@@ -1,105 +1,103 @@
 <!doctype html>
 <html lang="ms">
- <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Web GIS Projek Sabah</title>
-  <script src="/_sdk/element_sdk.js"></script>
 
-  <!-- style.css will be loaded -->
+  <!-- load stylesheet -->
   <link rel="stylesheet" href="style.css">
 
+  <!-- small runtime helper (optional sdk placeholder) -->
+  <script src="/_sdk/element_sdk.js"></script>
   <style>@view-transition { navigation: auto; }</style>
- </head>
- <body>
+</head>
+<body>
   <div class="main-container">
-   <div class="sidebar">
-    <div class="header">
-     <h1 id="main-title">Web GIS Projek Sabah</h1>
-    </div>
-    <div class="dashboard-content">
-     <div class="dashboard-title" id="dashboard-title">
-      Statistik Projek
-     </div>
-
-     <div class="stat-card">
-      <div class="stat-label">Jumlah Projek</div>
-      <div class="stat-value" id="total-projects">0</div>
-     </div>
-
-     <div class="stat-card">
-      <div class="stat-label">Kawasan Terpilih</div>
-      <div class="stat-value" id="selected-area" style="font-size:20px;">Semua Sabah</div>
-     </div>
-
-     <div class="stat-card">
-      <div class="stat-label">Kategori Projek</div>
-      <div class="category-stats">
-       <div class="category-item">
-        <div class="category-name">🗼 Menara</div>
-        <div class="category-count" id="menara-count">0</div>
-       </div>
-       <div class="category-item">
-        <div class="category-name">📡 NADI</div>
-        <div class="category-count" id="nadi-count">0</div>
-       </div>
-       <div class="category-item">
-        <div class="category-name">📶 WiFi</div>
-        <div class="category-count" id="wifi-count">0</div>
-       </div>
-       <div class="category-item">
-        <div class="category-name">🌐 POP</div>
-        <div class="category-count" id="pop-count">0</div>
-       </div>
+    <div class="sidebar">
+      <div class="header">
+        <h1 id="main-title">Web GIS Projek Sabah</h1>
       </div>
-     </div>
 
-     <div class="stat-card">
-      <div class="stat-label">Status Projek</div>
-      <div class="status-list" id="status-list"></div>
-     </div>
+      <div class="dashboard-content">
+        <div class="dashboard-title" id="dashboard-title">Statistik Projek</div>
 
-     <div class="legend">
-      <div class="legend-title">Legenda</div>
-      <div class="legend-item"><div class="legend-icon" style="background:#FF5722">🗼</div><div class="legend-label">Menara Komunikasi</div></div>
-      <div class="legend-item"><div class="legend-icon" style="background:#2196F3">📡</div><div class="legend-label">NADI</div></div>
-      <div class="legend-item"><div class="legend-icon" style="background:#4CAF50">📶</div><div class="legend-label">WiFi</div></div>
-      <div class="legend-item"><div class="legend-icon" style="background:#FF9800">🌐</div><div class="legend-label">POP</div></div>
-     </div>
+        <div class="stat-card">
+          <div class="stat-label">Jumlah Projek</div>
+          <div class="stat-value" id="total-projects">0</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Kawasan Terpilih</div>
+          <div class="stat-value" id="selected-area" style="font-size:20px;">Semua Sabah</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Kategori Projek</div>
+          <div class="category-stats">
+            <div class="category-item">
+              <div class="category-name">🗼 Menara</div>
+              <div class="category-count" id="menara-count">0</div>
+            </div>
+            <div class="category-item">
+              <div class="category-name">📡 NADI</div>
+              <div class="category-count" id="nadi-count">0</div>
+            </div>
+            <div class="category-item">
+              <div class="category-name">📶 WiFi</div>
+              <div class="category-count" id="wifi-count">0</div>
+            </div>
+            <div class="category-item">
+              <div class="category-name">🌐 POP</div>
+              <div class="category-count" id="pop-count">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Status Projek</div>
+          <div class="status-list" id="status-list"></div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-title">Legenda</div>
+          <div class="legend-item"><div class="legend-icon" style="background:#FF5722;">🗼</div><div class="legend-label">Menara Komunikasi</div></div>
+          <div class="legend-item"><div class="legend-icon" style="background:#2196F3;">📡</div><div class="legend-label">NADI</div></div>
+          <div class="legend-item"><div class="legend-icon" style="background:#4CAF50;">📶</div><div class="legend-label">WiFi</div></div>
+          <div class="legend-item"><div class="legend-icon" style="background:#FF9800;">🌐</div><div class="legend-label">POP</div></div>
+        </div>
+      </div>
     </div>
-   </div>
 
-   <div class="map-wrapper">
-    <div id="map"></div>
+    <div class="map-wrapper">
+      <div id="map"></div>
 
-    <div class="loading-indicator" id="loading">Memuatkan data...</div>
+      <div class="loading-indicator" id="loading">Memuatkan data...</div>
 
-    <div class="controls">
-     <div class="control-group">
-      <div class="control-title">Layer Sempadan</div>
-      <button class="control-button active" id="toggle-daerah">📍 Daerah</button>
-      <button class="control-button active" id="toggle-dun">🏛️ DUN</button>
-      <button class="control-button active" id="toggle-parliament">🏢 Parliament</button>
-     </div>
-     <div class="control-group">
-      <div class="control-title">Kategori Projek</div>
-      <button class="control-button active" id="toggle-menara">🗼 Menara</button>
-      <button class="control-button active" id="toggle-nadi">📡 NADI</button>
-      <button class="control-button active" id="toggle-wifi">📶 WiFi</button>
-      <button class="control-button active" id="toggle-pop">🌐 POP</button>
-     </div>
+      <div class="controls">
+        <div class="control-group">
+          <div class="control-title">Layer Sempadan</div>
+          <button class="control-button active" id="toggle-daerah">📍 Daerah</button>
+          <button class="control-button active" id="toggle-dun">🏛️ DUN</button>
+          <button class="control-button active" id="toggle-parliament">🏢 Parliament</button>
+        </div>
+        <div class="control-group">
+          <div class="control-title">Kategori Projek</div>
+          <button class="control-button active" id="toggle-menara">🗼 Menara</button>
+          <button class="control-button active" id="toggle-nadi">📡 NADI</button>
+          <button class="control-button active" id="toggle-wifi">📶 WiFi</button>
+          <button class="control-button active" id="toggle-pop">🌐 POP</button>
+        </div>
+      </div>
     </div>
-
-   </div>
   </div>
 
-  <!-- Load Google Maps JS with your key (Bossku provided) -->
+  <!-- Google Maps JS API (with callback) -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap">
   </script>
 
   <!-- Main script -->
   <script src="script.js"></script>
-
- </body>
+</body>
 </html>
