@@ -1,198 +1,186 @@
-// -------------------------------
-// script.js for WebGIS Sabah
-// -------------------------------
+// script.js - WebGIS Sabah (Google Maps + GeoJSON + Google Sheets)
+// Ensure index.html calls Google Maps with callback=initMap
 
-let map;
-let markers = []; // keep references
-let boundaryLayers = {
-  district: null,
-  dun: null,
-  parliament: null
+/* CONFIG: change if necessary */
+const API_KEY = "AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0"; // already in index.html; kept here for reference
+const URLs = {
+  district: "https://ersyahempire.github.io/webgis/district.json",
+  dun: "https://ersyahempire.github.io/webgis/dun.json",
+  parliament: "https://ersyahempire.github.io/webgis/parliament.json"
 };
 
-const sheetIDs = {
+const SHEETS = {
   db_bwa: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU",
   db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU",
   db_POP: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8",
   tower: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
 };
 
-const projectTypeForSheet = {
+const SHEET_TYPE = {
   db_bwa: "BWA",
   db_pim: "NADI",
   db_POP: "POP",
   tower: "TOWER"
 };
 
-const typeConfig = {
+const TYPE_CFG = {
   BWA: { color: "#FF5722", icon: "🗼" },
   NADI: { color: "#2196F3", icon: "📡" },
-  POP: { color: "#4CAF50", icon: "🌐" },
-  TOWER: { color: "#FF9800", icon: "📶" } // you can switch icons
+  POP: { color: "#FF9800", icon: "🌐" },
+  TOWER: { color: "#4CAF50", icon: "📶" }
 };
 
-let allProjects = []; // full list
-let active = {
-  menara: true,
-  nadi: true,
-  wifi: true,
-  pop: true,
-  district: true,
-  dun: true,
-  parliament: true
-};
+/* STATE */
+let map;
+let markers = []; // google.maps.Marker[]
+let allProjects = []; // normalized data
+let dataLayers = { district: null, dun: null, parliament: null };
+let refreshInterval = 60 * 1000; // auto-refresh every 60s
 
-// INIT MAP (callback for Google Maps API)
-function initMap() {
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: 5.9804, lng: 116.0735 },
-    zoom: 8,
-    mapTypeId: "satellite",
-    mapTypeControl: true,
-    streetViewControl: false,
-    fullscreenControl: true
-  });
-
-  showLoading(true);
-  Promise.all([
-    loadAllSheets(),
-    loadGeoJsonLayer("district.json", "district"),
-    loadGeoJsonLayer("dun.json", "dun"),
-    loadGeoJsonLayer("parliament.json", "parliament")
-  ]).then(([projects]) => {
-    // projects is array from loadAllSheets
-    addProjectsToMap(projects);
-    updateDashboard(projects);
-    showLoading(false);
-    setupButtons();
-  }).catch(err => {
-    console.error(err);
-    showLoading(false);
-    alert("Ralat: gagal load data, semak console.");
-  });
-}
-
-// Show / hide loading overlay
+/* Utils */
 function showLoading(on) {
   const el = document.getElementById("loading");
+  if (!el) return;
   el.classList.toggle("show", !!on);
 }
+function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-// LOAD GOOGLE SHEETS (gviz JSON)
-async function loadSheet(sheetID) {
-  const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
-  const res = await fetch(url);
-  const text = await res.text();
-  // gviz response needs trimming
-  const json = JSON.parse(text.substring(47, text.length - 2));
-  const cols = json.table.cols.map(c => (c && c.label) ? c.label : "");
-  const rows = json.table.rows || [];
-  // produce array of objects with column names (case-insensitive)
-  const result = rows.map(r => {
+/* GVIZ parse helper */
+function parseGviz(text) {
+  // extract JSON object inside response
+  try {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1) return null;
+    const jsonText = text.substring(start, end + 1);
+    return JSON.parse(jsonText);
+  } catch (e) {
+    console.error("parseGviz error", e);
+    return null;
+  }
+}
+
+/* Load a single Google Sheet via gviz */
+async function loadSheet(sheetId) {
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error("Sheet fetch failed: " + url + " status:" + resp.status);
+  const text = await resp.text();
+  const g = parseGviz(text);
+  if (!g || !g.table) return [];
+  const cols = g.table.cols.map(c => (c && c.label) ? c.label : "");
+  const rows = g.table.rows || [];
+  return rows.map(r => {
     const obj = {};
-    cols.forEach((col, i) => {
-      const key = (col || `col${i}`).toUpperCase();
-      obj[key] = r.c[i] ? r.c[i].v : "";
-    });
+    cols.forEach((c,i) => obj[c ? c.toUpperCase() : `COL${i}`] = (r.c[i] ? r.c[i].v : ""));
     return obj;
   });
-  return result;
 }
 
-// load all sheets and unify into single array (adds TYPE)
+/* Normalize rows from sheets to expected fields */
+function normalizeRows(rows, sheetKey) {
+  return rows.map(r => {
+    const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
+    // attempt common header names
+    const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || get("SITE_NAME");
+    const district = get("DISTRICT") || get("DAERAH") || get("DISTRIK") || get("DISTRIK");
+    const dun = get("DUN") || get("D.A.N") || get("Dewan") || get("Dun");
+    const parliament = get("PARLIAMENT") || get("PARLIAMEN") || get("PARLIAMENT_NAME") || get("PARLIAMENT");
+    const lat = parseFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC") || 0) || 0;
+    const lng = parseFloat(get("LONGITUDE") || get("LON") || get("LONG") || 0) || 0;
+    const status = get("STATUS") || get("KETERANGAN") || get("STATE") || "";
+    return {
+      SITE_NAME: String(site || "").trim(),
+      DISTRICT: String(district || "").trim(),
+      DUN: String(dun || "").trim(),
+      PARLIAMENT: String(parliament || "").trim(),
+      LATITUDE: lat,
+      LONGITUDE: lng,
+      STATUS: String(status || "").trim(),
+      _sheet: sheetKey,
+      _type: SHEET_TYPE[sheetKey] || "UNKNOWN"
+    };
+  }).filter(o => o.LATITUDE && o.LONGITUDE);
+}
+
+/* Load all sheets */
 async function loadAllSheets() {
-  const promises = Object.entries(sheetIDs).map(([k,id]) => loadSheet(id).then(rows => {
-    return rows.map(r => {
-      // Normalize keys to expected columns (SITE_NAME, DISTRICT, DUN, PARLIAMENT, LATITUDE, LONGITUDE, STATUS)
-      return {
-        SITE_NAME: r.SITE_NAME || r.site_name || r["SITE NAME"] || r["SITE"] || "",
-        DISTRICT: r.DISTRICT || r.district || r["DAERAH"] || "",
-        DUN: r.DUN || r.dun || r["DUN"] || "",
-        PARLIAMENT: r.PARLIAMENT || r.parliament || r["PARLIAMENT"] || r["PARLIMEN"] || "",
-        LATITUDE: parseFloat(r.LATITUDE || r.latitude || r.Latitude || r.lat || 0) || 0,
-        LONGITUDE: parseFloat(r.LONGITUDE || r.longitude || r.Longitude || r.lng || 0) || 0,
-        STATUS: r.STATUS || r.status || "",
-        _source_sheet: k,
-        _type: projectTypeForSheet[k] || "UNKNOWN"
-      };
-    });
-  }));
-  const arrays = await Promise.all(promises);
-  allProjects = arrays.flat();
-  // filter out rows without coords
-  allProjects = allProjects.filter(p => p.LATITUDE && p.LONGITUDE);
-  return allProjects;
+  const entries = Object.entries(SHEETS);
+  const results = await Promise.all(entries.map(([k,id]) => loadSheet(id).then(rows => ({ k, rows })).catch(e => { console.error("sheet load fail", k, e); return { k, rows: [] }; })));
+  const combined = [];
+  results.forEach(r => {
+    const norm = normalizeRows(r.rows, r.k);
+    norm.forEach(n => combined.push(n));
+  });
+  allProjects = combined;
+  return combined;
 }
 
-// ADD MARKERS
-function addProjectsToMap(projects) {
-  // clear old markers
-  markers.forEach(m => m.setMap && m.setMap(null));
+/* Marker management */
+function clearMarkers() {
+  markers.forEach(m => m.setMap(null));
   markers = [];
+}
 
-  projects.forEach(p => {
-    // map project type to config color/icon; adjust mapping if needed
-    const cfg = typeConfig[p._type] || { color: "#000000", icon: "📍" };
+function createMarker(project) {
+  const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
+  const marker = new google.maps.Marker({
+    position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
+    map: map,
+    title: project.SITE_NAME || "",
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 7,
+      fillColor: cfg.color,
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 1
+    }
+  });
+  marker._meta = project;
+  const infowindow = new google.maps.InfoWindow({
+    content: `
+      <div class="info-popup">
+        <div class="info-title">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
+        <div class="info-row"><div class="info-label">Daerah:</div><div class="info-value">${escapeHtml(project.DISTRICT)}</div></div>
+        <div class="info-row"><div class="info-label">DUN:</div><div class="info-value">${escapeHtml(project.DUN)}</div></div>
+        <div class="info-row"><div class="info-label">Parlimen:</div><div class="info-value">${escapeHtml(project.PARLIAMENT)}</div></div>
+        <div class="info-row"><div class="info-label">Status:</div><div class="info-value">${escapeHtml(project.STATUS)}</div></div>
+      </div>
+    `
+  });
+  marker.addListener("click", () => {
+    infowindow.open(map, marker);
+    // when marker clicked, set selected-area to its district (prefer district then dun then parliament)
+    const name = project.DISTRICT || project.DUN || project.PARLIAMENT || "Undefined";
+    document.getElementById("selected-area").textContent = name;
+    // optionally pan map mildly
+    map.panTo(marker.getPosition());
+  });
+  return marker;
+}
 
-    const marker = new google.maps.Marker({
-      position: { lat: Number(p.LATITUDE), lng: Number(p.LONGITUDE) },
-      map: map,
-      title: p.SITE_NAME || "",
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 7,
-        fillColor: cfg.color,
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: 1
-      }
-    });
-
-    const infowin = new google.maps.InfoWindow({
-      content: infoWindowHtml(p, cfg)
-    });
-
-    marker.addListener("click", () => {
-      infowin.open(map, marker);
-    });
-
-    marker._meta = p; // save for filtering
-    markers.push(marker);
+function renderMarkers(list) {
+  clearMarkers();
+  list.forEach(p => {
+    const m = createMarker(p);
+    markers.push(m);
   });
 }
 
-// create info window html
-function infoWindowHtml(p, cfg) {
-  return `
-    <div class="info-popup">
-      <div class="info-title">${cfg.icon} ${escapeHtml(p.SITE_NAME)}</div>
-      <div class="info-row"><div class="info-label">Daerah:</div><div class="info-value">${escapeHtml(p.DISTRICT)}</div></div>
-      <div class="info-row"><div class="info-label">DUN:</div><div class="info-value">${escapeHtml(p.DUN)}</div></div>
-      <div class="info-row"><div class="info-label">Parliament:</div><div class="info-value">${escapeHtml(p.PARLIAMENT)}</div></div>
-      <div class="info-row"><div class="info-label">Status:</div><div class="info-value">${escapeHtml(p.STATUS)}</div></div>
-      <div class="info-row"><div class="info-label">Koordinat:</div><div class="info-value">${p.LATITUDE}, ${p.LONGITUDE}</div></div>
-    </div>
-  `;
-}
-
-function escapeHtml(s) { return String(s || "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-// DASHBOARD
-function updateDashboard(data) {
-  const list = data || allProjects;
+/* Dashboard updates */
+function updateDashboard(filteredList) {
+  const list = filteredList || allProjects || [];
   document.getElementById("total-projects").textContent = list.length;
 
-  // counts by type
-  const counts = { menara:0, nadi:0, wifi:0, pop:0, TOWER:0, BWA:0, NADI:0, POP:0 };
+  const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
   const statusCounts = {};
   list.forEach(p => {
     const t = p._type;
-    counts[t] = (counts[t] || 0) + 1;
-    // map to UI counters:
     if (t === "BWA" || t === "TOWER") counts.menara++;
     if (t === "NADI") counts.nadi++;
     if (t === "POP") counts.pop++;
-    // assuming wifi possibly in POP sheet or other, leave wifi count empty unless explicitly in sheet
+    // wifi may be part of POP or other: leave 0 unless specified
     statusCounts[p.STATUS] = (statusCounts[p.STATUS] || 0) + 1;
   });
 
@@ -201,136 +189,179 @@ function updateDashboard(data) {
   document.getElementById("wifi-count").textContent = counts.wifi || 0;
   document.getElementById("pop-count").textContent = counts.pop || 0;
 
-  const statusList = document.getElementById("status-list");
-  statusList.innerHTML = "";
-  Object.entries(statusCounts).forEach(([s,c]) => {
+  const statusEl = document.getElementById("status-list");
+  statusEl.innerHTML = "";
+  Object.entries(statusCounts).forEach(([k,v]) => {
     const div = document.createElement("div");
     div.className = "status-item";
-    div.innerHTML = `<div class="status-name">${s}</div><div class="status-count">${c}</div>`;
-    statusList.appendChild(div);
+    div.innerHTML = `<div class="status-name">${k}</div><div class="status-count">${v}</div>`;
+    statusEl.appendChild(div);
   });
 }
 
-// LOAD GEOJSON LAYER (DISTRICT / DUN / PARLIAMENT)
-// expects that geojson file has feature.properties.NAME or similar
-function loadGeoJsonLayer(url, key) {
-  return new Promise((resolve, reject) => {
-    fetch(url).then(r => r.json()).then(geojson => {
-      // Convert to google maps Data layer
-      const dataLayer = new google.maps.Data({ map: map });
-      // If geojson is KML-like, try to extract features; else load directly
-      try {
-        dataLayer.addGeoJson(geojson);
-      } catch (e) {
-        // fallback: if geojson not valid, fail gracefully
-        console.error("addGeoJson failed for", url, e);
-      }
-      // Styling for each layer
-      const styleObj = {
-        strokeWeight: 2,
-        fillOpacity: 0.08,
-        visible: true
-      };
-      if (key === "district") {
-        styleObj.strokeColor = "#FF0000";
-        styleObj.fillColor = "#FFCDD2";
-      } else if (key === "dun") {
-        styleObj.strokeColor = "#00AA00";
-        styleObj.fillColor = "#C8E6C9";
-      } else if (key === "parliament") {
-        styleObj.strokeColor = "#2196F3";
-        styleObj.fillColor = "#BBDEFB";
-      }
-
-      dataLayer.setStyle(feature => {
-        return styleObj;
-      });
-
-      // click handler
-      dataLayer.addListener("click", e => {
-        const props = e.feature.getProperties ? e.feature.getProperties() : null;
-        // property keys vary; try common names
-        const name = props && (props.NAME || props.name || props.DISTRICT || props.DUN || props.PARLAMENT || props.PARLIAMENT || props.parliament) || "Undefined Area";
-        document.getElementById("selected-area").textContent = name;
-        // filter projects by area name if matches any of the area fields
-        const filtered = allProjects.filter(p => (p.DISTRICT === name) || (p.DUN === name) || (p.PARLIAMENT === name));
-        // adjust markers visibility to show only filtered
-        markers.forEach(m => {
-          const show = filtered.some(f => f.SITE_NAME === m._meta.SITE_NAME);
-          m.setVisible(show);
-        });
-        updateDashboard(filtered);
-        // zoom to bounds of clicked feature (if geometry exists)
+/* Load GeoJSON into google.maps.Data */
+async function loadGeoJSONIntoData(key, url, style) {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error("geojson fetch failed " + url);
+    const json = await resp.json();
+    const dataLayer = new google.maps.Data({ map: map });
+    try {
+      dataLayer.addGeoJson(json);
+    } catch(e) {
+      // some geojson may already be in feature collection; try manual add
+      console.warn("addGeoJson failed, attempting single feature add", e);
+    }
+    dataLayer.setStyle(feature => style);
+    dataLayer.addListener("click", evt => {
+      // try several property names for the area name
+      const propKeys = ["NAME","Name","name","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLAMENT","PARLIAMENT_N","NAME_1"];
+      let name = "Area";
+      for (const k of propKeys) {
         try {
-          const bounds = new google.maps.LatLngBounds();
-          e.feature.getGeometry().forEachLatLng && e.feature.getGeometry().forEachLatLng(latlng => {
-            bounds.extend(latlng);
-          });
-          map.fitBounds(bounds);
-        } catch (err) {
-          // ignore
-        }
-      });
-
-      boundaryLayers[key] = dataLayer;
-      resolve(dataLayer);
-    }).catch(err => {
-      console.error("Fail load geojson", url, err);
-      reject(err);
+          const v = evt.feature.getProperty(k);
+          if (v) { name = v; break; }
+        } catch(_) {}
+      }
+      document.getElementById("selected-area").textContent = name;
+      // filter projects by matching name in any of the three fields
+      filterMarkersByArea(name);
+      // optional: zoom to feature bound
+      try {
+        const bounds = new google.maps.LatLngBounds();
+        evt.feature.getGeometry().forEachLatLng && evt.feature.getGeometry().forEachLatLng(ll => bounds.extend(ll));
+        map.fitBounds(bounds);
+      } catch(e){}
     });
-  });
-}
-
-// SETUP BUTTONS (toggle boundaries & categories)
-function setupButtons() {
-  // category toggles: use marker._meta._type to control
-  document.getElementById("toggle-menara").addEventListener("click", () => toggleCategory("menara"));
-  document.getElementById("toggle-nadi").addEventListener("click", () => toggleCategory("nadi"));
-  document.getElementById("toggle-wifi").addEventListener("click", () => toggleCategory("wifi"));
-  document.getElementById("toggle-pop").addEventListener("click", () => toggleCategory("pop"));
-
-  // boundary toggles
-  document.getElementById("toggle-daerah").addEventListener("click", () => toggleBoundary("district", "toggle-daerah"));
-  document.getElementById("toggle-dun").addEventListener("click", () => toggleBoundary("dun", "toggle-dun"));
-  document.getElementById("toggle-parliament").addEventListener("click", () => toggleBoundary("parliament", "toggle-parliament"));
-}
-
-function toggleCategory(cat) {
-  const btn = document.getElementById(`toggle-${cat}`);
-  btn.classList.toggle("active");
-  active[cat] = !active[cat];
-  // show/hide markers based on type mapping
-  markers.forEach(m => {
-    const t = m._meta._type || "";
-    let show = true;
-    if ((t === "BWA" || t === "TOWER") && !active.menara) show = false;
-    if (t === "NADI" && !active.nadi) show = false;
-    if (t === "POP" && !active.pop) show = false;
-    // wifi mapping depends on which sheet; adjust if you have specific
-    m.setVisible(show);
-  });
-  // update dashboard to reflect visible markers
-  const visible = markers.filter(m => m.getVisible()).map(m => m._meta);
-  updateDashboard(visible);
-}
-
-function toggleBoundary(key, btnId) {
-  const btn = document.getElementById(btnId);
-  btn.classList.toggle("active");
-  active[key === "district" ? "district" : key] = !active[key];
-  const layer = boundaryLayers[key];
-  if (!layer) return;
-  const visible = btn.classList.contains("active");
-  // Google Maps Data layer does not have simple visibility toggle; we remove/add to map
-  if (visible) {
-    layer.setMap(map);
-  } else {
-    layer.setMap(null);
-    // reset dashboard to full
-    updateDashboard(allProjects);
-    markers.forEach(m => m.setVisible(true));
-    document.getElementById("selected-area").textContent = "Semua Sabah";
+    dataLayers[key] = dataLayer;
+    return dataLayer;
+  } catch(e) {
+    console.warn("loadGeoJSONIntoData error", e);
+    return null;
   }
 }
 
-// On page load: nothing — initMap called by Google Maps API callback (in index.html)
+/* Filter markers by area name */
+function filterMarkersByArea(name) {
+  const filtered = allProjects.filter(p => {
+    return [p.DISTRICT, p.DUN, p.PARLIAMENT].some(x => String(x||"").trim() === String(name||"").trim());
+  });
+  // hide all then show matching
+  markers.forEach(m => {
+    const keep = filtered.some(f => f.SITE_NAME === m._meta.SITE_NAME);
+    m.setVisible(keep);
+  });
+  updateDashboard(filtered);
+}
+
+/* Toggles handling */
+function setupToggles() {
+  // category toggles
+  document.getElementById("toggle-menara").addEventListener("click", function(){
+    this.classList.toggle("active");
+    const on = this.classList.contains("active");
+    markers.forEach(m => {
+      const t = m._meta._type;
+      if (t === "BWA" || t === "TOWER") m.setVisible(on);
+    });
+    updateDashboard(markers.filter(m => m.getVisible()).map(m => m._meta));
+  });
+  document.getElementById("toggle-nadi").addEventListener("click", function(){
+    this.classList.toggle("active");
+    const on = this.classList.contains("active");
+    markers.forEach(m => { if (m._meta._type === "NADI") m.setVisible(on); });
+    updateDashboard(markers.filter(m => m.getVisible()).map(m => m._meta));
+  });
+  document.getElementById("toggle-pop").addEventListener("click", function(){
+    this.classList.toggle("active");
+    const on = this.classList.contains("active");
+    markers.forEach(m => { if (m._meta._type === "POP") m.setVisible(on); });
+    updateDashboard(markers.filter(m => m.getVisible()).map(m => m._meta));
+  });
+  document.getElementById("toggle-wifi").addEventListener("click", function(){
+    this.classList.toggle("active");
+    // If Wifi is in separate sheet you can implement; currently no distinct wifi sheet
+  });
+
+  // boundary toggles - show/hide data layers
+  document.getElementById("toggle-daerah").addEventListener("click", function(){
+    this.classList.toggle("active");
+    const show = this.classList.contains("active");
+    if (dataLayers.district) dataLayers.district.setMap(show ? map : null);
+    if (!show) {
+      document.getElementById("selected-area").textContent = "Semua Sabah";
+      markers.forEach(m => m.setVisible(true));
+      updateDashboard(allProjects);
+    }
+  });
+  document.getElementById("toggle-dun").addEventListener("click", function(){
+    this.classList.toggle("active");
+    const show = this.classList.contains("active");
+    if (dataLayers.dun) dataLayers.dun.setMap(show ? map : null);
+    if (!show) { document.getElementById("selected-area").textContent = "Semua Sabah"; markers.forEach(m=>m.setVisible(true)); updateDashboard(allProjects); }
+  });
+  document.getElementById("toggle-parliament").addEventListener("click", function(){
+    this.classList.toggle("active");
+    const show = this.classList.contains("active");
+    if (dataLayers.parliament) dataLayers.parliament.setMap(show ? map : null);
+    if (!show) { document.getElementById("selected-area").textContent = "Semua Sabah"; markers.forEach(m=>m.setVisible(true)); updateDashboard(allProjects); }
+  });
+}
+
+/* MAIN INIT - called by Google Maps callback (index.html) */
+async function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 5.9804, lng: 116.0735 },
+    zoom: 8,
+    mapTypeId: "satellite",
+    streetViewControl: false,
+    fullscreenControl: true
+  });
+
+  showLoading(true);
+  try {
+    // load sheets then geojson
+    const projects = await loadAllSheets();
+    renderMarkers(projects);
+    updateDashboard(projects);
+
+    // Load district/dun/parliament as GeoJSON Data layers
+    await loadGeoJSONIntoData("district", URLs.district, {
+      strokeWeight: 2, strokeColor: "#FF0000", fillOpacity: 0.06, fillColor: "#FFCDD2"
+    });
+    await loadGeoJSONIntoData("dun", URLs.dun, {
+      strokeWeight: 2, strokeColor: "#00AA00", fillOpacity: 0.05, fillColor: "#C8E6C9"
+    });
+    await loadGeoJSONIntoData("parliament", URLs.parliament, {
+      strokeWeight: 2, strokeColor: "#2196F3", fillOpacity: 0.05, fillColor: "#BBDEFB"
+    });
+
+    setupToggles();
+
+    // auto refresh sheets every X ms (safe small interval)
+    setInterval(async () => {
+      try {
+        const refreshed = await loadAllSheets();
+        // re-render markers but try to preserve visible state toggles
+        const visibilityMap = new Map();
+        markers.forEach(m => visibilityMap.set(m._meta.SITE_NAME, m.getVisible()));
+        renderMarkers(refreshed);
+        // restore visibility
+        markers.forEach(m => {
+          const prev = visibilityMap.get(m._meta.SITE_NAME);
+          if (prev === false) m.setVisible(false);
+        });
+        updateDashboard(refreshed);
+      } catch(e){ console.warn("auto-refresh fail", e); }
+    }, refreshInterval);
+
+  } catch(e) {
+    console.error("initMap error", e);
+    alert("Ralat: gagal load data. Semak console (F12).");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/* Expose initMap globally (callback) */
+window.initMap = initMap;
