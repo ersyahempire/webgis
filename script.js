@@ -37,6 +37,8 @@ let areaIndex = new Map(); // areaName -> Set of SITE_NAME (fast filter)
 let dataLayers = {};
 let refreshIntervalMs = 60_000; // auto refresh every 60s
 let batchSize = 300; // markers per chunk when rendering (tune if needed)
+let hoverInfoWindow = new google.maps.InfoWindow(); // sms over effect
+
 
 // Utility helpers
 function showLoading(on) {
@@ -271,46 +273,107 @@ async function fetchSheetObjects(sheetId) {
   });
 }
 
-// GeoJSON load into google.maps.Data (load after map idle)
-async function loadGeoJsonLayer(key, url, style) {
+// GeoJSON load into google.maps.Data (with random colors, hover highlight + tooltip)
+async function loadGeoJsonLayer(key, url) {
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`geojson fetch ${url} status ${res.status}`);
     const json = await res.json();
+
     const layer = new google.maps.Data({ map: map });
-    try {
-      layer.addGeoJson(json);
-    } catch (e) {
-      console.warn("addGeoJson fallback", e);
+    layer.addGeoJson(json);
+
+    // store random color per feature
+    const randomColors = new Map();
+
+    function getRandomColor(id) {
+      if (randomColors.has(id)) return randomColors.get(id);
+      const color = "#" + Math.floor(Math.random() * 16777215).toString(16);
+      randomColors.set(id, color);
+      return color;
     }
-    layer.setStyle(feature => style);
+
+    // default style: random color
+    layer.setStyle(feature => {
+      const id = feature.getId() || feature.getProperty("NAME") || Math.random();
+      const color = getRandomColor(id);
+      return {
+        fillColor: color,
+        fillOpacity: 0.5,
+        strokeColor: color,
+        strokeWeight: 1
+      };
+    });
+
+    // -------------------------
+    // HOVER EFFECT
+    // -------------------------
+    layer.addListener("mouseover", e => {
+      const id = e.feature.getId() || e.feature.getProperty("NAME");
+      const color = getRandomColor(id);
+
+      layer.overrideStyle(e.feature, {
+        fillColor: color,
+        fillOpacity: 0.8,
+        strokeColor: "#000000",
+        strokeWeight: 3
+      });
+
+      // Tooltip / Infowindow
+      const props = ["NAME", "name", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMEN"];
+      let name = "Unknown Area";
+      for (const k of props) {
+        const v = e.feature.getProperty(k);
+        if (v) { name = v; break; }
+      }
+
+      hoverInfoWindow.setContent(`
+        <div style="font-size:14px; font-weight:bold;">
+          ${name}
+        </div>
+      `);
+
+      hoverInfoWindow.setPosition(e.latLng);
+      hoverInfoWindow.open(map);
+    });
+
+    layer.addListener("mouseout", e => {
+      hoverInfoWindow.close();
+      layer.revertStyle(e.feature);
+    });
+
+    // -------------------------
+    // CLICK to filter markers
+    // -------------------------
     layer.addListener("click", e => {
-      // try multiple property names
-      const props = ["NAME","name","NAME_1","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
+      const props = ["NAME","name","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
       let name = "Area";
       for (const k of props) {
-        try {
-          const v = e.feature.getProperty(k);
-          if (v) { name = v; break; }
-        } catch(_) {}
+        const v = e.feature.getProperty(k);
+        if (v) { name = v; break; }
       }
+
       document.getElementById("selected-area").textContent = name;
-      // fast filter via areaIndex
+
       setMarkerVisibilityForArea(name);
-      // optional: fit bounds safely
+
       try {
         const bounds = new google.maps.LatLngBounds();
-        e.feature.getGeometry().forEachLatLng && e.feature.getGeometry().forEachLatLng(ll => bounds.extend(ll));
+        e.feature.getGeometry().forEachLatLng(ll => bounds.extend(ll));
         map.fitBounds(bounds);
-      } catch(_) {}
+      } catch (_) {}
     });
+
     dataLayers[key] = layer;
     return layer;
-  } catch(e) {
+
+  } catch (e) {
     console.warn("loadGeoJsonLayer error", key, e);
     return null;
   }
 }
+
+
 
 // Setup UI toggles
 function setupToggles() {
