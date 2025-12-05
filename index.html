@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Web GIS Projek Sabah</title>
 
-  <!-- load stylesheet -->
+  <!-- Load Stylesheet (Gaya Canva UI) -->
   <link rel="stylesheet" href="style.css">
-
-  <!-- small runtime helper (optional sdk placeholder) -->
-  <script src="/_sdk/element_sdk.js"></script>
-  <style>@view-transition { navigation: auto; }</style>
+  <!-- Load FontAwesome Icon (Optional) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
   <div class="main-container">
+    
+    <!-- SIDEBAR -->
     <div class="sidebar">
       <div class="header">
-        <h1 id="main-title">Web GIS Projek Sabah</h1>
+        <h1 id="main-title"><i class="fas fa-map-marked-alt"></i> Projek Sabah</h1>
       </div>
 
       <div class="dashboard-content">
@@ -36,19 +36,19 @@
           <div class="stat-label">Kategori Projek</div>
           <div class="category-stats">
             <div class="category-item">
-              <div class="category-name">🗼 Menara</div>
+              <div class="category-name">Menara</div>
               <div class="category-count" id="menara-count">0</div>
             </div>
             <div class="category-item">
-              <div class="category-name">📡 NADI</div>
+              <div class="category-name">NADI</div>
               <div class="category-count" id="nadi-count">0</div>
             </div>
             <div class="category-item">
-              <div class="category-name">📶 WiFi</div>
+              <div class="category-name">WiFi</div>
               <div class="category-count" id="wifi-count">0</div>
             </div>
             <div class="category-item">
-              <div class="category-name">🌐 POP</div>
+              <div class="category-name">POP</div>
               <div class="category-count" id="pop-count">0</div>
             </div>
           </div>
@@ -61,43 +61,48 @@
 
         <div class="legend">
           <div class="legend-title">Legenda</div>
-          <div class="legend-item"><div class="legend-icon" style="background:#FF5722;">🗼</div><div class="legend-label">Menara Komunikasi</div></div>
-          <div class="legend-item"><div class="legend-icon" style="background:#2196F3;">📡</div><div class="legend-label">NADI</div></div>
-          <div class="legend-item"><div class="legend-icon" style="background:#4CAF50;">📶</div><div class="legend-label">WiFi</div></div>
-          <div class="legend-item"><div class="legend-icon" style="background:#FF9800;">🌐</div><div class="legend-label">POP</div></div>
+          <div class="legend-item"><div class="legend-icon" style="background:#FF5722;"><i class="fas fa-broadcast-tower"></i></div><div class="legend-label">Menara Komunikasi</div></div>
+          <div class="legend-item"><div class="legend-icon" style="background:#2196F3;"><i class="fas fa-satellite-dish"></i></div><div class="legend-label">NADI</div></div>
+          <div class="legend-item"><div class="legend-icon" style="background:#4CAF50;"><i class="fas fa-wifi"></i></div><div class="legend-label">WiFi</div></div>
+          <div class="legend-item"><div class="legend-icon" style="background:#FF9800;"><i class="fas fa-globe"></i></div><div class="legend-label">POP</div></div>
         </div>
       </div>
     </div>
 
+    <!-- MAP WRAPPER -->
     <div class="map-wrapper">
       <div id="map"></div>
 
-      <div class="loading-indicator" id="loading">Memuatkan data...</div>
+      <div class="loading-indicator" id="loading">
+        <i class="fas fa-spinner fa-spin"></i> Memuatkan data...
+      </div>
 
+      <!-- CONTROLS OVERLAY -->
       <div class="controls">
         <div class="control-group">
           <div class="control-title">Layer Sempadan</div>
-          <button class="control-button active" id="toggle-daerah">📍 Daerah</button>
-          <button class="control-button active" id="toggle-dun">🏛️ DUN</button>
-          <button class="control-button active" id="toggle-parliament">🏢 Parliament</button>
+          <!-- Butang Daerah Aktif (akan dihandle oleh JS logic) -->
+          <button class="control-button" id="toggle-daerah"><i class="fas fa-map-marker-alt"></i> &nbsp; Daerah</button>
+          <button class="control-button" id="toggle-dun"><i class="fas fa-landmark"></i> &nbsp; DUN</button>
+          <button class="control-button" id="toggle-parliament"><i class="fas fa-building"></i> &nbsp; Parlimen</button>
         </div>
         <div class="control-group">
           <div class="control-title">Kategori Projek</div>
-          <button class="control-button active" id="toggle-menara">🗼 Menara</button>
-          <button class="control-button active" id="toggle-nadi">📡 NADI</button>
-          <button class="control-button active" id="toggle-wifi">📶 WiFi</button>
-          <button class="control-button active" id="toggle-pop">🌐 POP</button>
+          <button class="control-button" id="toggle-menara"><i class="fas fa-broadcast-tower"></i> &nbsp; Menara</button>
+          <button class="control-button" id="toggle-nadi"><i class="fas fa-satellite-dish"></i> &nbsp; NADI</button>
+          <button class="control-button" id="toggle-wifi"><i class="fas fa-wifi"></i> &nbsp; WiFi</button>
+          <button class="control-button" id="toggle-pop"><i class="fas fa-globe"></i> &nbsp; POP</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Google Maps JS API (with callback) -->
+  <!-- Main script -->
+  <script src="script.js"></script>
+
+  <!-- Google Maps JS API -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap">
   </script>
-
-  <!-- Main script -->
-  <script src="script.js"></script>
 </body>
 </html>
