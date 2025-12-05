@@ -52,7 +52,7 @@ function showLoading(on) {
   el.classList.toggle("show", !!on);
 }
 function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function debounce(fn, wait=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
+function debounce(fn, wait=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; };
 function randomHexColor(){ return "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'); }
 
 /**
@@ -76,10 +76,10 @@ function extractFeatureName(feature) {
  * Menyahaktifkan gaya poligon aktif dari mana-mana lapisan.
  */
 function resetAllLayerStyles() {
-    // Revert all overrides across all data layers
+    // FIX: Menggunakan revertStyle() tanpa argumen untuk membatalkan semua penimpaan gaya.
     Object.keys(dataLayers).forEach(k => {
         const dl = dataLayers[k];
-        if (dl) dl.revertAll(); 
+        if (dl) dl.revertStyle(); 
     });
     activeFeature = null;
     activeLayer = null;
@@ -449,6 +449,8 @@ function toggleBoundaryLayerVisibility(key) {
     });
     
     // 2. Reset gaya aktif jika layer ditukar melalui butang UI
+    // Ini penting jika pengguna menekan butang layer (Daerah/DUN/Parlimen) 
+    // tanpa mengklik sebarang poligon baru.
     if (currentBoundaryKey !== key) {
         resetAllLayerStyles();
     }
@@ -492,21 +494,21 @@ function setupToggles() {
     filterAndDisplayMarkers();
   });
   
-  // Boundary Toggles - Hanya tukar layer visibility
+  // Boundary Toggles - Hanya tukar layer visibility (reset active polygon and filter to all projects)
   document.getElementById("toggle-daerah").addEventListener("click", function(){
     toggleBoundaryLayerVisibility("district");
     document.getElementById("selected-area").textContent = "Sabah";
-    filterAndDisplayMarkers(); // Tapis semua projek (kerana activeFeature=null)
+    filterAndDisplayMarkers(); 
   });
   document.getElementById("toggle-dun").addEventListener("click", function(){
     toggleBoundaryLayerVisibility("dun");
     document.getElementById("selected-area").textContent = "Sabah";
-    filterAndDisplayMarkers(); // Tapis semua projek
+    filterAndDisplayMarkers(); 
   });
   document.getElementById("toggle-parliament").addEventListener("click", function(){
     toggleBoundaryLayerVisibility("parliament");
     document.getElementById("selected-area").textContent = "Sabah";
-    filterAndDisplayMarkers(); // Tapis semua projek
+    filterAndDisplayMarkers(); 
   });
 }
 
