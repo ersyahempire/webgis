@@ -285,6 +285,16 @@ async function loadGeoJsonLayer(key, url, style) {
     }
     layer.setStyle(feature => style);
     layer.addListener("click", e => {
+      
+    // <<< NEW random highlight
+  const randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
+  layer.overrideStyle(e.feature, {
+    fillColor: randomColor,
+    fillOpacity: 0.6,
+    strokeColor: randomColor,
+    strokeWeight: 2
+  });
+      
       // try multiple property names
       const props = ["NAME","name","NAME_1","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
       let name = "Area";
@@ -409,6 +419,9 @@ async function initMap() {
       // after all markers created, ensure markersList is sync
       markersList = Array.from(markersBySite.values());
       updateDashboard(allProjects);
+
+      // <<< NEW — hide all markers by default
+   markersList.forEach(m => m.setVisible(false));
     });
 
     // 3) load geojson boundaries AFTER initial map idle -> smoother UX
@@ -416,6 +429,11 @@ async function initMap() {
       await loadGeoJsonLayer("district", URLs.district, { strokeWeight: 2, strokeColor: "#FF0000", fillOpacity: 0.05, fillColor: "#FFCDD2" });
       await loadGeoJsonLayer("dun", URLs.dun, { strokeWeight: 2, strokeColor: "#00AA00", fillOpacity: 0.04, fillColor: "#C8E6C9" });
       await loadGeoJsonLayer("parliament", URLs.parliament, { strokeWeight: 2, strokeColor: "#2196F3", fillOpacity: 0.04, fillColor: "#BBDEFB" });
+
+      // <<< NEW — only district visible by default
+  if (dataLayers.district) dataLayers.district.setMap(map);
+  if (dataLayers.dun) dataLayers.dun.setMap(null);
+  if (dataLayers.parliament) dataLayers.parliament.setMap(null);
     });
 
     setupToggles();
