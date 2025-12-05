@@ -29,7 +29,7 @@ const TYPE_CFG = {
   TOWER: { color: "#4CAF50", icon: "📶" }
 };
 
-// ---------- STATE ----------
+// ---------- STATE (Updated) ----------
 let map;
 let markersBySite = new Map();
 let markersList = [];
@@ -41,6 +41,10 @@ let hoverInfoWindow = null;
 let refreshIntervalMs = 60_000;
 let batchSize = 300;
 
+// State untuk pengurusan poligon aktif
+let activeFeature = null;
+let activeLayer = null;
+
 // ---------- UTIL ----------
 function showLoading(on) {
   const el = document.getElementById("loading");
@@ -50,6 +54,36 @@ function showLoading(on) {
 function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function debounce(fn, wait=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
 function randomHexColor(){ return "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'); }
+
+/**
+ * Mendapatkan nama kawasan dari GeoJSON Feature.
+ * @param {google.maps.Data.Feature} feature
+ * @returns {string}
+ */
+function extractFeatureName(feature) {
+  const props = ["NAME","name","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
+  let name = "Sabah";
+  for (const k of props) {
+    try {
+      const v = feature.getProperty(k);
+      if (v) { name = v; break; }
+    } catch(_) {}
+  }
+  return String(name).trim();
+}
+
+/**
+ * Menyahaktifkan gaya poligon aktif dari mana-mana lapisan.
+ */
+function resetAllLayerStyles() {
+    // Revert all overrides across all data layers
+    Object.keys(dataLayers).forEach(k => {
+        const dl = dataLayers[k];
+        if (dl) dl.revertAll(); 
+    });
+    activeFeature = null;
+    activeLayer = null;
+}
 
 // ---------- GVIZ parse ----------
 function parseGviz(text) {
@@ -162,7 +196,7 @@ function createOrUpdateMarker(project) {
 
     marker.addListener("click", () => {
       infowin.open(map, marker);
-      document.getElementById("selected-area").textContent = project.DISTRICT || "Undefined";
+      // Tiada perubahan pada selected-area, ia akan diupdate oleh klik poligon
     });
 
     marker._meta = project;
@@ -196,14 +230,58 @@ function renderMarkersInBatches(projects, onComplete) {
   runChunk();
 }
 
+/**
+ * Menapis projek berdasarkan kawasan aktif dan kategori aktif.
+ * Mengemas kini Dashboard dan visibility Marker.
+ */
+function filterAndDisplayMarkers() {
+    const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
+    const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
+    const popActive = document.getElementById("toggle-pop")?.classList.contains("active");
+    
+    let filteredList = allProjects;
+    
+    // 1. Tapis mengikut kawasan yang dipilih (jika ada)
+    if (activeFeature && currentBoundaryKey) {
+        let areaName = extractFeatureName(activeFeature);
+        
+        filteredList = allProjects.filter(p => {
+            if (currentBoundaryKey === 'district') return p.DISTRICT === areaName;
+            if (currentBoundaryKey === 'dun') return p.DUN === areaName;
+            if (currentBoundaryKey === 'parliament') return p.PARLIAMENT === areaName;
+            return false;
+        });
+    }
+
+    // 2. Kemaskini Dashboard berdasarkan penapis kawasan
+    updateDashboard(filteredList);
+
+    // 3. Kemaskini visibility Marker berdasarkan penapis kategori DAN penapis kawasan
+    const visibleSiteNames = new Set(filteredList.map(p => p.SITE_NAME));
+
+    markersList.forEach(m => {
+        const type = m._meta._type;
+        let isCategoryActive = false;
+
+        // Check if marker category is toggled on
+        if (type === "BWA" || type === "TOWER") isCategoryActive = menaraActive;
+        else if (type === "NADI") isCategoryActive = nadiActive;
+        else if (type === "POP") isCategoryActive = popActive;
+
+        // Marker hanya kelihatan jika ia berada di kawasan yang ditapis DAN kategorinya aktif
+        const isVisible = visibleSiteNames.has(m._meta.SITE_NAME) && isCategoryActive;
+        m.setVisible(isVisible);
+    });
+}
+
 // ---------- DASHBOARD ----------
-const updateDashboard = debounce(function(filteredList) {
-  const list = filteredList || allProjects || [];
-  document.getElementById("total-projects").textContent = list.length;
+const updateDashboard = debounce(function(list) {
+  const displayList = list || allProjects || [];
+  document.getElementById("total-projects").textContent = displayList.length;
   const counts = { menara:0, nadi:0, wifi:0, pop:0 };
   const statusCounts = {};
   
-  list.forEach(p => {
+  displayList.forEach(p => {
     if (p._type === "BWA" || p._type === "TOWER") counts.menara++;
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
@@ -220,7 +298,10 @@ const updateDashboard = debounce(function(filteredList) {
 
   const statusEl = document.getElementById("status-list");
   statusEl.innerHTML = "";
-  Object.entries(statusCounts).forEach(([k,v]) => {
+  // Sort status by count (descending)
+  Object.entries(statusCounts)
+    .sort(([, a], [, b]) => b - a)
+    .forEach(([k,v]) => {
     if (!k) return;
     const div = document.createElement("div");
     div.className = "status-item";
@@ -258,38 +339,32 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
 
     const layer = new google.maps.Data({ map: null });
     layer.addGeoJson(json);
-
-    // Style lalai (telus/tidak berwarna kuat)
-    layer.setStyle(feature => {
-      const s = layer._currentStyle || {
+    
+    // Tentukan base style lutsinar (default tidak berwarna)
+    layer._baseStyle = { 
         strokeWeight: baseStyle.strokeWeight || 1,
         strokeColor: baseStyle.strokeColor || "#888888",
-        fillOpacity: (baseStyle.fillOpacity !== undefined ? baseStyle.fillOpacity : 0.0),
+        fillOpacity: 0.0, // Default: telus
         fillColor: (baseStyle.fillColor || "#CCCCCC")
-      };
-      return s;
-    });
+    };
+    layer.setStyle(feature => layer._baseStyle); // Apply base transparent style
 
     // Hover effect
     layer.addListener("mouseover", e => {
       if (!layer.getMap()) return;
+      // Jangan override jika sudah aktif
+      if (activeFeature === e.feature) return;
+
       const hoverStyle = {
         strokeWeight: 2,
         strokeColor: "#ffffff",
-        fillOpacity: 0.8,
-        fillColor: (layer._currentStyle && layer._currentStyle.fillColor) ? layer._currentStyle.fillColor : "#FFFF00"
+        fillOpacity: 0.2, // Opacity hover yang ringan
+        fillColor: (activeLayer && activeLayer._baseStyle && activeLayer._baseStyle.fillColor) ? activeLayer._baseStyle.fillColor : "#CCCCCC"
       };
       layer.overrideStyle(e.feature, hoverStyle);
 
       if (!hoverInfoWindow) hoverInfoWindow = new google.maps.InfoWindow();
-      const props = ["NAME","name","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
-      let title = "Area";
-      for (const k of props) {
-        try {
-          const v = e.feature.getProperty(k);
-          if (v) { title = v; break; }
-        } catch(_) {}
-      }
+      const title = extractFeatureName(e.feature);
       hoverInfoWindow.setContent(`<div style="padding:5px; font-weight:700;">${escapeHtml(title)}</div>`);
       if (e.latLng) hoverInfoWindow.setPosition(e.latLng);
       hoverInfoWindow.open(map);
@@ -297,23 +372,21 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
 
     layer.addListener("mouseout", e => {
       if (!layer.getMap()) return;
-      try { layer.revertStyle(e.feature); } catch(_) {}
+      // Revert style hanya jika feature tidak aktif
+      if (activeFeature !== e.feature) {
+          try { layer.revertStyle(e.feature); } catch(_) {}
+      }
       if (hoverInfoWindow) hoverInfoWindow.close();
     });
 
-    // Click: Select Area & Zoom
+    // Click: Select Area & Zoom & Set Active Feature (NEW LOGIC)
     layer.addListener("click", e => {
-      const props = ["NAME","name","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
-      let name = "Area";
-      for (const k of props) {
-        try {
-          const v = e.feature.getProperty(k);
-          if (v) { name = v; break; }
-        } catch(_) {}
-      }
-      document.getElementById("selected-area").textContent = name;
-      activateBoundaryLayer(key, layer, e.feature);
+      const featureName = extractFeatureName(e.feature);
+      document.getElementById("selected-area").textContent = featureName;
       
+      handleFeatureClick(key, e.feature); // Panggil logik baru
+      
+      // Zoom logic
       try {
         const bounds = new google.maps.LatLngBounds();
         e.feature.getGeometry().forEachLatLng && e.feature.getGeometry().forEachLatLng(ll => bounds.extend(ll));
@@ -329,45 +402,60 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
   }
 }
 
-function activateBoundaryLayer(key, layerObj, clickedFeature = null) {
-  // Matikan layer lain
-  Object.keys(dataLayers).forEach(k => {
-    const dl = dataLayers[k];
-    if (!dl) return;
-    if (k !== key) {
-      dl.setMap(null);
-      dl._currentStyle = { strokeWeight: 1, strokeColor: "#888888", fillOpacity: 0.0, fillColor: "#CCCCCC" };
-      dl.setStyle(feature => dl._currentStyle);
+/**
+ * Menguruskan klik pada GeoJSON feature (poligon).
+ * Menetapkan gaya aktif dan mengemas kini dashboard.
+ * @param {string} key - Kunci layer ('district', 'dun', 'parliament')
+ * @param {google.maps.Data.Feature} feature - Feature yang diklik
+ */
+function handleFeatureClick(key, feature) {
+    const layerObj = dataLayers[key];
+    if (!layerObj) return;
+
+    // 1. Pastikan hanya layer yang betul kelihatan
+    toggleBoundaryLayerVisibility(key); 
+
+    // 2. Clear gaya poligon aktif dari semua lapisan
+    resetAllLayerStyles(); 
+
+    // 3. Apply the new color to the clicked feature (60% opacity)
+    const col = randomHexColor();
+    const activeStyle = {
+        strokeWeight: 3,
+        strokeColor: "#ffffff",
+        fillOpacity: 0.6, // Requested 60% opacity
+        fillColor: col
+    };
+    layerObj.overrideStyle(feature, activeStyle);
+
+    // 4. Update global state
+    activeFeature = feature;
+    activeLayer = layerObj;
+    currentBoundaryKey = key;
+    
+    // 5. Update Dashboard and Markers for the selected area
+    filterAndDisplayMarkers();
+}
+
+/**
+ * Mengawal visibility layer (untuk butang toggle di UI).
+ * @param {string} key - Kunci layer ('district', 'dun', 'parliament')
+ */
+function toggleBoundaryLayerVisibility(key) {
+    // 1. Matikan layer lain
+    Object.keys(dataLayers).forEach(k => {
+        const dl = dataLayers[k];
+        if (dl) dl.setMap(k === key ? map : null);
+    });
+    
+    // 2. Reset gaya aktif jika layer ditukar melalui butang UI
+    if (currentBoundaryKey !== key) {
+        resetAllLayerStyles();
     }
-  });
-
-  // Hidupkan layer terpilih
-  if (!layerObj) layerObj = dataLayers[key];
-  if (!layerObj) return;
-  layerObj.setMap(map);
-
-  // Warna rawak untuk layer aktif
-  const col = randomHexColor();
-  layerObj._currentStyle = {
-    strokeWeight: 2,
-    strokeColor: col,
-    fillOpacity: 0.5,
-    fillColor: col
-  };
-
-  // Efek fade-in ringkas
-  layerObj.setStyle(feature => {
-    return { ...layerObj._currentStyle, fillOpacity: 0.0 };
-  });
-  
-  setTimeout(() => {
-    try {
-      layerObj.setStyle(feature => layerObj._currentStyle);
-    } catch (_) {}
-  }, 60);
-
-  updateToggleButtonsUI(key);
-  currentBoundaryKey = key;
+    
+    // 3. Update UI buttons
+    updateToggleButtonsUI(key);
+    currentBoundaryKey = key;
 }
 
 function updateToggleButtonsUI(activeKey) {
@@ -382,53 +470,43 @@ function updateToggleButtonsUI(activeKey) {
 
 // ---------- UI TOGGLES SETUP ----------
 function setupToggles() {
+  
+  // Marker Toggles - Panggil filterAndDisplayMarkers untuk filter marker mengikut kawasan dan kategori
   document.getElementById("toggle-menara").addEventListener("click", function(){
     this.classList.toggle("active");
-    const visible = this.classList.contains("active");
-    markersList.forEach(m => {
-      const t = m._meta._type;
-      if (t === "BWA" || t === "TOWER") m.setVisible(visible);
-    });
-    // Kemaskini dashboard
-    const visibleMarkers = markersList.filter(m => m.getVisible()).map(m => m._meta);
-    updateDashboard(visibleMarkers.length > 0 ? visibleMarkers : (visible ? [] : allProjects)); 
+    filterAndDisplayMarkers();
   });
 
   document.getElementById("toggle-nadi").addEventListener("click", function(){
     this.classList.toggle("active");
-    const visible = this.classList.contains("active");
-    markersList.forEach(m => { if (m._meta._type === "NADI") m.setVisible(visible); });
-    const visibleMarkers = markersList.filter(m => m.getVisible()).map(m => m._meta);
-    updateDashboard(visibleMarkers.length > 0 ? visibleMarkers : allProjects);
+    filterAndDisplayMarkers();
   });
 
   document.getElementById("toggle-pop").addEventListener("click", function(){
     this.classList.toggle("active");
-    const visible = this.classList.contains("active");
-    markersList.forEach(m => { if (m._meta._type === "POP") m.setVisible(visible); });
-    const visibleMarkers = markersList.filter(m => m.getVisible()).map(m => m._meta);
-    updateDashboard(visibleMarkers.length > 0 ? visibleMarkers : allProjects);
+    filterAndDisplayMarkers();
   });
 
   document.getElementById("toggle-wifi").addEventListener("click", function(){
     this.classList.toggle("active");
-    // Tambah logik wifi jika ada data khusus
+    filterAndDisplayMarkers();
   });
-
+  
+  // Boundary Toggles - Hanya tukar layer visibility
   document.getElementById("toggle-daerah").addEventListener("click", function(){
-    const layer = dataLayers.district;
-    if (!layer) return;
-    activateBoundaryLayer("district", layer);
+    toggleBoundaryLayerVisibility("district");
+    document.getElementById("selected-area").textContent = "Sabah";
+    filterAndDisplayMarkers(); // Tapis semua projek (kerana activeFeature=null)
   });
   document.getElementById("toggle-dun").addEventListener("click", function(){
-    const layer = dataLayers.dun;
-    if (!layer) return;
-    activateBoundaryLayer("dun", layer);
+    toggleBoundaryLayerVisibility("dun");
+    document.getElementById("selected-area").textContent = "Sabah";
+    filterAndDisplayMarkers(); // Tapis semua projek
   });
   document.getElementById("toggle-parliament").addEventListener("click", function(){
-    const layer = dataLayers.parliament;
-    if (!layer) return;
-    activateBoundaryLayer("parliament", layer);
+    toggleBoundaryLayerVisibility("parliament");
+    document.getElementById("selected-area").textContent = "Sabah";
+    filterAndDisplayMarkers(); // Tapis semua projek
   });
 }
 
@@ -450,19 +528,9 @@ async function autoRefreshLoop() {
     allProjects = newProjects;
     buildAreaIndex();
     
-    // Kekalkan status butang aktif
-    const menaraActive = document.getElementById("toggle-menara").classList.contains("active");
-    const nadiActive = document.getElementById("toggle-nadi").classList.contains("active");
-    const popActive = document.getElementById("toggle-pop").classList.contains("active");
+    // Kekalkan status butang aktif, tapis mengikut status semasa
+    filterAndDisplayMarkers();
 
-    markersList.forEach(m => {
-        const t = m._meta._type;
-        if (t === "BWA" || t === "TOWER") m.setVisible(menaraActive);
-        else if (t === "NADI") m.setVisible(nadiActive);
-        else if (t === "POP") m.setVisible(popActive);
-    });
-
-    updateDashboard(allProjects);
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
   }
@@ -499,18 +567,18 @@ async function initMap() {
     });
 
     // Load boundaries dari fail TEMPATAN
-    const pDistrict = loadGeoJsonLayer("district", URLs.district, { strokeWeight: 1, strokeColor: "#FF0000", fillOpacity: 0.0, fillColor: "#FFCDD2" });
-    const pDun = loadGeoJsonLayer("dun", URLs.dun, { strokeWeight: 1, strokeColor: "#00AA00", fillOpacity: 0.0, fillColor: "#C8E6C9" });
-    const pPar = loadGeoJsonLayer("parliament", URLs.parliament, { strokeWeight: 1, strokeColor: "#2196F3", fillOpacity: 0.0, fillColor: "#BBDEFB" });
+    const pDistrict = loadGeoJsonLayer("district", URLs.district);
+    const pDun = loadGeoJsonLayer("dun", URLs.dun);
+    const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
 
     google.maps.event.addListenerOnce(map, "idle", async () => {
       const ld = await pDistrict;
       await pDun;
       await pPar;
 
-      // Default: Paparkan Daerah
+      // Default: Paparkan Daerah (tanpa mewarnakan apa-apa)
       if (ld) {
-        activateBoundaryLayer("district", ld);
+        toggleBoundaryLayerVisibility("district");
       }
       setupToggles();
     });
@@ -519,7 +587,8 @@ async function initMap() {
 
   } catch (e) {
     console.error("initMap main error", e);
-    alert("Gagal memuatkan data. Sila semak console (F12) untuk ralat.");
+    // Gantikan alert() dengan cara yang lebih lembut dalam UI jika perlu
+    console.log("Gagal memuatkan data. Sila semak console (F12) untuk ralat.");
   } finally {
     showLoading(false);
   }
