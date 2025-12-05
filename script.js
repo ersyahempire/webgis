@@ -1,6 +1,6 @@
-// script.js (Updated — markers hidden by default; district ON by default; exclusive colored layer on click)
+// script.js (Optimized for performance — Balanced simplification ~5% assumed)
+// Replace existing script.js with this file.
 
-// ---------- CONFIG ----------
 const URLs = {
   district: "https://ersyahempire.github.io/webgis/district.json",
   dun: "https://ersyahempire.github.io/webgis/dun.json",
@@ -28,19 +28,17 @@ const TYPE_CFG = {
   TOWER: { color: "#4CAF50", icon: "📶" }
 };
 
-// ---------- STATE ----------
+// State
 let map;
-let markersBySite = new Map();
-let markersList = [];
-let allProjects = [];
-let areaIndex = new Map();
-let dataLayers = { district: null, dun: null, parliament: null }; // google.maps.Data objects
-let currentBoundaryKey = null; // which boundary (district/dun/parliament) is currently active
-let hoverInfoWindow = null;
-let refreshIntervalMs = 60_000;
-let batchSize = 300;
+let markersBySite = new Map(); // SITE_NAME -> google.maps.Marker
+let markersList = []; // array of markers (for iteration)
+let allProjects = []; // array of normalized project objects
+let areaIndex = new Map(); // areaName -> Set of SITE_NAME (fast filter)
+let dataLayers = {};
+let refreshIntervalMs = 60_000; // auto refresh every 60s
+let batchSize = 300; // markers per chunk when rendering (tune if needed)
 
-// ---------- UTIL ----------
+// Utility helpers
 function showLoading(on) {
   const el = document.getElementById("loading");
   if (!el) return;
@@ -48,9 +46,8 @@ function showLoading(on) {
 }
 function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function debounce(fn, wait=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
-function randomHexColor(){ return "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'); }
 
-// ---------- GVIZ parse ----------
+// GViz parse
 function parseGviz(text) {
   try {
     const start = text.indexOf('{');
@@ -63,7 +60,7 @@ function parseGviz(text) {
   }
 }
 
-// ---------- Google Sheets fetch & normalize ----------
+// Fetch and parse a single sheet
 async function fetchSheetObjects(sheetId) {
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
   const res = await fetch(url);
@@ -80,6 +77,7 @@ async function fetchSheetObjects(sheetId) {
   });
 }
 
+// Normalize to expected keys and types; filter invalid coords
 function normalizeRows(rows, sheetKey) {
   const normalized = rows.map(r => {
     const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
@@ -105,6 +103,7 @@ function normalizeRows(rows, sheetKey) {
   return normalized;
 }
 
+// Build areaIndex for quick filtering (called after allProjects set)
 function buildAreaIndex() {
   areaIndex.clear();
   allProjects.forEach(p => {
@@ -117,11 +116,12 @@ function buildAreaIndex() {
   });
 }
 
-// ---------- MARKERS ----------
+// Marker creation / update
 function createOrUpdateMarker(project) {
   const site = project.SITE_NAME;
   const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
   if (markersBySite.has(site)) {
+    // update existing marker position & meta if changed
     const m = markersBySite.get(site);
     const pos = m.getPosition();
     if (!pos || pos.lat().toFixed(6) !== Number(project.LATITUDE).toFixed(6) || pos.lng().toFixed(6) !== Number(project.LONGITUDE).toFixed(6)) {
@@ -134,7 +134,6 @@ function createOrUpdateMarker(project) {
       position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
       map: map,
       title: project.SITE_NAME || "",
-      visible: false, // <<< HIDE BY DEFAULT
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 7,
@@ -166,7 +165,9 @@ function createOrUpdateMarker(project) {
   }
 }
 
+// Batch render markers to avoid blocking UI
 function renderMarkersInBatches(projects, onComplete) {
+  // create/update but in chunks
   const total = projects.length;
   let i = 0;
   const runChunk = () => {
@@ -175,7 +176,9 @@ function renderMarkersInBatches(projects, onComplete) {
       const p = projects[i];
       createOrUpdateMarker(p);
     }
+    // yield to browser
     if (i < total) {
+      // prefer requestIdleCallback when available
       if (window.requestIdleCallback) window.requestIdleCallback(runChunk, { timeout: 200 });
       else setTimeout(runChunk, 50);
     } else {
@@ -185,20 +188,23 @@ function renderMarkersInBatches(projects, onComplete) {
   runChunk();
 }
 
+// Show/hide markers quickly using precomputed lists (fast)
 function setMarkerVisibilityForArea(areaName) {
   if (!areaName) {
-    markersList.forEach(m => m.setVisible(false)); // keep hidden by default
+    // show all markers
+    markersList.forEach(m => m.setVisible(true));
     updateDashboard(allProjects);
     return;
   }
   const normalized = String(areaName).trim();
   const siteSet = areaIndex.get(normalized) || new Set();
+  // hide all then show those in set
   markersList.forEach(m => m.setVisible(siteSet.has(m._meta.SITE_NAME)));
   const filtered = allProjects.filter(p => siteSet.has(p.SITE_NAME));
   updateDashboard(filtered);
 }
 
-// ---------- DASHBOARD ----------
+// Dashboard update (debounced)
 const updateDashboard = debounce(function(filteredList) {
   const list = filteredList || allProjects || [];
   document.getElementById("total-projects").textContent = list.length;
@@ -225,16 +231,19 @@ const updateDashboard = debounce(function(filteredList) {
   });
 }, 200);
 
-// ---------- LOAD SHEETS ----------
+// Load all sheets (concurrent)
 async function loadAllSheetsAndNormalize() {
   const entries = Object.entries(SHEETS);
   const promises = entries.map(([k,id]) => fetchSheetObjectsSafe(k, id));
   const results = await Promise.all(promises);
+  // flatten normalized
   const combined = results.flat();
   allProjects = combined;
   buildAreaIndex();
   return combined;
 }
+
+// Safe wrapper for sheet fetch + normalize
 async function fetchSheetObjectsSafe(sheetKey, id) {
   try {
     const rows = await fetchSheetObjects(id);
@@ -244,6 +253,8 @@ async function fetchSheetObjectsSafe(sheetKey, id) {
     return [];
   }
 }
+
+// Wrapper to fetch sheet raw rows as objects (GViz)
 async function fetchSheetObjects(sheetId) {
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
   const res = await fetch(url);
@@ -260,75 +271,22 @@ async function fetchSheetObjects(sheetId) {
   });
 }
 
-// ---------- GEOJSON BOUNDARY LAYERS (IMPROVED) ----------
-/*
-  loadGeoJsonLayer:
-  - do NOT attach to map automatically
-  - add event listeners for hover/click
-  - style function returns current style stored per-layer
-*/
-async function loadGeoJsonLayer(key, url, baseStyle = {}) {
+// GeoJSON load into google.maps.Data (load after map idle)
+async function loadGeoJsonLayer(key, url, style) {
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error("geojson fetch failed " + url);
-    const json = await resp.json();
-
-    // create Data layer WITHOUT map initially
-    const layer = new google.maps.Data({ map: null });
-    layer.addGeoJson(json);
-
-    // prepare a map from feature -> original style (for revert)
-    // but easier: keep per-layer style state and use revertStyle(feature)
-    // default style function (uses layer._currentStyle if set)
-    layer.setStyle(feature => {
-      const s = layer._currentStyle || {
-        strokeWeight: baseStyle.strokeWeight || 1,
-        strokeColor: baseStyle.strokeColor || "#888888",
-        fillOpacity: (baseStyle.fillOpacity !== undefined ? baseStyle.fillOpacity : 0.0),
-        fillColor: (baseStyle.fillColor || "#CCCCCC")
-      };
-      return s;
-    });
-
-    // mouseover: highlight & show info
-    layer.addListener("mouseover", e => {
-      // only highlight if layer currently visible on map
-      if (!layer.getMap()) return;
-      // create hover style
-      const hoverStyle = {
-        strokeWeight: 3,
-        strokeColor: "#000000",
-        fillOpacity: 0.8,
-        fillColor: (layer._currentStyle && layer._currentStyle.fillColor) ? layer._currentStyle.fillColor : "#FFFF00"
-      };
-      layer.overrideStyle(e.feature, hoverStyle);
-
-      // show info popup
-      if (!hoverInfoWindow) hoverInfoWindow = new google.maps.InfoWindow();
-      const props = ["NAME","name","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
-      let title = "Area";
-      for (const k of props) {
-        try {
-          const v = e.feature.getProperty(k);
-          if (v) { title = v; break; }
-        } catch(_) {}
-      }
-      hoverInfoWindow.setContent(`<div style="font-weight:700">${escapeHtml(title)}</div>`);
-      // use event latLng if available; fallback to centroid approximation
-      if (e.latLng) hoverInfoWindow.setPosition(e.latLng);
-      hoverInfoWindow.open(map);
-    });
-
-    layer.addListener("mouseout", e => {
-      if (!layer.getMap()) return;
-      try { layer.revertStyle(e.feature); } catch(_) {}
-      if (hoverInfoWindow) hoverInfoWindow.close();
-    });
-
-    // click: activate this layer (exclusive), colorize and animate
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`geojson fetch ${url} status ${res.status}`);
+    const json = await res.json();
+    const layer = new google.maps.Data({ map: map });
+    try {
+      layer.addGeoJson(json);
+    } catch (e) {
+      console.warn("addGeoJson fallback", e);
+    }
+    layer.setStyle(feature => style);
     layer.addListener("click", e => {
-      // determine name for selected-area text
-      const props = ["NAME","name","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
+      // try multiple property names
+      const props = ["NAME","name","NAME_1","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
       let name = "Area";
       for (const k of props) {
         try {
@@ -337,90 +295,24 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
         } catch(_) {}
       }
       document.getElementById("selected-area").textContent = name;
-
-      // Activate this layer exclusively
-      activateBoundaryLayer(key, layer, e.feature);
-      // Filter markers to this area (markers remain hidden by default, but show those in area if desired)
-      // As per Bossku: keep markers hidden by default. If you want to show markers for the selected area, uncomment:
-      // setMarkerVisibilityForArea(name);
-
-      // zoom to feature
+      // fast filter via areaIndex
+      setMarkerVisibilityForArea(name);
+      // optional: fit bounds safely
       try {
         const bounds = new google.maps.LatLngBounds();
         e.feature.getGeometry().forEachLatLng && e.feature.getGeometry().forEachLatLng(ll => bounds.extend(ll));
         map.fitBounds(bounds);
       } catch(_) {}
     });
-
     dataLayers[key] = layer;
     return layer;
-  } catch (e) {
+  } catch(e) {
     console.warn("loadGeoJsonLayer error", key, e);
     return null;
   }
 }
 
-// Activate a given boundary layer exclusively
-function activateBoundaryLayer(key, layerObj, clickedFeature = null) {
-  // turn off previous
-  Object.keys(dataLayers).forEach(k => {
-    const dl = dataLayers[k];
-    if (!dl) return;
-    if (k !== key) {
-      dl.setMap(null); // hide other layers completely
-      dl._currentStyle = { strokeWeight: 1, strokeColor: "#888888", fillOpacity: 0.0, fillColor: "#CCCCCC" };
-      dl.setStyle(feature => dl._currentStyle);
-    }
-  });
-
-  // show new one
-  if (!layerObj) layerObj = dataLayers[key];
-  if (!layerObj) return;
-  layerObj.setMap(map);
-
-  // choose a random color for this layer
-  const col = randomHexColor();
-  // set layer._currentStyle to be used by setStyle
-  layerObj._currentStyle = {
-    strokeWeight: 2,
-    strokeColor: col,
-    fillOpacity: 0.6,
-    fillColor: col
-  };
-
-  // quick "fade-in" emulated: start with low opacity then set to 0.6
-  // (we set initial style then after short timeout increase fillOpacity)
-  layerObj.setStyle(feature => {
-    // if clickedFeature and we want to animate only that feature differently we could,
-    // but per spec animate whole layer.
-    return { ...layerObj._currentStyle, fillOpacity: 0.0 };
-  });
-  // small timeout to set visible opacity (animation effect)
-  setTimeout(() => {
-    try {
-      layerObj.setStyle(feature => layerObj._currentStyle);
-    } catch (_) {}
-  }, 60); // 60ms => quick fade effect
-
-  // update toggle UI: keep only the corresponding control button active
-  updateToggleButtonsUI(key);
-
-  // set currentBoundaryKey
-  currentBoundaryKey = key;
-}
-
-// helper to update toggle button classes (so only active layer button is highlighted)
-function updateToggleButtonsUI(activeKey) {
-  const mapping = { district: "toggle-daerah", dun: "toggle-dun", parliament: "toggle-parliament" };
-  Object.keys(mapping).forEach(k => {
-    const btn = document.getElementById(mapping[k]);
-    if (!btn) return;
-    if (k === activeKey) btn.classList.add("active");
-    else btn.classList.remove("active");
-  });
-}
-
-// ---------- UI TOGGLES SETUP ----------
+// Setup UI toggles
 function setupToggles() {
   document.getElementById("toggle-menara").addEventListener("click", function(){
     this.classList.toggle("active");
@@ -445,34 +337,42 @@ function setupToggles() {
   });
   document.getElementById("toggle-wifi").addEventListener("click", function(){
     this.classList.toggle("active");
+    // implement if wifi is in separate dataset
   });
 
-  // boundary toggles are now mutually exclusive; they call activateBoundaryLayer
+  // boundary toggles
   document.getElementById("toggle-daerah").addEventListener("click", function(){
-    // if layer not loaded yet, just toggle UI
-    const layer = dataLayers.district;
-    if (!layer) return;
-    activateBoundaryLayer("district", layer);
+    this.classList.toggle("active");
+    const show = this.classList.contains("active");
+    if (dataLayers.district) dataLayers.district.setMap(show ? map : null);
+    if (!show) { document.getElementById("selected-area").textContent = "Semua Sabah"; markersList.forEach(m=>m.setVisible(true)); updateDashboard(allProjects); }
   });
   document.getElementById("toggle-dun").addEventListener("click", function(){
-    const layer = dataLayers.dun;
-    if (!layer) return;
-    activateBoundaryLayer("dun", layer);
+    this.classList.toggle("active");
+    const show = this.classList.contains("active");
+    if (dataLayers.dun) dataLayers.dun.setMap(show ? map : null);
+    if (!show) { document.getElementById("selected-area").textContent = "Semua Sabah"; markersList.forEach(m=>m.setVisible(true)); updateDashboard(allProjects); }
   });
   document.getElementById("toggle-parliament").addEventListener("click", function(){
-    const layer = dataLayers.parliament;
-    if (!layer) return;
-    activateBoundaryLayer("parliament", layer);
+    this.classList.toggle("active");
+    const show = this.classList.contains("active");
+    if (dataLayers.parliament) dataLayers.parliament.setMap(show ? map : null);
+    if (!show) { document.getElementById("selected-area").textContent = "Semua Sabah"; markersList.forEach(m=>m.setVisible(true)); updateDashboard(allProjects); }
   });
 }
 
-// ---------- AUTO REFRESH ----------
+// Auto-refresh that updates markers incrementally rather than recreate all
 async function autoRefreshLoop() {
   try {
     const newProjects = await loadAllSheetsAndNormalize();
-    // update/create markers
-    newProjects.forEach(np => createOrUpdateMarker(np));
-    // remove deleted
+    // update allProjects and areaIndex
+    // update existing markers & create new ones
+    const existingSiteNames = new Set(allProjects.map(p => p.SITE_NAME));
+    // update or add
+    newProjects.forEach(np => {
+      createOrUpdateMarker(np);
+    });
+    // remove markers that no longer exist
     const newSiteNames = new Set(newProjects.map(p => p.SITE_NAME));
     for (const [site,m] of markersBySite.entries()) {
       if (!newSiteNames.has(site)) {
@@ -480,17 +380,17 @@ async function autoRefreshLoop() {
         markersBySite.delete(site);
       }
     }
+    // rebuild marker list
     markersList = Array.from(markersBySite.values());
     allProjects = newProjects;
     buildAreaIndex();
-    // Do not automatically show markers (remain hidden until user toggles)
     updateDashboard(allProjects);
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
   }
 }
 
-// ---------- INIT MAP (callback) ----------
+// MAIN init (Google Maps callback)
 async function initMap() {
   map = new google.maps.Map(document.getElementById("map"), {
     center: { lat: 5.9804, lng: 116.0735 },
@@ -499,47 +399,32 @@ async function initMap() {
     streetViewControl: false,
     fullscreenControl: true
   });
+
   showLoading(true);
-
   try {
-    // 1) load sheets and normalize
+    // 1) load project sheets and normalize
     const projects = await loadAllSheetsAndNormalize();
-
-    // 2) create markers (hidden by default)
+    // 2) render markers in batches (non-blocking)
     renderMarkersInBatches(projects, () => {
+      // after all markers created, ensure markersList is sync
       markersList = Array.from(markersBySite.values());
-      // ensure all markers are hidden by default
-      markersList.forEach(m => m.setVisible(false));
       updateDashboard(allProjects);
     });
 
-    // 3) load geojson layers (without attaching to map yet)
-    // we will set district visible by default after loaded
-    const pDistrict = loadGeoJsonLayer("district", URLs.district, { strokeWeight: 1, strokeColor: "#FF0000", fillOpacity: 0.0, fillColor: "#FFCDD2" });
-    const pDun = loadGeoJsonLayer("dun", URLs.dun, { strokeWeight: 1, strokeColor: "#00AA00", fillOpacity: 0.0, fillColor: "#C8E6C9" });
-    const pPar = loadGeoJsonLayer("parliament", URLs.parliament, { strokeWeight: 1, strokeColor: "#2196F3", fillOpacity: 0.0, fillColor: "#BBDEFB" });
-
-    // Wait until map is idle then attach district only
+    // 3) load geojson boundaries AFTER initial map idle -> smoother UX
     google.maps.event.addListenerOnce(map, "idle", async () => {
-      // ensure layers have been created
-      const ld = await pDistrict;
-      const lu = await pDun;
-      const lp = await pPar;
-
-      // Only district visible by default
-      if (ld) {
-        // activate district visually (random color & opacity)
-        activateBoundaryLayer("district", ld);
-      }
-      if (lu) lu.setMap(null);
-      if (lp) lp.setMap(null);
-
-      // Setup toggles after layers available
-      setupToggles();
+      await loadGeoJsonLayer("district", URLs.district, { strokeWeight: 2, strokeColor: "#FF0000", fillOpacity: 0.05, fillColor: "#FFCDD2" });
+      await loadGeoJsonLayer("dun", URLs.dun, { strokeWeight: 2, strokeColor: "#00AA00", fillOpacity: 0.04, fillColor: "#C8E6C9" });
+      await loadGeoJsonLayer("parliament", URLs.parliament, { strokeWeight: 2, strokeColor: "#2196F3", fillOpacity: 0.04, fillColor: "#BBDEFB" });
     });
 
-    // 4) auto refresh loop
-    setInterval(() => { autoRefreshLoop(); }, refreshIntervalMs);
+    setupToggles();
+
+    // 4) periodic background refresh (incremental)
+    setInterval(() => {
+      // run refresh but don't block UI
+      autoRefreshLoop();
+    }, refreshIntervalMs);
 
   } catch (e) {
     console.error("initMap main error", e);
@@ -549,5 +434,5 @@ async function initMap() {
   }
 }
 
-// expose initMap for callback
+// expose
 window.initMap = initMap;
