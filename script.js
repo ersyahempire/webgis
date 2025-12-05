@@ -16,10 +16,10 @@ const SHEETS = {
 };
 
 const SHEET_TYPE = {
-  db_bwa: "BWA",
+  db_bwa: "BWA", // Dianggap sebagai WiFi/Point Akses
   db_pim: "NADI",
   db_POP: "POP",
-  tower: "TOWER"
+  tower: "TOWER" // Dianggap sebagai Menara Komunikasi
 };
 
 const TYPE_CFG = {
@@ -76,7 +76,7 @@ function extractFeatureName(feature) {
  * Menyahaktifkan gaya poligon aktif dari mana-mana lapisan.
  */
 function resetAllLayerStyles() {
-    // FIX: Menggunakan revertStyle() tanpa argumen untuk membatalkan semua penimpaan gaya.
+    // Menggunakan revertStyle() tanpa argumen untuk membatalkan semua penimpaan gaya.
     Object.keys(dataLayers).forEach(k => {
         const dl = dataLayers[k];
         if (dl) dl.revertStyle(); 
@@ -238,7 +238,8 @@ function filterAndDisplayMarkers() {
     const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
     const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
     const popActive = document.getElementById("toggle-pop")?.classList.contains("active");
-    
+    const wifiActive = document.getElementById("toggle-wifi")?.classList.contains("active"); // Butang WiFi
+
     let filteredList = allProjects;
     
     // 1. Tapis mengikut kawasan yang dipilih (jika ada)
@@ -263,8 +264,9 @@ function filterAndDisplayMarkers() {
         const type = m._meta._type;
         let isCategoryActive = false;
 
-        // Check if marker category is toggled on
-        if (type === "BWA" || type === "TOWER") isCategoryActive = menaraActive;
+        // Logik BAHARU: Pisahkan TOWER (Menara) dan BWA (WiFi) sepenuhnya
+        if (type === "TOWER") isCategoryActive = menaraActive; // Menara: TOWER sahaja
+        else if (type === "BWA") isCategoryActive = wifiActive; // WiFi: BWA sahaja
         else if (type === "NADI") isCategoryActive = nadiActive;
         else if (type === "POP") isCategoryActive = popActive;
 
@@ -282,10 +284,11 @@ const updateDashboard = debounce(function(list) {
   const statusCounts = {};
   
   displayList.forEach(p => {
-    if (p._type === "BWA" || p._type === "TOWER") counts.menara++;
+    // Logik BAHARU: Kiraan Menara dan WiFi diasingkan
+    if (p._type === "TOWER") counts.menara++;
+    if (p._type === "BWA") counts.wifi++;
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
-    if (p._type === "BWA") counts.wifi++; // Andaian BWA sebagai WiFi juga? Sesuaikan jika perlu
     
     // Kira status untuk semua projek dalam list
     statusCounts[p.STATUS] = (statusCounts[p.STATUS] || 0) + 1;
