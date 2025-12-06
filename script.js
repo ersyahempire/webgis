@@ -1,4 +1,4 @@
-// script.js (FIXED: Duplicate Rows Issue)
+// script.js (FIXED: Filter logic removed to match total sheet count)
 
 // ---------- CONFIG ----------
 const URLs = {
@@ -118,7 +118,6 @@ async function fetchSheetObjects(sheetId) {
 function normalizeRows(rows, sheetKey, rawCols) {
   const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
   
-  // PEMBETULAN: Tambah index (i) dalam map function
   const normalized = rows.map((r, i) => {
     const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
     const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
@@ -126,6 +125,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
     const dun = get("DUN") || "";
     const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
     
+    // Walaupun koordinat mungkin 0, kita masih simpan nilainya.
     const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
     const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
     
@@ -145,8 +145,8 @@ function normalizeRows(rows, sheetKey, rawCols) {
     }
     
     return {
-      // PEMBETULAN: Cipta ID unik sepenuhnya berdasarkan sheet dan nombor baris
-      _id: `${sheetKey}_row_${i}`,
+      // Kunci unik berdasarkan sheet dan nombor baris dikekalkan
+      _id: `${sheetKey}_row_${i}`, 
       SITE_NAME: String(site || "").trim(),
       DISTRICT: String(district || "").trim(),
       DUN: String(dun || "").trim(),
@@ -158,7 +158,9 @@ function normalizeRows(rows, sheetKey, rawCols) {
       _type: SHEET_TYPE[sheetKey] || "UNKNOWN",
       _raw_details: rawDetails 
     };
-  }).filter(o => o.SITE_NAME && o.LATITUDE !== 0 && o.LONGITUDE !== 0);
+  // PEMBETULAN UTAMA: Hanya tapis baris jika SITE_NAME benar-benar kosong.
+  // Tidak lagi menapis berdasarkan LATITUDE/LONGITUDE 0 untuk memastikan kiraan total betul.
+  }).filter(o => o.SITE_NAME); 
   return normalized;
 }
 
@@ -176,8 +178,7 @@ function buildAreaIndex() {
 
 // ---------- MARKERS ----------
 function createOrUpdateMarker(project) {
-  // PEMBETULAN: Gunakan ID Unik (_id) yang dijana dari nombor baris
-  // Ini memastikan nama tapak yang sama (duplicate) tetap akan dipaparkan sebagai marker berasingan
+  // Gunakan ID Unik (_id) yang dijana dari nombor baris
   const uniqueKey = project._id;
   
   const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
@@ -290,8 +291,13 @@ function filterAndDisplayMarkers() {
     }
 
     updateDashboard(filteredList);
-
-    const visibleSiteNames = new Set(filteredList.map(p => p.SITE_NAME));
+    
+    // Tapis marker yang akan dipaparkan di peta (Perlu Lat/Lng bukan 0 untuk dipaparkan dengan betul)
+    const visibleProjectKeys = new Set(
+        filteredList
+            .filter(p => p.LATITUDE !== 0 && p.LONGITUDE !== 0) // Hanya kira yang boleh dipetakan
+            .map(p => p._id) // Guna ID unik
+    );
 
     markersList.forEach(m => {
         const type = m._meta._type;
@@ -302,16 +308,17 @@ function filterAndDisplayMarkers() {
         else if (type === "NADI") isCategoryActive = nadiActive;
         else if (type === "POP") isCategoryActive = popActive;
 
-        // Nota: Kita guna SITE_NAME untuk semak kawasan (kerana areaIndex based on names),
-        // tapi marker itu sendiri adalah unik.
-        const isVisible = visibleSiteNames.has(m._meta.SITE_NAME) && isCategoryActive;
+        const isVisible = visibleProjectKeys.has(m._meta._id) && isCategoryActive;
         m.setVisible(isVisible);
     });
 }
 
 const updateDashboard = debounce(function(list) {
   const displayList = list || allProjects || [];
-  document.getElementById("total-projects").textContent = displayList.length;
+  
+  // Dashboard count kini mengambil kira SEMUA baris dalam sheet (selain baris kosong)
+  document.getElementById("total-projects").textContent = displayList.length; 
+  
   const counts = { menara:0, nadi:0, wifi:0, pop:0 };
   const statusCounts = {};
   
@@ -517,7 +524,7 @@ async function autoRefreshLoop() {
     const newProjects = await loadAllSheetsAndNormalize();
     newProjects.forEach(np => createOrUpdateMarker(np));
     
-    // PEMBETULAN: Guna ID unik dalam set
+    // Guna ID unik dalam set
     const newKeys = new Set(newProjects.map(p => p._id));
     for (const [key,m] of markersBySite.entries()) {
       if (!newKeys.has(key)) {
