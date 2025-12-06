@@ -10,7 +10,7 @@ const URLs = {
 
 const SHEETS = {
   db_bwa: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU",
-  db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU",
+  db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU", // ID NADI BAHARU telah dimasukkan.
   db_POP: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8",
   tower: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
 };
@@ -223,6 +223,9 @@ function createOrUpdateMarker(project) {
     if (rawDetailsHtml) {
         // Tambah tajuk untuk maklumat terperinci
         rawDetailsHtml = `<div class="info-section-title" style="margin-top: 10px; font-weight: bold; border-top: 1px solid #eee; padding-top: 5px;">Maklumat Terperinci (Max 15 Lajur Pertama)</div>` + rawDetailsHtml;
+    } else {
+        // Mesej jika tiada maklumat terperinci ditemui
+        rawDetailsHtml = `<div style="margin-top: 10px; padding-top: 5px; font-style: italic; color: #777; border-top: 1px solid #eee;">Tiada lajur tambahan (selain Site, Kawasan, Koord., & Status) ditemui untuk dipaparkan.</div>`;
     }
     
     // *FIX*: Declare marker before adding the listener
