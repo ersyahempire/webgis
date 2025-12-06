@@ -10,7 +10,7 @@ const URLs = {
 
 const SHEETS = {
   db_bwa: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU",
-  db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56p0QhawZU",
+  db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56p0QhawZU", // Semak ID ini jika terus mendapat ralat 404
   db_POP: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8",
   tower: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
 };
@@ -147,7 +147,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
     const lng = parseFloat(get("LONGITUDE") || get("LON") || get("LNG") || 0) || 0;
     const status = get("STATUS") || get("STATUS_1") || "";
     
-    // --- NEW LOGIC: Extract raw details (first 15 unique non-standard columns) ---
+    // --- LOGIC: Extract raw details (first 15 unique non-standard columns) ---
     const rawDetails = [];
     let count = 0;
     
@@ -169,7 +169,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
             count++;
         }
     }
-    // --- END NEW LOGIC ---
+    // --- END LOGIC ---
     
     return {
       SITE_NAME: String(site || "").trim(),
@@ -199,7 +199,7 @@ function buildAreaIndex() {
   });
 }
 
-// ---------- MARKERS (UPDATED) ----------
+// ---------- MARKERS (FIXED ReferenceError) ----------
 function createOrUpdateMarker(project) {
   const site = project.SITE_NAME;
   const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
@@ -214,9 +214,9 @@ function createOrUpdateMarker(project) {
     return m;
   } else {
     
-    // NEW LOGIC: Generate HTML for detailed columns
+    // Generate HTML for detailed columns
     let rawDetailsHtml = project._raw_details.map(detail => 
-        // Menggunakan "info-row" dan "info-label/value" sedia ada, mungkin perlu CSS tambahan dalam index.html
+        // Menggunakan "info-row" dan "info-label/value" sedia ada
         `<div class="info-row"><div class="info-label">${escapeHtml(detail.label)}:</div><div class="info-value">${escapeHtml(detail.value)}</div></div>`
     ).join('');
 
@@ -224,6 +224,22 @@ function createOrUpdateMarker(project) {
         // Tambah tajuk untuk maklumat terperinci
         rawDetailsHtml = `<div class="info-section-title" style="margin-top: 10px; font-weight: bold; border-top: 1px solid #eee; padding-top: 5px;">Maklumat Terperinci (Max 15 Lajur Pertama)</div>` + rawDetailsHtml;
     }
+    
+    // *FIX*: Declare marker before adding the listener
+    const marker = new google.maps.Marker({
+      position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
+      map: map,
+      title: project.SITE_NAME || "",
+      visible: false, // Default hidden
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 6,
+        fillColor: cfg.color,
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 1.5
+      }
+    });
 
     const infowin = new google.maps.InfoWindow({
       content: `
@@ -243,21 +259,6 @@ function createOrUpdateMarker(project) {
     marker.addListener("click", () => {
       infowin.open(map, marker);
       // Tiada perubahan pada selected-area, ia akan diupdate oleh klik poligon
-    });
-
-    const marker = new google.maps.Marker({
-      position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
-      map: map,
-      title: project.SITE_NAME || "",
-      visible: false, // Default hidden
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 6,
-        fillColor: cfg.color,
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: 1.5
-      }
     });
 
     marker._meta = project;
