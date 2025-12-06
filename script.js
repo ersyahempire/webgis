@@ -198,7 +198,7 @@ function createOrUpdateMarker(project) {
     ).join('');
 
     if (rawDetailsHtml) {
-        rawDetailsHtml = `<div class="info-section-title" style="margin-top: 10px; font-weight: bold; border-top: 1px solid #eee; padding-top: 5px;">Maklumat Terperinci (Max 15 Lajur Pertama)</div>` + rawDetailsHtml;
+        rawDetailsHtml = `<div class="info-section-title" style="margin-top: 10px; font-weight: bold; border-top: 1px solid #eee; padding-top: 5px;">Maklumat Tapak</div>` + rawDetailsHtml;
     } else {
         rawDetailsHtml = `<div style="margin-top: 10px; padding-top: 5px; font-style: italic; color: #777; border-top: 1px solid #eee;">Tiada lajur tambahan (selain Site, Kawasan, Koord., & Status) ditemui untuk dipaparkan.</div>`;
     }
