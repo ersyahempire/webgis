@@ -1,4 +1,4 @@
-// script.js (FIXED: ReferenceError & LatLng Display)
+// script.js (FIXED: Unique Keys & Coordinate Parsing)
 
 // ---------- CONFIG ----------
 const URLs = {
@@ -54,6 +54,15 @@ function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g, c => ({'&':'&amp
 function debounce(fn, wait=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; };
 function randomHexColor(){ return "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'); }
 
+// FIX: Fungsi untuk membersihkan koordinat (handle koma dan float)
+function cleanFloat(val) {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    // Tukar koma ke titik (format Malaysia/Excel kadang guna koma)
+    const str = String(val).replace(',', '.').trim();
+    return parseFloat(str) || 0;
+}
+
 /**
  * Mendapatkan nama kawasan dari GeoJSON Feature.
  */
@@ -103,7 +112,6 @@ async function fetchSheetObjects(sheetId) {
   const json = parseGviz(text);
   if (!json || !json.table) return { rows: [], cols: [] };
 
-  // rawCols: Semua label lajur yang ditukar ke UPPERCASE
   const rawCols = json.table.cols.map(c => (c && c.label) ? c.label.toUpperCase() : "");
   const rows = json.table.rows || [];
   
@@ -125,25 +133,22 @@ function normalizeRows(rows, sheetKey, rawCols) {
     const district = get("DISTRICT") || get("DAERAH") || "";
     const dun = get("DUN") || "";
     const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
-    const lat = parseFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC") || 0) || 0;
-    const lng = parseFloat(get("LONGITUDE") || get("LON") || get("LNG") || 0) || 0;
+    
+    // FIX: Gunakan cleanFloat untuk elak ralat jika ada koma
+    const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
+    const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
+    
     const status = get("STATUS") || get("STATUS_1") || "";
     
-    // --- LOGIC: Extract raw details (first 15 unique non-standard columns) ---
+    // --- LOGIC: Extract raw details ---
     const rawDetails = [];
     let count = 0;
-    
     for(let i=0; i < rawCols.length && count < 15; i++) {
         const key = rawCols[i]; 
         if (normalizedKeys.has(key)) continue;
-
         const value = r[key];
-        
         if (value !== null && value !== "" && value !== undefined) {
-            rawDetails.push({ 
-                label: key,
-                value: String(value).trim() 
-            });
+            rawDetails.push({ label: key, value: String(value).trim() });
             count++;
         }
     }
@@ -176,13 +181,16 @@ function buildAreaIndex() {
   });
 }
 
-// ---------- MARKERS (FIXED) ----------
+// ---------- MARKERS ----------
 function createOrUpdateMarker(project) {
-  const site = project.SITE_NAME;
+  // FIX: Guna kombinasi Nama + Jenis sebagai kunci unik.
+  // Ini menghalang marker NADI dari menimpa marker Menara jika namanya sama.
+  const uniqueKey = project.SITE_NAME + "_" + project._type;
+  
   const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
   
-  if (markersBySite.has(site)) {
-    const m = markersBySite.get(site);
+  if (markersBySite.has(uniqueKey)) {
+    const m = markersBySite.get(uniqueKey);
     const pos = m.getPosition();
     if (!pos || pos.lat().toFixed(6) !== Number(project.LATITUDE).toFixed(6) || pos.lng().toFixed(6) !== Number(project.LONGITUDE).toFixed(6)) {
       m.setPosition({ lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) });
@@ -191,7 +199,6 @@ function createOrUpdateMarker(project) {
     return m;
   } else {
     
-    // Generate HTML for detailed columns
     let rawDetailsHtml = project._raw_details.map(detail => 
         `<div class="info-row"><div class="info-label">${escapeHtml(detail.label)}:</div><div class="info-value">${escapeHtml(detail.value)}</div></div>`
     ).join('');
@@ -202,7 +209,6 @@ function createOrUpdateMarker(project) {
         rawDetailsHtml = `<div style="margin-top: 10px; padding-top: 5px; font-style: italic; color: #777; border-top: 1px solid #eee;">Tiada lajur tambahan (selain Site, Kawasan, Koord., & Status) ditemui untuk dipaparkan.</div>`;
     }
     
-    // PEMBETULAN UTAMA: Definisi Marker SEBELUM addListener
     const marker = new google.maps.Marker({
       position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
       map: map,
@@ -240,7 +246,7 @@ function createOrUpdateMarker(project) {
     });
 
     marker._meta = project;
-    markersBySite.set(site, marker);
+    markersBySite.set(uniqueKey, marker); // Guna uniqueKey
     markersList.push(marker);
     return marker;
   }
@@ -270,9 +276,6 @@ function renderMarkersInBatches(projects, onComplete) {
   runChunk();
 }
 
-/**
- * Menapis projek berdasarkan kawasan aktif dan kategori aktif.
- */
 function filterAndDisplayMarkers() {
     const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
     const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
@@ -301,7 +304,6 @@ function filterAndDisplayMarkers() {
         const type = m._meta._type;
         let isCategoryActive = false;
 
-        // Logik Pisahkan TOWER dan BWA
         if (type === "TOWER") isCategoryActive = menaraActive;
         else if (type === "BWA") isCategoryActive = wifiActive;
         else if (type === "NADI") isCategoryActive = nadiActive;
@@ -312,7 +314,6 @@ function filterAndDisplayMarkers() {
     });
 }
 
-// ---------- DASHBOARD ----------
 const updateDashboard = debounce(function(list) {
   const displayList = list || allProjects || [];
   document.getElementById("total-projects").textContent = displayList.length;
@@ -346,7 +347,6 @@ const updateDashboard = debounce(function(list) {
   });
 }, 200);
 
-// ---------- LOAD SHEETS ----------
 async function loadAllSheetsAndNormalize() {
   const entries = Object.entries(SHEETS);
   const promises = entries.map(([k,id]) => fetchSheetObjectsSafe(k, id));
@@ -367,7 +367,6 @@ async function fetchSheetObjectsSafe(sheetKey, id) {
   }
 }
 
-// ---------- GEOJSON BOUNDARY LAYERS ----------
 async function loadGeoJsonLayer(key, url, baseStyle = {}) {
   try {
     const resp = await fetch(url);
@@ -480,7 +479,6 @@ function updateToggleButtonsUI(activeKey) {
   });
 }
 
-// ---------- UI TOGGLES SETUP ----------
 function setupToggles() {
   document.getElementById("toggle-menara").addEventListener("click", function(){
     this.classList.toggle("active");
@@ -519,17 +517,16 @@ function setupToggles() {
   });
 }
 
-// ---------- AUTO REFRESH ----------
 async function autoRefreshLoop() {
   try {
     const newProjects = await loadAllSheetsAndNormalize();
     newProjects.forEach(np => createOrUpdateMarker(np));
     
-    const newSiteNames = new Set(newProjects.map(p => p.SITE_NAME));
-    for (const [site,m] of markersBySite.entries()) {
-      if (!newSiteNames.has(site)) {
+    const newKeys = new Set(newProjects.map(p => p.SITE_NAME + "_" + p._type));
+    for (const [key,m] of markersBySite.entries()) {
+      if (!newKeys.has(key)) {
         m.setMap(null);
-        markersBySite.delete(site);
+        markersBySite.delete(key);
       }
     }
     markersList = Array.from(markersBySite.values());
@@ -543,7 +540,6 @@ async function autoRefreshLoop() {
   }
 }
 
-// ---------- INIT MAP (callback) ----------
 async function initMap() {
   const mapDiv = document.getElementById("map");
   if(!mapDiv) {
@@ -573,7 +569,6 @@ async function initMap() {
       updateDashboard(allProjects);
     });
 
-    // Load boundaries
     const pDistrict = loadGeoJsonLayer("district", URLs.district);
     const pDun = loadGeoJsonLayer("dun", URLs.dun);
     const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
@@ -583,7 +578,6 @@ async function initMap() {
       await pDun;
       await pPar;
 
-      // Default: Paparkan Daerah (tanpa mewarnakan apa-apa)
       if (ld) {
         toggleBoundaryLayerVisibility("district");
       }
