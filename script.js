@@ -1,4 +1,4 @@
-// script.js (FIXED: Unique Keys & Coordinate Parsing)
+// script.js (FIXED: Duplicate Rows Issue)
 
 // ---------- CONFIG ----------
 const URLs = {
@@ -40,7 +40,6 @@ let hoverInfoWindow = null;
 let refreshIntervalMs = 60_000;
 let batchSize = 300;
 
-// State untuk pengurusan poligon aktif
 let activeFeature = null;
 let activeLayer = null;
 
@@ -54,18 +53,13 @@ function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g, c => ({'&':'&amp
 function debounce(fn, wait=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; };
 function randomHexColor(){ return "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'); }
 
-// FIX: Fungsi untuk membersihkan koordinat (handle koma dan float)
 function cleanFloat(val) {
     if (typeof val === 'number') return val;
     if (!val) return 0;
-    // Tukar koma ke titik (format Malaysia/Excel kadang guna koma)
     const str = String(val).replace(',', '.').trim();
     return parseFloat(str) || 0;
 }
 
-/**
- * Mendapatkan nama kawasan dari GeoJSON Feature.
- */
 function extractFeatureName(feature) {
   const props = ["NAME","name","DISTRICT","DAERAH","DUN","PARLIAMENT","PARLIAMEN"];
   let name = "Sabah";
@@ -78,9 +72,6 @@ function extractFeatureName(feature) {
   return String(name).trim();
 }
 
-/**
- * Menyahaktifkan gaya poligon aktif dari mana-mana lapisan.
- */
 function resetAllLayerStyles() {
     Object.keys(dataLayers).forEach(k => {
         const dl = dataLayers[k];
@@ -127,24 +118,24 @@ async function fetchSheetObjects(sheetId) {
 function normalizeRows(rows, sheetKey, rawCols) {
   const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
   
-  const normalized = rows.map(r => {
+  // PEMBETULAN: Tambah index (i) dalam map function
+  const normalized = rows.map((r, i) => {
     const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
     const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
     const district = get("DISTRICT") || get("DAERAH") || "";
     const dun = get("DUN") || "";
     const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
     
-    // FIX: Gunakan cleanFloat untuk elak ralat jika ada koma
     const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
     const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
     
     const status = get("STATUS") || get("STATUS_1") || "";
     
-    // --- LOGIC: Extract raw details ---
+    // Extract raw details
     const rawDetails = [];
     let count = 0;
-    for(let i=0; i < rawCols.length && count < 15; i++) {
-        const key = rawCols[i]; 
+    for(let colIndex=0; colIndex < rawCols.length && count < 15; colIndex++) {
+        const key = rawCols[colIndex]; 
         if (normalizedKeys.has(key)) continue;
         const value = r[key];
         if (value !== null && value !== "" && value !== undefined) {
@@ -154,6 +145,8 @@ function normalizeRows(rows, sheetKey, rawCols) {
     }
     
     return {
+      // PEMBETULAN: Cipta ID unik sepenuhnya berdasarkan sheet dan nombor baris
+      _id: `${sheetKey}_row_${i}`,
       SITE_NAME: String(site || "").trim(),
       DISTRICT: String(district || "").trim(),
       DUN: String(dun || "").trim(),
@@ -183,9 +176,9 @@ function buildAreaIndex() {
 
 // ---------- MARKERS ----------
 function createOrUpdateMarker(project) {
-  // FIX: Guna kombinasi Nama + Jenis sebagai kunci unik.
-  // Ini menghalang marker NADI dari menimpa marker Menara jika namanya sama.
-  const uniqueKey = project.SITE_NAME + "_" + project._type;
+  // PEMBETULAN: Gunakan ID Unik (_id) yang dijana dari nombor baris
+  // Ini memastikan nama tapak yang sama (duplicate) tetap akan dipaparkan sebagai marker berasingan
+  const uniqueKey = project._id;
   
   const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
   
@@ -246,7 +239,7 @@ function createOrUpdateMarker(project) {
     });
 
     marker._meta = project;
-    markersBySite.set(uniqueKey, marker); // Guna uniqueKey
+    markersBySite.set(uniqueKey, marker); // Guna uniqueKey (_id)
     markersList.push(marker);
     return marker;
   }
@@ -309,6 +302,8 @@ function filterAndDisplayMarkers() {
         else if (type === "NADI") isCategoryActive = nadiActive;
         else if (type === "POP") isCategoryActive = popActive;
 
+        // Nota: Kita guna SITE_NAME untuk semak kawasan (kerana areaIndex based on names),
+        // tapi marker itu sendiri adalah unik.
         const isVisible = visibleSiteNames.has(m._meta.SITE_NAME) && isCategoryActive;
         m.setVisible(isVisible);
     });
@@ -522,7 +517,8 @@ async function autoRefreshLoop() {
     const newProjects = await loadAllSheetsAndNormalize();
     newProjects.forEach(np => createOrUpdateMarker(np));
     
-    const newKeys = new Set(newProjects.map(p => p.SITE_NAME + "_" + p._type));
+    // PEMBETULAN: Guna ID unik dalam set
+    const newKeys = new Set(newProjects.map(p => p._id));
     for (const [key,m] of markersBySite.entries()) {
       if (!newKeys.has(key)) {
         m.setMap(null);
