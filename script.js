@@ -135,6 +135,7 @@ async function fetchSheetObjects(sheetId) {
  * @returns {Object[]}
  */
 function normalizeRows(rows, sheetKey, rawCols) {
+  // Tambah LATITUDE dan LONGITUDE ke dalam senarai `normalizedKeys` supaya ia tidak muncul dalam `_raw_details`
   const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
   
   const normalized = rows.map(r => {
@@ -199,7 +200,7 @@ function buildAreaIndex() {
   });
 }
 
-// ---------- MARKERS (FIXED ReferenceError) ----------
+// ---------- MARKERS (UPDATED) ----------
 function createOrUpdateMarker(project) {
   const site = project.SITE_NAME;
   const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
@@ -228,7 +229,6 @@ function createOrUpdateMarker(project) {
         rawDetailsHtml = `<div style="margin-top: 10px; padding-top: 5px; font-style: italic; color: #777; border-top: 1px solid #eee;">Tiada lajur tambahan (selain Site, Kawasan, Koord., & Status) ditemui untuk dipaparkan.</div>`;
     }
     
-    // *FIX*: Declare marker before adding the listener
     const marker = new google.maps.Marker({
       position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
       map: map,
@@ -244,6 +244,7 @@ function createOrUpdateMarker(project) {
       }
     });
 
+    // --- BAHAGIAN INFO WINDOW DIKEMASKINI ---
     const infowin = new google.maps.InfoWindow({
       content: `
         <div class="info-popup">
@@ -253,11 +254,17 @@ function createOrUpdateMarker(project) {
           <div class="info-row"><div class="info-label">Parlimen:</div><div class="info-value">${escapeHtml(project.PARLIAMENT)}</div></div>
           <div class="info-row"><div class="info-label">Status:</div><div class="info-value">${escapeHtml(project.STATUS)}</div></div>
           
+          <!-- MAKLUMAT BAHARU: LATITUDE DAN LONGITUDE -->
+          <div class="info-row"><div class="info-label">Latitude:</div><div class="info-value">${project.LATITUDE.toFixed(6)}</div></div>
+          <div class="info-row"><div class="info-label">Longitude:</div><div class="info-value">${project.LONGITUDE.toFixed(6)}</div></div>
+          <!-- AKHIR MAKLUMAT BAHARU -->
+          
           ${rawDetailsHtml} 
           
         </div>
       `
     });
+    // ------------------------------------------
 
     marker.addListener("click", () => {
       infowin.open(map, marker);
