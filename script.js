@@ -10,7 +10,7 @@ const URLs = {
 
 const SHEETS = {
   db_bwa: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU",
-  db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU",
+  db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56p0QhawZU",
   db_POP: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8",
   tower: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
 };
@@ -98,24 +98,45 @@ function parseGviz(text) {
   }
 }
 
-// ---------- Google Sheets fetch & normalize ----------
+// ---------- Google Sheets fetch & normalize (UPDATED) ----------
+/**
+ * Mengambil data mentah dari Google Sheet dan mengembalikan baris dan lajur utama.
+ * @param {string} sheetId
+ * @returns {Promise<{rows: Object[], cols: string[]}>}
+ */
 async function fetchSheetObjects(sheetId) {
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Sheet fetch ${sheetId} failed (${res.status})`);
   const text = await res.text();
   const json = parseGviz(text);
-  if (!json || !json.table) return [];
-  const cols = json.table.cols.map(c => (c && c.label) ? c.label : "");
+  if (!json || !json.table) return { rows: [], cols: [] };
+
+  // rawCols: Semua label lajur yang ditukar ke UPPERCASE
+  const rawCols = json.table.cols.map(c => (c && c.label) ? c.label.toUpperCase() : "");
   const rows = json.table.rows || [];
-  return rows.map(r => {
+  
+  const processedRows = rows.map(r => {
     const obj = {};
-    cols.forEach((c, i) => obj[c ? c.toUpperCase() : `COL${i}`] = (r.c && r.c[i] ? r.c[i].v : ""));
+    // Peta nilai sel kepada objek menggunakan label lajur (UPPERCASE)
+    rawCols.forEach((c, i) => obj[c ? c : `COL${i}`] = (r.c && r.c[i] ? r.c[i].v : ""));
     return obj;
   });
+  
+  // Hanya kembalikan lajur dengan label yang sah
+  return { rows: processedRows, cols: rawCols.filter(c => c && !c.startsWith("COL")) }; 
 }
 
-function normalizeRows(rows, sheetKey) {
+/**
+ * Menormalkan data dan mengekstrak maklumat terperinci.
+ * @param {Object[]} rows - Baris data mentah.
+ * @param {string} sheetKey - Kunci sheet.
+ * @param {string[]} rawCols - Susunan label lajur asal (UPPERCASE).
+ * @returns {Object[]}
+ */
+function normalizeRows(rows, sheetKey, rawCols) {
+  const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
+  
   const normalized = rows.map(r => {
     const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
     const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
@@ -126,6 +147,30 @@ function normalizeRows(rows, sheetKey) {
     const lng = parseFloat(get("LONGITUDE") || get("LON") || get("LNG") || 0) || 0;
     const status = get("STATUS") || get("STATUS_1") || "";
     
+    // --- NEW LOGIC: Extract raw details (first 15 unique non-standard columns) ---
+    const rawDetails = [];
+    let count = 0;
+    
+    // rawCols mengandungi semua pengepala lajur dalam susunan asal
+    for(let i=0; i < rawCols.length && count < 15; i++) {
+        const key = rawCols[i]; // Label lajur asal (UPPERCASE)
+        
+        // Langkau lajur yang sudah dinormalkan/dipaparkan dalam maklumat asas
+        if (normalizedKeys.has(key)) continue;
+
+        const value = r[key];
+        
+        // Tambah hanya jika nilai tidak kosong
+        if (value !== null && value !== "" && value !== undefined) {
+            rawDetails.push({ 
+                label: key, // Gunakan label asal
+                value: String(value).trim() 
+            });
+            count++;
+        }
+    }
+    // --- END NEW LOGIC ---
+    
     return {
       SITE_NAME: String(site || "").trim(),
       DISTRICT: String(district || "").trim(),
@@ -135,7 +180,8 @@ function normalizeRows(rows, sheetKey) {
       LONGITUDE: lng,
       STATUS: String(status || "").trim(),
       _sheet: sheetKey,
-      _type: SHEET_TYPE[sheetKey] || "UNKNOWN"
+      _type: SHEET_TYPE[sheetKey] || "UNKNOWN",
+      _raw_details: rawDetails // Simpan lajur terperinci di sini
     };
   }).filter(o => o.SITE_NAME && o.LATITUDE !== 0 && o.LONGITUDE !== 0);
   return normalized;
@@ -153,7 +199,7 @@ function buildAreaIndex() {
   });
 }
 
-// ---------- MARKERS ----------
+// ---------- MARKERS (UPDATED) ----------
 function createOrUpdateMarker(project) {
   const site = project.SITE_NAME;
   const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
@@ -167,6 +213,38 @@ function createOrUpdateMarker(project) {
     m._meta = project;
     return m;
   } else {
+    
+    // NEW LOGIC: Generate HTML for detailed columns
+    let rawDetailsHtml = project._raw_details.map(detail => 
+        // Menggunakan "info-row" dan "info-label/value" sedia ada, mungkin perlu CSS tambahan dalam index.html
+        `<div class="info-row"><div class="info-label">${escapeHtml(detail.label)}:</div><div class="info-value">${escapeHtml(detail.value)}</div></div>`
+    ).join('');
+
+    if (rawDetailsHtml) {
+        // Tambah tajuk untuk maklumat terperinci
+        rawDetailsHtml = `<div class="info-section-title" style="margin-top: 10px; font-weight: bold; border-top: 1px solid #eee; padding-top: 5px;">Maklumat Terperinci (Max 15 Lajur Pertama)</div>` + rawDetailsHtml;
+    }
+
+    const infowin = new google.maps.InfoWindow({
+      content: `
+        <div class="info-popup">
+          <div class="info-title">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
+          <div class="info-row"><div class="info-label">Daerah:</div><div class="info-value">${escapeHtml(project.DISTRICT)}</div></div>
+          <div class="info-row"><div class="info-label">DUN:</div><div class="info-value">${escapeHtml(project.DUN)}</div></div>
+          <div class="info-row"><div class="info-label">Parlimen:</div><div class="info-value">${escapeHtml(project.PARLIAMENT)}</div></div>
+          <div class="info-row"><div class="info-label">Status:</div><div class="info-value">${escapeHtml(project.STATUS)}</div></div>
+          
+          ${rawDetailsHtml} 
+          
+        </div>
+      `
+    });
+
+    marker.addListener("click", () => {
+      infowin.open(map, marker);
+      // Tiada perubahan pada selected-area, ia akan diupdate oleh klik poligon
+    });
+
     const marker = new google.maps.Marker({
       position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
       map: map,
@@ -180,23 +258,6 @@ function createOrUpdateMarker(project) {
         strokeColor: "#ffffff",
         strokeWeight: 1.5
       }
-    });
-
-    const infowin = new google.maps.InfoWindow({
-      content: `
-        <div class="info-popup">
-          <div class="info-title">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
-          <div class="info-row"><div class="info-label">Daerah:</div><div class="info-value">${escapeHtml(project.DISTRICT)}</div></div>
-          <div class="info-row"><div class="info-label">DUN:</div><div class="info-value">${escapeHtml(project.DUN)}</div></div>
-          <div class="info-row"><div class="info-label">Parlimen:</div><div class="info-value">${escapeHtml(project.PARLIAMENT)}</div></div>
-          <div class="info-row"><div class="info-label">Status:</div><div class="info-value">${escapeHtml(project.STATUS)}</div></div>
-        </div>
-      `
-    });
-
-    marker.addListener("click", () => {
-      infowin.open(map, marker);
-      // Tiada perubahan pada selected-area, ia akan diupdate oleh klik poligon
     });
 
     marker._meta = project;
@@ -313,7 +374,7 @@ const updateDashboard = debounce(function(list) {
   });
 }, 200);
 
-// ---------- LOAD SHEETS ----------
+// ---------- LOAD SHEETS (UPDATED) ----------
 async function loadAllSheetsAndNormalize() {
   const entries = Object.entries(SHEETS);
   const promises = entries.map(([k,id]) => fetchSheetObjectsSafe(k, id));
@@ -323,10 +384,11 @@ async function loadAllSheetsAndNormalize() {
   buildAreaIndex();
   return combined;
 }
+
 async function fetchSheetObjectsSafe(sheetKey, id) {
   try {
-    const rows = await fetchSheetObjects(id);
-    return normalizeRows(rows, sheetKey);
+    const data = await fetchSheetObjects(id); // data is { rows, cols }
+    return normalizeRows(data.rows, sheetKey, data.cols); // Hantar lajur asal untuk mengekstrak 15 lajur terperinci
   } catch (e) {
     console.warn("sheet load fail", sheetKey, e);
     return [];
