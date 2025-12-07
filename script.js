@@ -1,5 +1,4 @@
-// script.js (FIXED: Filter logic removed to match total sheet count)
-
+// Projek Web GIS - Updated UI/UX Logic
 // ---------- CONFIG ----------
 const URLs = {
   district: "district.json",
@@ -22,10 +21,10 @@ const SHEET_TYPE = {
 };
 
 const TYPE_CFG = {
-  BWA: { color: "#FF5722", icon: "🗼" },
-  NADI: { color: "#2196F3", icon: "📡" },
-  POP: { color: "#FF9800", icon: "🌐" },
-  TOWER: { color: "#4CAF50", icon: "📶" }
+  BWA: { color: "#4CAF50", icon: "📶", label: "WiFi" },
+  NADI: { color: "#2196F3", icon: "📡", label: "NADI" },
+  POP: { color: "#FF9800", icon: "🌐", label: "POP" },
+  TOWER: { color: "#FF5722", icon: "🗼", label: "Menara" }
 };
 
 // ---------- STATE ----------
@@ -39,16 +38,18 @@ let currentBoundaryKey = null;
 let hoverInfoWindow = null;
 let refreshIntervalMs = 60_000;
 let batchSize = 300;
-
 let activeFeature = null;
 let activeLayer = null;
+let searchTerm = ""; // Untuk fungsi carian
 
 // ---------- UTIL ----------
 function showLoading(on) {
   const el = document.getElementById("loading");
   if (!el) return;
-  el.classList.toggle("show", !!on);
+  if(on) el.classList.remove("hide");
+  else el.classList.add("hide");
 }
+
 function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function debounce(fn, wait=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; };
 function randomHexColor(){ return "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'); }
@@ -125,11 +126,10 @@ function normalizeRows(rows, sheetKey, rawCols) {
     const dun = get("DUN") || "";
     const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
     
-    // Walaupun koordinat mungkin 0, kita masih simpan nilainya.
     const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
     const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
     
-    const status = get("STATUS") || get("STATUS_1") || "";
+    const status = get("STATUS") || get("STATUS_1") || "Tiada Status";
     
     // Extract raw details
     const rawDetails = [];
@@ -145,7 +145,6 @@ function normalizeRows(rows, sheetKey, rawCols) {
     }
     
     return {
-      // Kunci unik berdasarkan sheet dan nombor baris dikekalkan
       _id: `${sheetKey}_row_${i}`, 
       SITE_NAME: String(site || "").trim(),
       DISTRICT: String(district || "").trim(),
@@ -158,8 +157,6 @@ function normalizeRows(rows, sheetKey, rawCols) {
       _type: SHEET_TYPE[sheetKey] || "UNKNOWN",
       _raw_details: rawDetails 
     };
-  // PEMBETULAN UTAMA: Hanya tapis baris jika SITE_NAME benar-benar kosong.
-  // Tidak lagi menapis berdasarkan LATITUDE/LONGITUDE 0 untuk memastikan kiraan total betul.
   }).filter(o => o.SITE_NAME); 
   return normalized;
 }
@@ -178,9 +175,7 @@ function buildAreaIndex() {
 
 // ---------- MARKERS ----------
 function createOrUpdateMarker(project) {
-  // Gunakan ID Unik (_id) yang dijana dari nombor baris
   const uniqueKey = project._id;
-  
   const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
   
   if (markersBySite.has(uniqueKey)) {
@@ -194,43 +189,37 @@ function createOrUpdateMarker(project) {
   } else {
     
     let rawDetailsHtml = project._raw_details.map(detail => 
-        `<div class="info-row"><div class="info-label">${escapeHtml(detail.label)}:</div><div class="info-value">${escapeHtml(detail.value)}</div></div>`
+        `<div class="info-row"><span class="info-label">${escapeHtml(detail.label)}</span><span class="info-val">${escapeHtml(detail.value)}</span></div>`
     ).join('');
 
-    if (rawDetailsHtml) {
-        rawDetailsHtml = `<div class="info-section-title" style="margin-top: 10px; font-weight: bold; border-top: 1px solid #eee; padding-top: 5px;">Maklumat Tapak</div>` + rawDetailsHtml;
-    } else {
-        rawDetailsHtml = `<div style="margin-top: 10px; padding-top: 5px; font-style: italic; color: #777; border-top: 1px solid #eee;">Tiada lajur tambahan (selain Site, Kawasan, Koord., & Status) ditemui untuk dipaparkan.</div>`;
-    }
-    
     const marker = new google.maps.Marker({
       position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
       map: map,
       title: project.SITE_NAME || "",
-      visible: false, // Default hidden
+      visible: false, 
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 6,
         fillColor: cfg.color,
         fillOpacity: 1,
         strokeColor: "#ffffff",
-        strokeWeight: 1.5
+        strokeWeight: 2
       }
     });
 
     const infowin = new google.maps.InfoWindow({
       content: `
         <div class="info-popup">
-          <div class="info-title">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
-          <div class="info-row"><div class="info-label">Daerah:</div><div class="info-value">${escapeHtml(project.DISTRICT)}</div></div>
-          <div class="info-row"><div class="info-label">DUN:</div><div class="info-value">${escapeHtml(project.DUN)}</div></div>
-          <div class="info-row"><div class="info-label">Parlimen:</div><div class="info-value">${escapeHtml(project.PARLIAMENT)}</div></div>
-          <div class="info-row"><div class="info-label">Status:</div><div class="info-value">${escapeHtml(project.STATUS)}</div></div>
-          
-          <div class="info-row"><div class="info-label">Latitude:</div><div class="info-value">${project.LATITUDE.toFixed(6)}</div></div>
-          <div class="info-row"><div class="info-label">Longitude:</div><div class="info-value">${project.LONGITUDE.toFixed(6)}</div></div>
-          
-          ${rawDetailsHtml} 
+          <div class="info-header">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
+          <div class="info-body">
+            <div class="info-row"><span class="info-label">Kategori</span><span class="info-val">${cfg.label}</span></div>
+            <div class="info-row"><span class="info-label">Daerah</span><span class="info-val">${escapeHtml(project.DISTRICT)}</span></div>
+            <div class="info-row"><span class="info-label">DUN</span><span class="info-val">${escapeHtml(project.DUN)}</span></div>
+            <div class="info-row"><span class="info-label">Parlimen</span><span class="info-val">${escapeHtml(project.PARLIAMENT)}</span></div>
+            <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${cfg.color}">${escapeHtml(project.STATUS)}</span></div>
+            <hr style="border:0; border-top:1px solid #eee; margin:8px 0;">
+            ${rawDetailsHtml} 
+          </div>
         </div>
       `
     });
@@ -240,7 +229,7 @@ function createOrUpdateMarker(project) {
     });
 
     marker._meta = project;
-    markersBySite.set(uniqueKey, marker); // Guna uniqueKey (_id)
+    markersBySite.set(uniqueKey, marker);
     markersList.push(marker);
     return marker;
   }
@@ -278,10 +267,9 @@ function filterAndDisplayMarkers() {
 
     let filteredList = allProjects;
     
-    // Tapis mengikut kawasan
+    // Tapis mengikut kawasan (Sempadan)
     if (activeFeature && currentBoundaryKey) {
         let areaName = extractFeatureName(activeFeature);
-        
         filteredList = allProjects.filter(p => {
             if (currentBoundaryKey === 'district') return p.DISTRICT === areaName;
             if (currentBoundaryKey === 'dun') return p.DUN === areaName;
@@ -290,13 +278,22 @@ function filterAndDisplayMarkers() {
         });
     }
 
+    // Tapis mengikut Carian (Search)
+    if (searchTerm && searchTerm.length > 0) {
+      const term = searchTerm.toLowerCase();
+      filteredList = filteredList.filter(p => 
+        (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
+        (p.DISTRICT && p.DISTRICT.toLowerCase().includes(term)) ||
+        (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term))
+      );
+    }
+
     updateDashboard(filteredList);
     
-    // Tapis marker yang akan dipaparkan di peta (Perlu Lat/Lng bukan 0 untuk dipaparkan dengan betul)
     const visibleProjectKeys = new Set(
         filteredList
-            .filter(p => p.LATITUDE !== 0 && p.LONGITUDE !== 0) // Hanya kira yang boleh dipetakan
-            .map(p => p._id) // Guna ID unik
+            .filter(p => p.LATITUDE !== 0 && p.LONGITUDE !== 0) 
+            .map(p => p._id) 
     );
 
     markersList.forEach(m => {
@@ -316,8 +313,8 @@ function filterAndDisplayMarkers() {
 const updateDashboard = debounce(function(list) {
   const displayList = list || allProjects || [];
   
-  // Dashboard count kini mengambil kira SEMUA baris dalam sheet (selain baris kosong)
-  document.getElementById("total-projects").textContent = displayList.length; 
+  // Animate numbers
+  animateValue("total-projects", parseInt(document.getElementById("total-projects").textContent), displayList.length, 500);
   
   const counts = { menara:0, nadi:0, wifi:0, pop:0 };
   const statusCounts = {};
@@ -328,26 +325,64 @@ const updateDashboard = debounce(function(list) {
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
     
-    statusCounts[p.STATUS] = (statusCounts[p.STATUS] || 0) + 1;
+    // Normalize status key for counting
+    const s = p.STATUS || "Tiada Maklumat";
+    statusCounts[s] = (statusCounts[s] || 0) + 1;
   });
   
-  document.getElementById("menara-count").textContent = counts.menara || 0;
-  document.getElementById("nadi-count").textContent = counts.nadi || 0;
-  document.getElementById("wifi-count").textContent = counts.wifi || 0;
-  document.getElementById("pop-count").textContent = counts.pop || 0;
+  document.getElementById("menara-count").textContent = counts.menara;
+  document.getElementById("nadi-count").textContent = counts.nadi;
+  document.getElementById("wifi-count").textContent = counts.wifi;
+  document.getElementById("pop-count").textContent = counts.pop;
 
+  // Render Status Bars
   const statusEl = document.getElementById("status-list");
   statusEl.innerHTML = "";
-  Object.entries(statusCounts)
-    .sort(([, a], [, b]) => b - a)
-    .forEach(([k,v]) => {
+  
+  // Convert to array and sort
+  const sortedStatus = Object.entries(statusCounts).sort(([, a], [, b]) => b - a);
+  const maxCount = sortedStatus.length > 0 ? sortedStatus[0][1] : 1;
+
+  sortedStatus.forEach(([k,v]) => {
     if (!k) return;
+    
+    const percent = Math.round((v / displayList.length) * 100);
+    const barWidth = Math.round((v / maxCount) * 100); // Relative to max for visual scaling
+    
     const div = document.createElement("div");
     div.className = "status-item";
-    div.innerHTML = `<div class="status-name">${k}</div><div class="status-count">${v}</div>`;
+    div.innerHTML = `
+      <div class="status-header">
+        <span>${escapeHtml(k)}</span>
+        <span>${v} (${percent}%)</span>
+      </div>
+      <div class="progress-bg">
+        <div class="progress-fill" style="width: ${barWidth}%"></div>
+      </div>
+    `;
     statusEl.appendChild(div);
   });
 }, 200);
+
+// Helper util for smooth number transition
+function animateValue(id, start, end, duration) {
+    if (start === end) return;
+    const range = end - start;
+    let current = start;
+    const increment = end > start ? 1 : -1;
+    const stepTime = Math.abs(Math.floor(duration / range));
+    const obj = document.getElementById(id);
+    if (!obj) return;
+    
+    const timer = setInterval(function() {
+        current += increment;
+        obj.innerHTML = current;
+        if (current == end) {
+            clearInterval(timer);
+        }
+    }, Math.max(stepTime, 10)); // Min 10ms
+}
+
 
 async function loadAllSheetsAndNormalize() {
   const entries = Object.entries(SHEETS);
@@ -380,9 +415,9 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
     
     layer._baseStyle = { 
         strokeWeight: baseStyle.strokeWeight || 1,
-        strokeColor: baseStyle.strokeColor || "#888888",
-        fillOpacity: 0.0,
-        fillColor: (baseStyle.fillColor || "#CCCCCC")
+        strokeColor: baseStyle.strokeColor || "#666",
+        fillOpacity: 0.05,
+        fillColor: (baseStyle.fillColor || "#FFF")
     };
     layer.setStyle(feature => layer._baseStyle);
 
@@ -392,15 +427,15 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
 
       const hoverStyle = {
         strokeWeight: 2,
-        strokeColor: "#ffffff",
-        fillOpacity: 0.2,
-        fillColor: (activeLayer && activeLayer._baseStyle && activeLayer._baseStyle.fillColor) ? activeLayer._baseStyle.fillColor : "#CCCCCC"
+        strokeColor: "#4F46E5",
+        fillOpacity: 0.3,
+        fillColor: "#818cf8"
       };
       layer.overrideStyle(e.feature, hoverStyle);
 
       if (!hoverInfoWindow) hoverInfoWindow = new google.maps.InfoWindow();
       const title = extractFeatureName(e.feature);
-      hoverInfoWindow.setContent(`<div style="padding:5px; font-weight:700;">${escapeHtml(title)}</div>`);
+      hoverInfoWindow.setContent(`<div style="padding:8px 12px; font-weight:600; color:#4F46E5;">${escapeHtml(title)}</div>`);
       if (e.latLng) hoverInfoWindow.setPosition(e.latLng);
       hoverInfoWindow.open(map);
     });
@@ -441,12 +476,11 @@ function handleFeatureClick(key, feature) {
     toggleBoundaryLayerVisibility(key); 
     resetAllLayerStyles(); 
 
-    const col = randomHexColor();
     const activeStyle = {
-        strokeWeight: 3,
-        strokeColor: "#ffffff",
-        fillOpacity: 0.6,
-        fillColor: col
+        strokeWeight: 2,
+        strokeColor: "#4338ca",
+        fillOpacity: 0.5,
+        fillColor: "#4338ca"
     };
     layerObj.overrideStyle(feature, activeStyle);
 
@@ -482,41 +516,45 @@ function updateToggleButtonsUI(activeKey) {
 }
 
 function setupToggles() {
-  document.getElementById("toggle-menara").addEventListener("click", function(){
-    this.classList.toggle("active");
-    filterAndDisplayMarkers();
-  });
-
-  document.getElementById("toggle-nadi").addEventListener("click", function(){
-    this.classList.toggle("active");
-    filterAndDisplayMarkers();
-  });
-
-  document.getElementById("toggle-pop").addEventListener("click", function(){
-    this.classList.toggle("active");
-    filterAndDisplayMarkers();
-  });
-
-  document.getElementById("toggle-wifi").addEventListener("click", function(){
-    this.classList.toggle("active");
-    filterAndDisplayMarkers();
+  const categories = ["menara", "nadi", "pop", "wifi"];
+  categories.forEach(cat => {
+      document.getElementById(`toggle-${cat}`).addEventListener("click", function(){
+        this.classList.toggle("active");
+        filterAndDisplayMarkers();
+      });
   });
   
-  document.getElementById("toggle-daerah").addEventListener("click", function(){
-    toggleBoundaryLayerVisibility("district");
-    document.getElementById("selected-area").textContent = "Sabah";
-    filterAndDisplayMarkers(); 
+  const boundaries = [
+      {id: "toggle-daerah", key: "district"},
+      {id: "toggle-dun", key: "dun"},
+      {id: "toggle-parliament", key: "parliament"}
+  ];
+
+  boundaries.forEach(b => {
+      document.getElementById(b.id).addEventListener("click", function(){
+        // Jika sudah aktif, matikan (toggle off)
+        if(this.classList.contains('active') && currentBoundaryKey === b.key) {
+            this.classList.remove('active');
+            dataLayers[b.key].setMap(null);
+            currentBoundaryKey = null;
+            activeFeature = null;
+            document.getElementById("selected-area").textContent = "SELURUH SABAH";
+        } else {
+            toggleBoundaryLayerVisibility(b.key);
+            document.getElementById("selected-area").textContent = "SABAH (" + b.key.toUpperCase() + ")";
+        }
+        filterAndDisplayMarkers(); 
+      });
   });
-  document.getElementById("toggle-dun").addEventListener("click", function(){
-    toggleBoundaryLayerVisibility("dun");
-    document.getElementById("selected-area").textContent = "Sabah";
-    filterAndDisplayMarkers(); 
-  });
-  document.getElementById("toggle-parliament").addEventListener("click", function(){
-    toggleBoundaryLayerVisibility("parliament");
-    document.getElementById("selected-area").textContent = "Sabah";
-    filterAndDisplayMarkers(); 
-  });
+
+  // Setup Search Listener
+  const searchInput = document.getElementById("search-input");
+  if(searchInput) {
+      searchInput.addEventListener("input", (e) => {
+          searchTerm = e.target.value;
+          filterAndDisplayMarkers();
+      });
+  }
 }
 
 async function autoRefreshLoop() {
@@ -524,7 +562,6 @@ async function autoRefreshLoop() {
     const newProjects = await loadAllSheetsAndNormalize();
     newProjects.forEach(np => createOrUpdateMarker(np));
     
-    // Guna ID unik dalam set
     const newKeys = new Set(newProjects.map(p => p._id));
     for (const [key,m] of markersBySite.entries()) {
       if (!newKeys.has(key)) {
@@ -550,16 +587,36 @@ async function initMap() {
       return;
   }
 
+  // Google Maps Style: Clean & Modern (Silver/Grayscale to make markers pop)
+  const silverStyle = [
+    { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
+    { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
+    { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+    { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+    { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] },
+    { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
+    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }
+  ];
+
   map = new google.maps.Map(mapDiv, {
     center: { lat: 5.9804, lng: 116.0735 }, // Sabah
     zoom: 8,
-    mapTypeId: "satellite",
+    mapTypeId: "roadmap", // Changed to roadmap for cleaner UI, user can switch to satellite
+    styles: silverStyle,
+    disableDefaultUI: false, // Keep default UI but minimize it
     streetViewControl: false,
-    fullscreenControl: true,
-    mapTypeControlOptions: {
-        position: google.maps.ControlPosition.TOP_LEFT
-    }
+    mapTypeControl: true,
+    mapTypeControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT, style: google.maps.MapTypeControlStyle.DROPDOWN_MENU },
+    zoomControl: true,
+    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM }
   });
+  
   showLoading(true);
 
   try {
@@ -580,10 +637,6 @@ async function initMap() {
       const ld = await pDistrict;
       await pDun;
       await pPar;
-
-      if (ld) {
-        toggleBoundaryLayerVisibility("district");
-      }
       setupToggles();
     });
 
@@ -591,7 +644,7 @@ async function initMap() {
 
   } catch (e) {
     console.error("initMap main error", e);
-    console.log("Gagal memuatkan data. Sila semak console (F12) untuk ralat.");
+    alert("Gagal memuatkan data. Sila semak sambungan internet.");
   } finally {
     showLoading(false);
   }
