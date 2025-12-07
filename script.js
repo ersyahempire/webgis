@@ -8,7 +8,7 @@ const URLs = {
 
 const SHEETS = {
   db_bwa: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU",
-  db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU",
+  db_pim: "1WyZiw72LOVytssAuymJS_TIgckLCUqY56pB0QhawZU",
   db_POP: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8",
   tower: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
 };
@@ -109,7 +109,7 @@ async function fetchSheetObjects(sheetId) {
   
   const processedRows = rows.map(r => {
     const obj = {};
-    rawCols.forEach((c, i) => obj[c ? c : `COL${i}`] = (r.c && r.c[i] ? r.c[i].v : ""));
+    rawCols.forEach((c, i) => obj[c ? c : `COL${i}`} = (r.c && r.c[i] ? r.c[i].v : ""));
     return obj;
   });
   
@@ -332,21 +332,22 @@ const updateDashboard = debounce(function(list) {
   animateValue("total-projects", parseInt(document.getElementById("total-projects").textContent), displayList.length, 500);
   
   const counts = { menara:0, nadi:0, wifi:0, pop:0 };
-  const statusCounts = { "SIAP": 0, "PEMBINAAN": 0, "PERANCANGAN": 0 }; // Hanya 3 status ini
   
+  // 1. Dynamic Status Counting based on actual data header "STATUS"
+  const dynamicStatusCounts = {};
+
   displayList.forEach(p => {
     // Category Counts
     if (p._type === "TOWER") counts.menara++;
     if (p._type === "BWA") counts.wifi++;
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
-    
-    // Status Counts - Logic Pemadanan Ketat (Strict Mapping)
-    const s = (p.STATUS || "").toUpperCase();
-    if (s.includes("SIAP")) statusCounts["SIAP"]++;
-    else if (s.includes("BINA") || s.includes("IMPLEMENTATION") || s.includes("PELAKSANAAN")) statusCounts["PEMBINAAN"]++;
-    else if (s.includes("RANCANG") || s.includes("PLANNING") || s.includes("BARU")) statusCounts["PERANCANGAN"]++;
-    // Status lain diabaikan dalam kiraan status dashboard, tetapi masih dikira dalam jumlah projek
+
+    // Populate dynamic status counts
+    const s = String(p.STATUS || "Tidak Dinyatakan").trim(); 
+    if (s) {
+      dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
+    }
   });
   
   document.getElementById("menara-count").textContent = counts.menara;
@@ -354,32 +355,43 @@ const updateDashboard = debounce(function(list) {
   document.getElementById("wifi-count").textContent = counts.wifi;
   document.getElementById("pop-count").textContent = counts.pop;
 
-  // Render Status Bars - Fixed Order (UPDATED FOR PERCENTAGE AND VISUAL APPEAL)
+  // Render Status Bars - Dynamic Status (UPDATED)
   const statusEl = document.getElementById("status-list");
   statusEl.innerHTML = "";
   
-  const validStatuses = ["SIAP", "PEMBINAAN", "PERANCANGAN"];
+  // Sort the statuses for consistent display (e.g., by count descending)
+  const sortedStatuses = Object.entries(dynamicStatusCounts)
+      .sort(([, countA], [, countB]) => countB - countA); // Sort by count descending
 
-  validStatuses.forEach((k) => {
-    const v = statusCounts[k];
-    const percent = displayList.length > 0 ? Math.round((v / displayList.length) * 100) : 0;
+  const totalProjects = displayList.length;
+
+  sortedStatuses.forEach(([statusName, count]) => {
+    const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
     const barWidth = percent; 
     
-    // Define gradient colors based on status
-    let startColor = "#ccc", endColor = "#999";
-    
-    if(k === "SIAP") { startColor = "#81c784"; endColor = "#4CAF50"; } // Green
-    if(k === "PEMBINAAN") { startColor = "#64b5f6"; endColor = "#2196F3"; } // Blue
-    if(k === "PERANCANGAN") { startColor = "#ffb74d"; endColor = "#FF9800"; } // Orange
+    // Simple color logic for dynamic statuses, using a fallback and making key statuses distinct.
+    let endColor = "#4F46E5"; // Default primary color
+    let startColor = "#818cf8";
+
+    const statusUpper = statusName.toUpperCase();
+    if(statusUpper.includes("SIAP") || statusUpper.includes("SELESAI") || statusUpper.includes("COMPLETE")) { 
+        endColor = "#4CAF50"; startColor = "#81c784"; // Green (Siap)
+    } else if(statusUpper.includes("BINA") || statusUpper.includes("IMPLEMENTASI") || statusUpper.includes("PEMBINAAN") || statusUpper.includes("IN PROGRESS")) { 
+        endColor = "#2196F3"; startColor = "#64b5f6"; // Blue (Pembinaan/Implementasi) 
+    } else if(statusUpper.includes("TANGGUH") || statusUpper.includes("DIBATALKAN") || statusUpper.includes("CANCEL")) {
+        endColor = "#F44336"; startColor = "#e57373"; // Red (Tertangguh/Dibatalkan)
+    } else if(statusUpper.includes("RANCANG") || statusUpper.includes("PLANNING") || statusUpper.includes("BARU")) {
+        endColor = "#FF9800"; startColor = "#ffb74d"; // Orange (Perancangan/Baru)
+    } 
 
     const div = document.createElement("div");
     div.className = "status-item";
     div.innerHTML = `
       <div class="status-header">
-        <span class="status-name">${escapeHtml(k)}</span>
+        <span class="status-name">${escapeHtml(statusName)}</span>
         <div>
-            <span class="status-percent" style="color: ${endColor};">${percent}%</span>
-            <span class="status-count">(${v})</span>
+            <!-- Format yang diminta: N (P%) -->
+            <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
         </div>
       </div>
       <div class="progress-bg">
@@ -682,7 +694,8 @@ async function initMap() {
 
   } catch (e) {
     console.error("initMap main error", e);
-    alert("Gagal memuatkan data. Sila semak sambungan internet.");
+    // Gantikan alert() dengan console.error() mengikut panduan
+    console.error("Gagal memuatkan data. Sila semak sambungan internet.");
   } finally {
     showLoading(false);
   }
