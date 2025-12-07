@@ -354,34 +354,36 @@ const updateDashboard = debounce(function(list) {
   document.getElementById("wifi-count").textContent = counts.wifi;
   document.getElementById("pop-count").textContent = counts.pop;
 
-  // Render Status Bars - Fixed Order
+  // Render Status Bars - Fixed Order (UPDATED FOR PERCENTAGE AND VISUAL APPEAL)
   const statusEl = document.getElementById("status-list");
   statusEl.innerHTML = "";
   
-  const totalStatusCount = statusCounts["SIAP"] + statusCounts["PEMBINAAN"] + statusCounts["PERANCANGAN"];
-  const displayTotal = totalStatusCount > 0 ? totalStatusCount : 1; // Prevent div by zero
-
   const validStatuses = ["SIAP", "PEMBINAAN", "PERANCANGAN"];
 
   validStatuses.forEach((k) => {
     const v = statusCounts[k];
-    const percent = Math.round((v / displayList.length) * 100) || 0; // % dari TOTAL projek yang dipaparkan
-    const barWidth = Math.round((v / displayList.length) * 100) || 0; 
+    const percent = displayList.length > 0 ? Math.round((v / displayList.length) * 100) : 0;
+    const barWidth = percent; 
     
-    let color = "#999";
-    if(k === "SIAP") color = "#4CAF50"; // Green
-    if(k === "PEMBINAAN") color = "#2196F3"; // Blue
-    if(k === "PERANCANGAN") color = "#FF9800"; // Orange
+    // Define gradient colors based on status
+    let startColor = "#ccc", endColor = "#999";
+    
+    if(k === "SIAP") { startColor = "#81c784"; endColor = "#4CAF50"; } // Green
+    if(k === "PEMBINAAN") { startColor = "#64b5f6"; endColor = "#2196F3"; } // Blue
+    if(k === "PERANCANGAN") { startColor = "#ffb74d"; endColor = "#FF9800"; } // Orange
 
     const div = document.createElement("div");
     div.className = "status-item";
     div.innerHTML = `
       <div class="status-header">
-        <span>${escapeHtml(k)}</span>
-        <span>${v}</span>
+        <span class="status-name">${escapeHtml(k)}</span>
+        <div>
+            <span class="status-percent" style="color: ${endColor};">${percent}%</span>
+            <span class="status-count">(${v})</span>
+        </div>
       </div>
       <div class="progress-bg">
-        <div class="progress-fill" style="width: ${barWidth}%; background-color: ${color};"></div>
+        <div class="progress-fill" style="width: ${barWidth}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
       </div>
     `;
     statusEl.appendChild(div);
