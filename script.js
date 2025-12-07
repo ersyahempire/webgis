@@ -129,14 +129,18 @@ function normalizeRows(rows, sheetKey, rawCols) {
     const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
     const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
     
-    const status = get("STATUS") || get("STATUS_1") || "Tiada Status";
+    // Normalize status untuk memastikan data konsisten untuk filtering
+    const rawStatus = get("STATUS") || get("STATUS_1") || "Tiada Status";
     
-    // Extract raw details
+    // Extract raw details - Limit to first 15 distinct columns that are NOT main keys
     const rawDetails = [];
     let count = 0;
+    
+    // Iterate all cols to find first 15 valid additional properties
     for(let colIndex=0; colIndex < rawCols.length && count < 15; colIndex++) {
         const key = rawCols[colIndex]; 
-        if (normalizedKeys.has(key)) continue;
+        if (normalizedKeys.has(key)) continue; // Skip main keys
+        
         const value = r[key];
         if (value !== null && value !== "" && value !== undefined) {
             rawDetails.push({ label: key, value: String(value).trim() });
@@ -152,7 +156,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
       PARLIAMENT: String(parliament || "").trim(),
       LATITUDE: lat,
       LONGITUDE: lng,
-      STATUS: String(status || "").trim(),
+      STATUS: String(rawStatus).trim(),
       _sheet: sheetKey,
       _type: SHEET_TYPE[sheetKey] || "UNKNOWN",
       _raw_details: rawDetails 
@@ -188,15 +192,20 @@ function createOrUpdateMarker(project) {
     return m;
   } else {
     
+    // Jana HTML untuk 15 column tambahan
     let rawDetailsHtml = project._raw_details.map(detail => 
         `<div class="info-row"><span class="info-label">${escapeHtml(detail.label)}</span><span class="info-val">${escapeHtml(detail.value)}</span></div>`
     ).join('');
+
+    if(rawDetailsHtml) {
+        rawDetailsHtml = `<div class="section-header">Maklumat Tambahan</div>` + rawDetailsHtml;
+    }
 
     const marker = new google.maps.Marker({
       position: { lat: Number(project.LATITUDE), lng: Number(project.LONGITUDE) },
       map: map,
       title: project.SITE_NAME || "",
-      visible: false, 
+      visible: false, // Default: Hidden (OFF)
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 6,
@@ -207,17 +216,21 @@ function createOrUpdateMarker(project) {
       }
     });
 
+    // Kemaskini InfoWindow mengikut permintaan (Main info explicitly listed)
     const infowin = new google.maps.InfoWindow({
       content: `
         <div class="info-popup">
           <div class="info-header">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
           <div class="info-body">
+            <div class="section-header">Maklumat Utama</div>
             <div class="info-row"><span class="info-label">Kategori</span><span class="info-val">${cfg.label}</span></div>
             <div class="info-row"><span class="info-label">Daerah</span><span class="info-val">${escapeHtml(project.DISTRICT)}</span></div>
             <div class="info-row"><span class="info-label">DUN</span><span class="info-val">${escapeHtml(project.DUN)}</span></div>
             <div class="info-row"><span class="info-label">Parlimen</span><span class="info-val">${escapeHtml(project.PARLIAMENT)}</span></div>
             <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${cfg.color}">${escapeHtml(project.STATUS)}</span></div>
-            <hr style="border:0; border-top:1px solid #eee; margin:8px 0;">
+            <div class="info-row"><span class="info-label">Latitude</span><span class="info-val">${project.LATITUDE.toFixed(5)}</span></div>
+            <div class="info-row"><span class="info-label">Longitude</span><span class="info-val">${project.LONGITUDE.toFixed(5)}</span></div>
+            
             ${rawDetailsHtml} 
           </div>
         </div>
@@ -260,6 +273,7 @@ function renderMarkersInBatches(projects, onComplete) {
 }
 
 function filterAndDisplayMarkers() {
+    // Check toggle status from DOM class 'active'
     const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
     const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
     const popActive = document.getElementById("toggle-pop")?.classList.contains("active");
@@ -305,6 +319,7 @@ function filterAndDisplayMarkers() {
         else if (type === "NADI") isCategoryActive = nadiActive;
         else if (type === "POP") isCategoryActive = popActive;
 
+        // Logic: Marker visible ONLY if category button is ACTIVE AND project is in filtered list
         const isVisible = visibleProjectKeys.has(m._meta._id) && isCategoryActive;
         m.setVisible(isVisible);
     });
@@ -317,17 +332,21 @@ const updateDashboard = debounce(function(list) {
   animateValue("total-projects", parseInt(document.getElementById("total-projects").textContent), displayList.length, 500);
   
   const counts = { menara:0, nadi:0, wifi:0, pop:0 };
-  const statusCounts = {};
+  const statusCounts = { "SIAP": 0, "PEMBINAAN": 0, "PERANCANGAN": 0 }; // Hanya 3 status ini
   
   displayList.forEach(p => {
+    // Category Counts
     if (p._type === "TOWER") counts.menara++;
     if (p._type === "BWA") counts.wifi++;
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
     
-    // Normalize status key for counting
-    const s = p.STATUS || "Tiada Maklumat";
-    statusCounts[s] = (statusCounts[s] || 0) + 1;
+    // Status Counts - Logic Pemadanan Ketat (Strict Mapping)
+    const s = (p.STATUS || "").toUpperCase();
+    if (s.includes("SIAP")) statusCounts["SIAP"]++;
+    else if (s.includes("BINA") || s.includes("IMPLEMENTATION") || s.includes("PELAKSANAAN")) statusCounts["PEMBINAAN"]++;
+    else if (s.includes("RANCANG") || s.includes("PLANNING") || s.includes("BARU")) statusCounts["PERANCANGAN"]++;
+    // Status lain diabaikan dalam kiraan status dashboard, tetapi masih dikira dalam jumlah projek
   });
   
   document.getElementById("menara-count").textContent = counts.menara;
@@ -335,29 +354,34 @@ const updateDashboard = debounce(function(list) {
   document.getElementById("wifi-count").textContent = counts.wifi;
   document.getElementById("pop-count").textContent = counts.pop;
 
-  // Render Status Bars
+  // Render Status Bars - Fixed Order
   const statusEl = document.getElementById("status-list");
   statusEl.innerHTML = "";
   
-  // Convert to array and sort
-  const sortedStatus = Object.entries(statusCounts).sort(([, a], [, b]) => b - a);
-  const maxCount = sortedStatus.length > 0 ? sortedStatus[0][1] : 1;
+  const totalStatusCount = statusCounts["SIAP"] + statusCounts["PEMBINAAN"] + statusCounts["PERANCANGAN"];
+  const displayTotal = totalStatusCount > 0 ? totalStatusCount : 1; // Prevent div by zero
 
-  sortedStatus.forEach(([k,v]) => {
-    if (!k) return;
+  const validStatuses = ["SIAP", "PEMBINAAN", "PERANCANGAN"];
+
+  validStatuses.forEach((k) => {
+    const v = statusCounts[k];
+    const percent = Math.round((v / displayList.length) * 100) || 0; // % dari TOTAL projek yang dipaparkan
+    const barWidth = Math.round((v / displayList.length) * 100) || 0; 
     
-    const percent = Math.round((v / displayList.length) * 100);
-    const barWidth = Math.round((v / maxCount) * 100); // Relative to max for visual scaling
-    
+    let color = "#999";
+    if(k === "SIAP") color = "#4CAF50"; // Green
+    if(k === "PEMBINAAN") color = "#2196F3"; // Blue
+    if(k === "PERANCANGAN") color = "#FF9800"; // Orange
+
     const div = document.createElement("div");
     div.className = "status-item";
     div.innerHTML = `
       <div class="status-header">
         <span>${escapeHtml(k)}</span>
-        <span>${v} (${percent}%)</span>
+        <span>${v}</span>
       </div>
       <div class="progress-bg">
-        <div class="progress-fill" style="width: ${barWidth}%"></div>
+        <div class="progress-fill" style="width: ${barWidth}%; background-color: ${color};"></div>
       </div>
     `;
     statusEl.appendChild(div);
@@ -587,7 +611,7 @@ async function initMap() {
       return;
   }
 
-  // Google Maps Style: Clean & Modern (Silver/Grayscale to make markers pop)
+  // Google Maps Style: Clean & Modern (Silver/Grayscale)
   const silverStyle = [
     { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
     { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
@@ -607,9 +631,9 @@ async function initMap() {
   map = new google.maps.Map(mapDiv, {
     center: { lat: 5.9804, lng: 116.0735 }, // Sabah
     zoom: 8,
-    mapTypeId: "roadmap", // Changed to roadmap for cleaner UI, user can switch to satellite
+    mapTypeId: "roadmap", 
     styles: silverStyle,
-    disableDefaultUI: false, // Keep default UI but minimize it
+    disableDefaultUI: false, 
     streetViewControl: false,
     mapTypeControl: true,
     mapTypeControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT, style: google.maps.MapTypeControlStyle.DROPDOWN_MENU },
@@ -637,7 +661,19 @@ async function initMap() {
       const ld = await pDistrict;
       await pDun;
       await pPar;
+      
+      // Default View Logic:
+      // Hanya aktifkan layer daerah (district)
+      if (ld) {
+        dataLayers['district'].setMap(map);
+        currentBoundaryKey = 'district';
+      }
+      
+      // Pastikan fungsi toggle menghormati kelas 'active' di HTML
       setupToggles();
+      
+      // Filter awal - semak butang 'active' (sekarang semua OFF default untuk markers)
+      filterAndDisplayMarkers();
     });
 
     setInterval(() => { autoRefreshLoop(); }, refreshIntervalMs);
