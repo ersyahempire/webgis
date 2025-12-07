@@ -385,17 +385,17 @@ body {
     <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      <!-- DEBUG: Added 'active' class to these buttons so markers show up on load -->
-      <button class="toggle-btn active" id="toggle-menara" title="Menara">
+      <!-- Default: All inactive as requested (removed 'active' class) -->
+      <button class="toggle-btn" id="toggle-menara" title="Menara">
         <i class="fas fa-broadcast-tower" style="color: #FF5722;"></i> <span>Menara</span>
       </button>
-      <button class="toggle-btn active" id="toggle-nadi" title="NADI">
+      <button class="toggle-btn" id="toggle-nadi" title="NADI">
         <i class="fas fa-satellite-dish" style="color: #2196F3;"></i> <span>NADI</span>
       </button>
-      <button class="toggle-btn active" id="toggle-wifi" title="WiFi">
+      <button class="toggle-btn" id="toggle-wifi" title="WiFi">
         <i class="fas fa-wifi" style="color: #4CAF50;"></i> <span>WiFi</span>
       </button>
-      <button class="toggle-btn active" id="toggle-pop" title="POP">
+      <button class="toggle-btn" id="toggle-pop" title="POP">
         <i class="fas fa-globe" style="color: #FF9800;"></i> <span>POP</span>
       </button>
     </div>
@@ -1107,7 +1107,7 @@ body {
           // Pastikan fungsi toggle menghormati kelas 'active' di HTML
           setupToggles();
           
-          // Filter awal - semak butang 'active' (sekarang semua ON default untuk markers)
+          // Filter awal - semak butang 'active' (sekarang semua OFF default untuk markers)
           filterAndDisplayMarkers();
         });
 
