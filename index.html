@@ -418,7 +418,7 @@ body {
   </script>
 
   <script>
-   // Projek Web GIS - Debugged & Optimized Logic
+    // Projek Web GIS - Debugged & Optimized Logic
 // ---------------------------------------------------
 
 // ---------- CONFIG ----------
@@ -495,11 +495,9 @@ function cleanFloat(val) {
 }
 
 // FIX: Generate ID berdasarkan kandungan, bukan nombor baris
-// Ini mengelakkan masalah apabila Google Sheet di-filter/sort
 function generateStableId(rowObj, type) {
   const name = normalizeString(rowObj.SITE_NAME || "UNKNOWN");
   const district = normalizeString(rowObj.DISTRICT || "SABAH");
-  // Hash mudah: Guna nama tapak + daerah + jenis untuk ID unik
   return `${type}_${name.replace(/\s+/g, '_')}_${district.replace(/\s+/g, '_')}`;
 }
 
@@ -538,7 +536,6 @@ function parseGviz(text) {
 }
 
 async function fetchSheetObjects(sheetId) {
-  // Tambah &tq= untuk pastikan kita tarik data mentah tanpa terkesan filter UI user (kadang-kadang membantu)
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&tq=`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Sheet fetch ${sheetId} failed (${res.status})`);
@@ -573,7 +570,6 @@ function normalizeRows(rows, sheetKey, rawCols) {
 
     const rawStatus = get("STATUS") || get("STATUS_1") || "Tiada Status";
 
-    // Extract Extra Details
     const rawDetails = [];
     let count = 0;
     for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
@@ -588,8 +584,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
 
     const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
     
-    // FIX: Pre-validate coordinate validity
-    const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100); // Rudimentary Sabah check
+    const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100); 
 
     const rowObj = {
       SITE_NAME: String(site || "N/A").trim(),
@@ -605,11 +600,10 @@ function normalizeRows(rows, sheetKey, rawCols) {
       _validCoord: isValidCoordinate
     };
 
-    // FIX: Guna Stable ID
     rowObj._id = generateStableId(rowObj, type);
 
     return rowObj;
-  }).filter(o => o.SITE_NAME !== "N/A"); // Buang baris kosong sepenuhnya
+  }).filter(o => o.SITE_NAME !== "N/A"); 
 
   return normalized;
 }
@@ -619,7 +613,7 @@ function buildAreaIndex() {
   allProjects.forEach(p => {
     [p.DISTRICT, p.DUN, p.PARLIAMENT].forEach(k => {
       if (!k) return;
-      const key = normalizeString(k); // Index guna normalized string
+      const key = normalizeString(k);
       if (!areaIndex.has(key)) areaIndex.set(key, new Set());
       areaIndex.get(key).add(p.SITE_NAME);
     });
@@ -628,7 +622,6 @@ function buildAreaIndex() {
 
 // ---------- MARKERS LOGIC ----------
 function createOrUpdateMarker(project) {
-  // Jika koordinat rosak (0,0), jangan buat marker langsung
   if (!project._validCoord) return null;
 
   const uniqueKey = project._id;
@@ -636,10 +629,8 @@ function createOrUpdateMarker(project) {
 
   if (markersBySite.has(uniqueKey)) {
     const m = markersBySite.get(uniqueKey);
-    // Update data meta terkini (penting jika status berubah di sheet)
     m._meta = project; 
     
-    // Update posisi hanya jika berubah (optimization)
     const pos = m.getPosition();
     if (!pos || Math.abs(pos.lat() - project.LATITUDE) > 0.0001 || Math.abs(pos.lng() - project.LONGITUDE) > 0.0001) {
        m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
@@ -670,6 +661,7 @@ function createOrUpdateMarker(project) {
       }
     });
 
+    // UPDATE: Menambah DUN dan Parlimen dalam Maklumat Utama
     const infowin = new google.maps.InfoWindow({
       content: `
             <div class="info-popup">
@@ -678,6 +670,8 @@ function createOrUpdateMarker(project) {
                 <div class="section-header">Maklumat Utama</div>
                 <div class="info-row"><span class="info-label">Kategori</span><span class="info-val">${cfg.label}</span></div>
                 <div class="info-row"><span class="info-label">Daerah</span><span class="info-val">${escapeHtml(project.DISTRICT)}</span></div>
+                <div class="info-row"><span class="info-label">DUN</span><span class="info-val">${escapeHtml(project.DUN)}</span></div>
+                <div class="info-row"><span class="info-label">Parlimen</span><span class="info-val">${escapeHtml(project.PARLIAMENT)}</span></div>
                 <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${cfg.color}">${escapeHtml(project.STATUS)}</span></div>
                 <div class="info-row"><span class="info-label">Koordinat</span><span class="info-val">${project.LATITUDE.toFixed(4)}, ${project.LONGITUDE.toFixed(4)}</span></div>
                 ${rawDetailsHtml} 
@@ -692,7 +686,6 @@ function createOrUpdateMarker(project) {
 
     marker._meta = project;
     markersBySite.set(uniqueKey, marker);
-    // Note: markersList akan di-rebuild selepas batch selesai
     return marker;
   }
 }
@@ -712,7 +705,7 @@ function renderMarkersInBatches(projects, onComplete) {
       createOrUpdateMarker(projects[i]);
     }
     if (i < total) {
-      setTimeout(runChunk, 50); // Bagi UI bernafas
+      setTimeout(runChunk, 50); 
     } else {
       if (onComplete) onComplete();
     }
@@ -720,7 +713,7 @@ function renderMarkersInBatches(projects, onComplete) {
   runChunk();
 }
 
-// ---------- FILTERING LOGIC (CORE DEBUG FIX) ----------
+// ---------- FILTERING LOGIC ----------
 function filterAndDisplayMarkers() {
   const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
   const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
@@ -732,7 +725,7 @@ function filterAndDisplayMarkers() {
   // 1. Tapis mengikut Sempadan (District/Dun/Parliament)
   if (activeFeature && currentBoundaryKey) {
     const areaNameRaw = extractFeatureName(activeFeature);
-    const areaName = normalizeString(areaNameRaw); // " Kota Kinabalu " -> "KOTA KINABALU"
+    const areaName = normalizeString(areaNameRaw); 
 
     filteredList = allProjects.filter(p => {
       if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
@@ -742,36 +735,34 @@ function filterAndDisplayMarkers() {
     });
   }
 
-  // 2. Tapis mengikut Carian
+  // 2. Tapis mengikut Carian (Text Only - Coordinate handling is separate in listener)
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
-    filteredList = filteredList.filter(p =>
-      (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
-      (p.DISTRICT && p.DISTRICT.toLowerCase().includes(term))
-    );
+    // Jika ia bukan format koordinat, kita filter senarai projek
+    if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
+        filteredList = filteredList.filter(p =>
+        (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
+        (p.DISTRICT && p.DISTRICT.toLowerCase().includes(term)) ||
+        (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term))
+        );
+    }
   }
 
-  // Update Dashboard dengan data yang telah ditapis (Sebelum sembunyikan marker di peta)
   updateDashboard(filteredList);
 
-  // 3. Bina Set ID yang layak dipaparkan berdasarkan lokasi/carian
   const visibleLocationIds = new Set(filteredList.map(p => p._id));
 
-  // 4. Update visibiliti marker di peta
   markersList.forEach(m => {
     if(!m) return;
     const meta = m._meta;
     const type = meta._type;
 
-    // Check Filter Kategori (Butang Kanan)
     let isCategoryActive = false;
     if (type === "TOWER") isCategoryActive = menaraActive;
     else if (type === "BWA") isCategoryActive = wifiActive;
     else if (type === "NADI") isCategoryActive = nadiActive;
     else if (type === "POP") isCategoryActive = popActive;
 
-    // Logic Akhir: 
-    // (Lokasi Betul) AND (Kategori Butang ON) AND (Koordinat Valid)
     const shouldShow = visibleLocationIds.has(meta._id) && isCategoryActive && meta._validCoord;
     
     m.setVisible(shouldShow);
@@ -781,7 +772,6 @@ function filterAndDisplayMarkers() {
 const updateDashboard = debounce(function (list) {
   const displayList = list || [];
 
-  // Animate numbers
   const totalEl = document.getElementById("total-projects");
   if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
 
@@ -804,7 +794,6 @@ const updateDashboard = debounce(function (list) {
   setTxt("wifi-count", counts.wifi);
   setTxt("pop-count", counts.pop);
 
-  // Status Bars
   const statusEl = document.getElementById("status-list");
   if(!statusEl) return;
   
@@ -928,7 +917,6 @@ function handleFeatureClick(key, feature) {
   const featureName = extractFeatureName(feature);
   document.getElementById("selected-area").textContent = featureName;
 
-  // Visual feedback on map
   toggleBoundaryLayerVisibility(key);
   resetAllLayerStyles();
   layerObj.overrideStyle(feature, { strokeWeight: 2, strokeColor: "#4338ca", fillOpacity: 0.5, fillColor: "#4338ca" });
@@ -973,14 +961,12 @@ function setupToggles() {
   boundaries.forEach(b => {
     document.getElementById(b.id)?.addEventListener("click", function () {
       if (this.classList.contains('active') && currentBoundaryKey === b.key) {
-        // Toggle OFF
         this.classList.remove('active');
         dataLayers[b.key].setMap(null);
         currentBoundaryKey = null;
         activeFeature = null;
         document.getElementById("selected-area").textContent = "SELURUH SABAH";
       } else {
-        // Toggle ON
         toggleBoundaryLayerVisibility(b.key);
         document.getElementById("selected-area").textContent = "SABAH (" + b.key.toUpperCase() + ")";
         currentBoundaryKey = b.key; 
@@ -989,23 +975,36 @@ function setupToggles() {
     });
   });
 
+  // UPDATE: Carian Responsif + Koordinat
   document.getElementById("search-input")?.addEventListener("input", (e) => {
     searchTerm = e.target.value;
-    filterAndDisplayMarkers();
+    
+    // Check regex untuk format "Lat, Long"
+    const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
+    if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            // Pan terus ke lokasi tanpa filter markers
+            map.panTo({lat, lng});
+            map.setZoom(14);
+            // Optional: Letak marker sementara atau biarkan user melihat kawasan
+        }
+    } else {
+        // Jika teks biasa, jalankan filter standard
+        filterAndDisplayMarkers();
+    }
   });
 }
 
 async function autoRefreshLoop() {
   try {
     const newProjects = await loadAllSheetsAndNormalize();
-    // Only update existing or add new.
     newProjects.forEach(np => createOrUpdateMarker(np));
     
-    // Refresh markersList variable for filtering
     markersList = Array.from(markersBySite.values());
     allProjects = newProjects;
     
-    // Re-run filter to ensure view is consistent
     filterAndDisplayMarkers();
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
@@ -1033,45 +1032,52 @@ async function initMap() {
     mapTypeId: "roadmap",
     styles: silverStyle,
     disableDefaultUI: false,
-    mapTypeControl: false,
-    streetViewControl: false
+    
+    // UPDATE: Pilihan View (Satellite/Map)
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+        style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+        position: google.maps.ControlPosition.TOP_RIGHT
+    },
+    
+    // UPDATE: Butang Zoom (+ -)
+    zoomControl: true,
+    zoomControlOptions: {
+        position: google.maps.ControlPosition.RIGHT_BOTTOM
+    },
+    
+    streetViewControl: false,
+    fullscreenControl: false
   });
 
   showLoading(true);
 
   try {
-    // 1. Load Data
     const projects = await loadAllSheetsAndNormalize();
     
-    // 2. Render Markers
     renderMarkersInBatches(projects, () => {
       markersList = Array.from(markersBySite.values());
-      // Initial Filter Run
       filterAndDisplayMarkers();
     });
 
-    // 3. Load Layers (Background)
     const pDistrict = loadGeoJsonLayer("district", URLs.district).catch(e => null);
     const pDun = loadGeoJsonLayer("dun", URLs.dun).catch(e => null);
     const pPar = loadGeoJsonLayer("parliament", URLs.parliament).catch(e => null);
 
-    // 4. Setup logic after map idle
     google.maps.event.addListenerOnce(map, "idle", async () => {
       const ld = await pDistrict;
       await pDun; 
       await pPar;
 
-      // Default: District Layer Active
       if (ld) {
         dataLayers['district'].setMap(map);
         currentBoundaryKey = 'district';
       }
       
       setupToggles();
-      filterAndDisplayMarkers(); // Ensure correct initial state
+      filterAndDisplayMarkers(); 
     });
 
-    // Auto Refresh
     setInterval(() => autoRefreshLoop(), refreshIntervalMs);
 
   } catch (e) {
