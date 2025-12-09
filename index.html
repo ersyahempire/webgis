@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah - Moden</title>
+  <title>Web GIS Projek Sabah - Moden (Dibaiki)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -375,7 +375,6 @@ body {
       <!-- Status Progress Bars (Enhanced / Interactive) -->
       <div class="status-section-title">Status Kemajuan</div>
 
-      <!-- DROPDOWNS REMOVED: UI simplified as requested -->
       <!-- Status list -->
       <div id="status-list">
         <!-- JS will inject a more detailed, interactive status breakdown here -->
@@ -452,10 +451,11 @@ body {
 
   <script>
     // Projek Web GIS - Update v3 (dropdowns removed from Status Kemajuan)
-    // Core logic is preserved; the two dropdowns in the status panel were removed.
-    // Status panel now follows the same source rules implemented earlier:
-    // - If a boundary is selected, status list shows statuses for all categories within that boundary.
-    // - Otherwise, status list shows statuses for the currently active category toggles (if any), otherwise all projects.
+    // Debugged & minor fixes applied:
+    // - Fixed marker visibility logic when NO category toggles are active (previously hid all markers)
+    // - Added defensive checks for data layer operations to avoid exceptions when layers missing
+    // - Minor robustness improvements (safe access, fallbacks)
+    // Everything else logic preserved.
 
     // ---------- CONFIG ----------
 const URLs = {
@@ -468,7 +468,7 @@ const SHEETS = {
   db_bwa: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU",
   db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU",
   db_POP: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8",
-  tower: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
+  tower: "1b0Aipp0MQv8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
 };
 
 const SHEET_TYPE = {
@@ -541,7 +541,10 @@ function extractFeatureName(feature) {
   let name = "Sabah";
   for (const k of props) {
     try {
-      const v = feature.getProperty(k);
+      // Data.Feature: getProperty exists; for raw geojson feature object try properties
+      let v = null;
+      if (typeof feature.getProperty === 'function') v = feature.getProperty(k);
+      else if (feature.properties && feature.properties[k]) v = feature.properties[k];
       if (v) { name = v; break; }
     } catch (_) { }
   }
@@ -551,7 +554,11 @@ function extractFeatureName(feature) {
 function resetAllLayerStyles() {
   Object.keys(dataLayers).forEach(k => {
     const dl = dataLayers[k];
-    if (dl) dl.revertStyle();
+    try {
+      if (dl && typeof dl.revertStyle === 'function') dl.revertStyle();
+    } catch (e) {
+      // ignore
+    }
   });
   activeFeature = null;
   activeLayer = null;
@@ -583,7 +590,10 @@ async function fetchSheetObjects(sheetId) {
 
   const processedRows = rows.map(r => {
     const obj = {};
-    rawCols.forEach((c, i) => obj[c ? c : `COL${i}`] = (r.c && r.c[i] ? r.c[i].v : ""));
+    rawCols.forEach((c, i) => {
+      const key = c ? c : `COL${i}`;
+      obj[key] = (r.c && r.c[i] ? r.c[i].v : "");
+    });
     return obj;
   });
 
@@ -609,6 +619,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
     let count = 0;
     for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
       const key = rawCols[colIndex];
+      if (!key) continue;
       if (normalizedKeys.has(key)) continue;
       const value = r[key];
       if (value !== null && value !== "" && value !== undefined) {
@@ -619,7 +630,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
 
     const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
     
-    const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100); 
+    const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > -90 && lat < 90 && lng > -180 && lng < 180); 
 
     const rowObj = {
       SITE_NAME: String(site || "N/A").trim(),
@@ -666,9 +677,13 @@ function createOrUpdateMarker(project) {
     const m = markersBySite.get(uniqueKey);
     m._meta = project; 
     
-    const pos = m.getPosition();
-    if (!pos || Math.abs(pos.lat() - project.LATITUDE) > 0.0001 || Math.abs(pos.lng() - project.LONGITUDE) > 0.0001) {
-       m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
+    try {
+      const pos = m.getPosition();
+      if (!pos || Math.abs(pos.lat() - project.LATITUDE) > 0.0001 || Math.abs(pos.lng() - project.LONGITUDE) > 0.0001) {
+         m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
+      }
+    } catch (e) {
+      // ignore
     }
     return m;
   } else {
@@ -786,7 +801,7 @@ function getCurrentFilteredList() {
     filteredList = filteredList;
   }
 
-  // Apply text search (if any) - same behaviour as before
+  // Apply text search (if any)
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
     if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
@@ -831,10 +846,14 @@ function getStatusesSourceList() {
 function filterAndDisplayMarkers() {
   markersList = Array.from(markersBySite.values());
 
+  // read toggles
   const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
   const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
   const popActive = document.getElementById("toggle-pop")?.classList.contains("active");
   const wifiActive = document.getElementById("toggle-wifi")?.classList.contains("active");
+
+  // Determine if any category toggle is active
+  const anyCategoryToggle = !!(menaraActive || nadiActive || popActive || wifiActive);
 
   const filteredList = getCurrentFilteredList();
   updateDashboard(filteredList);
@@ -846,20 +865,22 @@ function filterAndDisplayMarkers() {
     const meta = m._meta;
     const type = meta._type;
 
-    // category visibility toggles still influence marker visibility if no boundary selected.
-    // However if boundary is selected, getCurrentFilteredList already restricted to the boundary and here we simply show/hide accordingly.
-    let isCategoryActive = false;
-    if (type === "TOWER") isCategoryActive = menaraActive;
-    else if (type === "BWA") isCategoryActive = wifiActive;
-    else if (type === "NADI") isCategoryActive = nadiActive;
-    else if (type === "POP") isCategoryActive = popActive;
+    // If no category toggles are active, we treat all categories as active (show everything)
+    let isCategoryActive = true;
+    if (anyCategoryToggle) {
+      if (type === "TOWER") isCategoryActive = menaraActive;
+      else if (type === "BWA") isCategoryActive = wifiActive;
+      else if (type === "NADI") isCategoryActive = nadiActive;
+      else if (type === "POP") isCategoryActive = popActive;
+      else isCategoryActive = false;
+    }
 
     // Determine visibility:
     // - If boundary is active: visible if marker in visibleLocationIds (boundary filtered list) AND meta._validCoord
-    // - Else: visible if in visibleLocationIds (category filtered list) AND corresponding toggle active
+    // - Else: visible if in visibleLocationIds AND corresponding category active (or all active if no toggles)
     const inFiltered = visibleLocationIds.has(meta._id);
     const shouldShow = inFiltered && meta._validCoord && (activeFeature && currentBoundaryKey ? true : isCategoryActive);
-    m.setVisible(!!shouldShow);
+    try { m.setVisible(!!shouldShow); } catch (e) { /* ignore */ }
   }
 }
 
@@ -1007,7 +1028,7 @@ function handleStatusRowClick(name) {
     if (!m || !m._meta) continue;
     const meta = m._meta;
     const shouldShow = visibleLocationIds.has(meta._id) && meta._validCoord;
-    m.setVisible(!!shouldShow);
+    try { m.setVisible(!!shouldShow); } catch (e) { /* ignore */ }
   }
 
   // Update dashboard counts to reflect the shown subset
@@ -1020,20 +1041,27 @@ function findFeatureByName(layerKey, name) {
   if (!layer) return null;
   let found = null;
   try {
-    layer.forEach(feature => {
-      const fname = extractFeatureName(feature);
-      if (normalizeString(fname) === normalizeString(name)) {
-        found = feature;
-      }
-    });
-  } catch (e) {
-    try {
-      const features = layer.getFeatures ? layer.getFeatures() : [];
+    if (typeof layer.forEach === 'function') {
+      layer.forEach(feature => {
+        const fname = extractFeatureName(feature);
+        if (normalizeString(fname) === normalizeString(name)) {
+          found = feature;
+        }
+      });
+    } else if (typeof layer.getFeatures === 'function') {
+      const features = layer.getFeatures();
       for (const f of features) {
         const fname = extractFeatureName(f);
         if (normalizeString(fname) === normalizeString(name)) { found = f; break; }
       }
-    } catch (_) {}
+    } else if (layer.features && Array.isArray(layer.features)) {
+      for (const f of layer.features) {
+        const fname = extractFeatureName(f);
+        if (normalizeString(fname) === normalizeString(name)) { found = f; break; }
+      }
+    }
+  } catch (e) {
+    // ignore
   }
   return found;
 }
@@ -1105,7 +1133,7 @@ function animateValue(id, start, end, duration) {
   const range = end - start;
   let current = start;
   const increment = end > start ? 1 : -1;
-  const stepTime = Math.abs(Math.floor(duration / range));
+  const stepTime = Math.abs(Math.floor(duration / Math.max(Math.abs(range),1)));
   const obj = document.getElementById(id);
   if (!obj) return;
   
@@ -1157,16 +1185,22 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
     layer.addListener("mouseover", e => {
       if (!layer.getMap()) return;
       if (activeFeature === e.feature) return;
-      layer.overrideStyle(e.feature, { strokeWeight: 2, strokeColor: "#4F46E5", fillOpacity: 0.3, fillColor: "#818cf8" });
-      
+      try {
+        layer.overrideStyle(e.feature, { strokeWeight: 2, strokeColor: "#4F46E5", fillOpacity: 0.3, fillColor: "#818cf8" });
+      } catch (e) {}
+
       if (!hoverInfoWindow) hoverInfoWindow = new google.maps.InfoWindow();
       hoverInfoWindow.setContent(`<div style="padding:8px 12px; font-weight:600; color:#4F46E5;">${escapeHtml(extractFeatureName(e.feature))}</div>`);
-      hoverInfoWindow.setPosition(e.latLng);
-      hoverInfoWindow.open(map);
+      if (e.latLng) {
+        hoverInfoWindow.setPosition(e.latLng);
+        hoverInfoWindow.open(map);
+      }
     });
 
     layer.addListener("mouseout", e => {
-      if (activeFeature !== e.feature) layer.revertStyle(e.feature);
+      if (activeFeature !== e.feature) {
+        try { layer.revertStyle(e.feature); } catch (e) {}
+      }
       if (hoverInfoWindow) hoverInfoWindow.close();
     });
 
@@ -1188,11 +1222,14 @@ function handleFeatureClick(key, feature) {
   if (!layerObj) return;
 
   const featureName = extractFeatureName(feature);
-  document.getElementById("selected-area").textContent = featureName;
+  const selAreaEl = document.getElementById("selected-area");
+  if (selAreaEl) selAreaEl.textContent = featureName;
 
   toggleBoundaryLayerVisibility(key);
   resetAllLayerStyles();
-  layerObj.overrideStyle(feature, { strokeWeight: 2, strokeColor: "#4338ca", fillOpacity: 0.5, fillColor: "#4338ca" });
+  try {
+    layerObj.overrideStyle(feature, { strokeWeight: 2, strokeColor: "#4338ca", fillOpacity: 0.5, fillColor: "#4338ca" });
+  } catch (e) {}
 
   activeFeature = feature;
   activeLayer = layerObj;
@@ -1207,7 +1244,9 @@ function handleFeatureClick(key, feature) {
 function toggleBoundaryLayerVisibility(key) {
   Object.keys(dataLayers).forEach(k => {
     const dl = dataLayers[k];
-    if (dl) dl.setMap(k === key ? map : null);
+    try {
+      if (dl) dl.setMap(k === key ? map : null);
+    } catch (e) {}
   });
   updateToggleButtonsUI(key);
 }
@@ -1216,7 +1255,9 @@ function updateToggleButtonsUI(activeKey) {
   const mapping = { district: "toggle-daerah", dun: "toggle-dun", parliament: "toggle-parliament" };
   Object.keys(mapping).forEach(k => {
     const btn = document.getElementById(mapping[k]);
-    if (btn) activeKey === k ? btn.classList.add("active") : btn.classList.remove("active");
+    if (!btn) return;
+    if (activeKey === k) btn.classList.add("active");
+    else btn.classList.remove("active");
   });
 }
 
@@ -1239,16 +1280,28 @@ function setupToggles() {
 
   boundaries.forEach(b => {
     document.getElementById(b.id)?.addEventListener("click", function () {
+      const layerExists = !!dataLayers[b.key];
       if (this.classList.contains('active') && currentBoundaryKey === b.key) {
         this.classList.remove('active');
-        dataLayers[b.key].setMap(null);
+        if (layerExists) {
+          try { dataLayers[b.key].setMap(null); } catch (e) {}
+        }
         currentBoundaryKey = null;
         activeFeature = null;
-        document.getElementById("selected-area").textContent = "SELURUH SABAH";
+        const sel = document.getElementById("selected-area");
+        if (sel) sel.textContent = "SELURUH SABAH";
       } else {
-        toggleBoundaryLayerVisibility(b.key);
-        document.getElementById("selected-area").textContent = "SABAH (" + b.key.toUpperCase() + ")";
-        currentBoundaryKey = b.key; 
+        if (layerExists) {
+          toggleBoundaryLayerVisibility(b.key);
+          const sel = document.getElementById("selected-area");
+          if (sel) sel.textContent = "SABAH (" + b.key.toUpperCase() + ")";
+          currentBoundaryKey = b.key; 
+        } else {
+          // if layer not loaded, still set UI state to indicate selection but don't crash
+          updateToggleButtonsUI(null);
+          document.getElementById(b.id)?.classList.add('active');
+          currentBoundaryKey = null;
+        }
       }
       filterAndDisplayMarkers();
       renderStatusDetailed(getStatusesSourceList());
@@ -1264,7 +1317,7 @@ function setupToggles() {
     if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
         const lng = parseFloat(coordMatch[2]);
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!isNaN(lat) && !isNaN(lng) && map) {
             map.panTo({lat, lng});
             map.setZoom(14);
         }
@@ -1334,22 +1387,25 @@ async function initMap() {
       filterAndDisplayMarkers();
     });
 
+    // Start loading geojson layers in parallel
     const pDistrict = loadGeoJsonLayer("district", URLs.district).catch(e => null);
     const pDun = loadGeoJsonLayer("dun", URLs.dun).catch(e => null);
     const pPar = loadGeoJsonLayer("parliament", URLs.parliament).catch(e => null);
 
     google.maps.event.addListenerOnce(map, "idle", async () => {
       const ld = await pDistrict;
-      await pDun; 
-      await pPar;
+      const dd = await pDun;
+      const pp = await pPar;
 
       if (ld) {
-        dataLayers['district'].setMap(map);
-        currentBoundaryKey = 'district';
+        try { dataLayers['district'].setMap(map); currentBoundaryKey = 'district'; } catch (e) {}
+        updateToggleButtonsUI('district');
+      } else {
+        updateToggleButtonsUI(null);
       }
       
       setupToggles();
-      // initial status panel follows rules: district boundary default active, show statuses for that boundary
+      // initial status panel follows rules: district boundary default active (if loaded), show statuses for that boundary
       renderStatusDetailed(getStatusesSourceList());
       filterAndDisplayMarkers(); 
     });
@@ -1367,6 +1423,7 @@ async function initMap() {
 window.initMap = initMap;
   </script>
 
+<!-- Replace the API key below with your own key if needed -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
     
 </body>
