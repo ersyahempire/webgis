@@ -14,7 +14,7 @@
 :root {
   --primary: #4F46E5;
   --primary-dark: #4338ca;
-  --glass-bg: rgba(255, 255, 255, 0.45);  /* SMS dulu 0.85 */
+  --glass-bg: rgba(255, 255, 255, 0.65); /* Increased opacity slightly for better readability */
   --glass-border: rgba(255, 255, 255, 0.5);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   --blur: 12px;
@@ -90,7 +90,7 @@ body {
 
 .dashboard-panel {
   position: absolute; top: 75px; left: 20px; bottom: 20px;
-  width: 320px;
+  width: 340px; /* Sedikit lebar untuk tab */
   z-index: 10;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--blur));
@@ -122,7 +122,6 @@ body {
   overflow-y: auto;
   scrollbar-width: thin;
 }
-/* Custom Scrollbar */
 .panel-content::-webkit-scrollbar { width: 6px; }
 .panel-content::-webkit-scrollbar-track { background: transparent; }
 .panel-content::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 20px; }
@@ -154,42 +153,71 @@ body {
 .mini-stat-val { font-size: 20px; font-weight: 700; color: var(--text-main); }
 .mini-stat-lbl { font-size: 11px; color: var(--text-sub); }
 
-/* Status List Styles - UPDATED FOR PROGRESS BAR & PERCENTAGE */
-.status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; }
+/* --- NEW TABS STYLE --- */
+.stats-tabs {
+  display: flex;
+  background: rgba(0,0,0,0.05);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+.stats-tab {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-sub);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  text-align: center;
+}
+.stats-tab.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Status List Styles */
+.status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; display: flex; justify-content: space-between; align-items: center; }
+
 .status-item { 
-  margin-bottom: 16px; 
-  background: rgba(0,0,0,0.02); 
-  padding: 8px; 
-  border-radius: 8px; 
-} 
+  margin-bottom: 10px; 
+  background: rgba(255,255,255,0.4); 
+  padding: 10px; 
+  border-radius: 10px; 
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: transform 0.2s;
+}
+.status-item:hover { transform: translateX(2px); background: rgba(255,255,255,0.6); }
+
 .status-header { 
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
-  font-size: 14px; 
+  font-size: 13px; 
   margin-bottom: 6px; 
   font-weight: 600; 
 } 
-.status-name { font-weight: 700; }
-.status-count { color: var(--text-sub); font-weight: 500; margin-left: 5px; font-size: 12px; }
-.status-percent { font-size: 14px; font-weight: 700; } 
+.status-name { font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
+.status-rank { font-size: 10px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; color: var(--text-sub); }
 
 .progress-bg { 
   width: 100%; 
-  height: 10px; /* Thicker bar */
-  background: rgba(0,0,0,0.1); /* Darker background */
-  border-radius: 5px; 
+  height: 6px; 
+  background: rgba(0,0,0,0.05); 
+  border-radius: 10px; 
   overflow: hidden; 
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); /* Inner shadow for depth */
 }
 .progress-fill { 
   height: 100%; 
-  background: var(--primary); /* Will be overridden by JS gradient */
-  border-radius: 5px; 
+  background: var(--primary); 
+  border-radius: 10px; 
   width: 0%; 
-  transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smoother transition */
+  transition: width 1s ease; 
 }
-
 
 /* ----- CONTROLS (RIGHT) ----- */
 .controls-container {
@@ -205,7 +233,7 @@ body {
   padding: 5px;
   border-radius: 12px;
   box-shadow: var(--glass-shadow);
-  width: 50px; /* Collapsed width */
+  width: 50px; 
   overflow: hidden;
   transition: width 0.3s ease, background 0.3s;
   border: 1px solid var(--glass-border);
@@ -213,14 +241,14 @@ body {
 }
 
 .control-card:hover, .control-card.expanded {
-  width: 180px; /* Expanded width */
-  background: rgba(255, 255, 255, 0.55); /* SMS dulu 0.95 */
+  width: 180px; 
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .control-group-title {
   padding: 10px 15px; font-size: 11px; font-weight: 700; 
   text-transform: uppercase; color: var(--text-sub); letter-spacing: 0.5px;
-  display: none; /* Hide when collapsed */
+  display: none; 
 }
 .control-card.expanded .control-group-title { display: block; }
 
@@ -235,12 +263,15 @@ body {
 .toggle-btn i { width: 30px; text-align: center; font-size: 16px; flex-shrink: 0; }
 .toggle-btn span { opacity: 0; transition: opacity 0.2s; font-size: 13px; font-weight: 500; }
 
-/* Show text on hover/expand */
 .control-card:hover .toggle-btn span, .control-card.expanded .toggle-btn span { opacity: 1; }
 .control-card:hover .toggle-btn, .control-card.expanded .toggle-btn { padding: 10px 15px; }
 
 .toggle-btn:hover { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
 .toggle-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
+
+/* Extra Button: Reset */
+.btn-reset { color: #F44336 !important; }
+.btn-reset:hover { background: rgba(244, 67, 54, 0.1) !important; color: #d32f2f !important; }
 
 /* Legend Mini */
 .legend-mini {
@@ -267,11 +298,7 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* InfoWindow Customization */
-.gm-style .gm-style-iw-c {
-  padding: 0 !important; border-radius: 12px !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-}
+.gm-style .gm-style-iw-c { padding: 0 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important; }
 .gm-style-iw-d { overflow: hidden !important; max-height: 400px !important; }
 .info-popup { padding: 0; min-width: 280px; max-width: 320px; }
 .info-header { background: var(--primary); color: white; padding: 12px 16px; font-weight: 600; font-size: 14px; }
@@ -282,7 +309,7 @@ body {
 .section-header { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; margin: 12px 0 8px 0; border-bottom: 2px solid #eee; padding-bottom: 4px; }
 
 @media (max-width: 600px) {
-  .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; }
+  .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 55vh; }
   .controls-container { top: auto; bottom: 80px; right: 20px; }
   .control-card { width: 45px; }
   .control-card:hover, .control-card.expanded { width: 160px; }
@@ -348,10 +375,20 @@ body {
         </div>
       </div>
 
-      <!-- Status Progress Bars (Real Data) -->
-      <div class="status-section-title">Status Kemajuan</div>
+      <!-- New Tabs for Statistics -->
+      <div class="status-section-title">
+        <span>Perincian Data</span>
+      </div>
+      
+      <div class="stats-tabs">
+        <button class="stats-tab active" onclick="window.switchStatTab('status', this)">Status</button>
+        <button class="stats-tab" onclick="window.switchStatTab('district', this)">Daerah</button>
+        <button class="stats-tab" onclick="window.switchStatTab('dun', this)">DUN</button>
+        <button class="stats-tab" onclick="window.switchStatTab('parliament', this)">Parlimen</button>
+      </div>
+
       <div id="status-list">
-        <!-- JS will inject status bars here -->
+        <!-- JS will inject lists here -->
       </div>
 
       <!-- Mini Legend -->
@@ -367,10 +404,18 @@ body {
   <!-- Right Side Controls (Expandable Cards) -->
   <div class="controls-container">
     
+    <!-- General Controls (New) -->
+    <div class="control-card" id="general-card">
+        <div class="control-group-title">Kawalan</div>
+        <button class="toggle-btn btn-reset" id="btn-reset-map" title="Reset Peta">
+          <i class="fas fa-undo-alt"></i> <span>Reset Peta</span>
+        </button>
+    </div>
+
     <!-- Layer Toggle Group -->
     <div class="control-card" id="layer-card">
       <div class="control-group-title">Sempadan</div>
-      <!-- Default: Daerah Active, others inactive -->
+      <!-- Default: Daerah Active -->
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
         <i class="fas fa-map-marked-alt"></i> <span>Daerah</span>
       </button>
@@ -385,7 +430,6 @@ body {
     <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      <!-- Default: All inactive as requested (removed 'active' class) -->
       <button class="toggle-btn" id="toggle-menara" title="Menara">
         <i class="fas fa-broadcast-tower" style="color: #FF5722;"></i> <span>Menara</span>
       </button>
@@ -400,7 +444,7 @@ body {
       </button>
     </div>
   </div>
-  
+   
   <!-- UI Interactions Script -->
   <script>
     function toggleDashboard() {
@@ -410,15 +454,15 @@ body {
       btn.innerHTML = panel.classList.contains('closed') ? '<i class="fas fa-chart-pie"></i>' : '<i class="fas fa-times"></i>';
     }
 
-    // Auto-expand controls on mouseover
     document.querySelectorAll('.control-card').forEach(card => {
       card.addEventListener('mouseenter', () => card.classList.add('expanded'));
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
   </script>
 
+  <!-- Main script -->
   <script>
-    // Projek Web GIS - Debugged & Optimized Logic
+// Projek Web GIS - Debugged & Optimized Logic
 // ---------------------------------------------------
 
 // ---------- CONFIG ----------
@@ -463,6 +507,8 @@ let batchSize = 300;
 let activeFeature = null;
 let activeLayer = null;
 let searchTerm = "";
+// New: State for Stats Tab
+let activeStatTab = "status"; 
 
 // ---------- UTIL HELPER ----------
 function showLoading(on) {
@@ -480,7 +526,6 @@ function debounce(fn, wait = 250) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
 }
 
-// FIX: Helper untuk membersihkan string bagi tujuan perbandingan (Trim + Uppercase)
 function normalizeString(str) {
   return String(str || "").trim().toUpperCase();
 }
@@ -488,13 +533,11 @@ function normalizeString(str) {
 function cleanFloat(val) {
   if (typeof val === 'number') return val;
   if (!val) return 0;
-  // Buang semua character pelik, tukar koma jadi titik
   const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
   const floatVal = parseFloat(str);
   return isNaN(floatVal) ? 0 : floatVal;
 }
 
-// FIX: Generate ID berdasarkan kandungan, bukan nombor baris
 function generateStableId(rowObj, type) {
   const name = normalizeString(rowObj.SITE_NAME || "UNKNOWN");
   const district = normalizeString(rowObj.DISTRICT || "SABAH");
@@ -583,7 +626,6 @@ function normalizeRows(rows, sheetKey, rawCols) {
     }
 
     const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
-    
     const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100); 
 
     const rowObj = {
@@ -601,7 +643,6 @@ function normalizeRows(rows, sheetKey, rawCols) {
     };
 
     rowObj._id = generateStableId(rowObj, type);
-
     return rowObj;
   }).filter(o => o.SITE_NAME !== "N/A"); 
 
@@ -637,7 +678,6 @@ function createOrUpdateMarker(project) {
     }
     return m;
   } else {
-    // Bina HTML InfoWindow
     let rawDetailsHtml = project._raw_details.map(detail =>
       `<div class="info-row"><span class="info-label">${escapeHtml(detail.label)}</span><span class="info-val">${escapeHtml(detail.value)}</span></div>`
     ).join('');
@@ -650,7 +690,7 @@ function createOrUpdateMarker(project) {
       position: { lat: project.LATITUDE, lng: project.LONGITUDE },
       map: map,
       title: project.SITE_NAME || "",
-      visible: false, // Default hidden
+      visible: false,
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 6,
@@ -661,7 +701,6 @@ function createOrUpdateMarker(project) {
       }
     });
 
-    // UPDATE: Menambah DUN dan Parlimen dalam Maklumat Utama
     const infowin = new google.maps.InfoWindow({
       content: `
             <div class="info-popup">
@@ -693,7 +732,6 @@ function createOrUpdateMarker(project) {
 function renderMarkersInBatches(projects, onComplete) {
   const total = projects.length;
   let i = 0;
-  
   if (total === 0) {
     if (onComplete) onComplete();
     return;
@@ -713,6 +751,128 @@ function renderMarkersInBatches(projects, onComplete) {
   runChunk();
 }
 
+// ---------- DASHBOARD & TABS LOGIC ----------
+
+// UI Helper: Switch Tabs
+window.switchStatTab = function(tabName, btnElement) {
+    activeStatTab = tabName;
+    
+    // Update Button Classes
+    document.querySelectorAll('.stats-tab').forEach(b => b.classList.remove('active'));
+    if(btnElement) btnElement.classList.add('active');
+
+    // Force Dashboard Update with current list
+    const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
+    // (We re-trigger the filter to get the latest list, which calls updateDashboard)
+    filterAndDisplayMarkers();
+};
+
+const updateDashboard = debounce(function (list) {
+  const displayList = list || [];
+
+  // Update Top Stats
+  const totalEl = document.getElementById("total-projects");
+  if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
+
+  const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
+  displayList.forEach(p => {
+    if (p._type === "TOWER") counts.menara++;
+    if (p._type === "BWA") counts.wifi++;
+    if (p._type === "NADI") counts.nadi++;
+    if (p._type === "POP") counts.pop++;
+  });
+
+  const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  setTxt("menara-count", counts.menara);
+  setTxt("nadi-count", counts.nadi);
+  setTxt("wifi-count", counts.wifi);
+  setTxt("pop-count", counts.pop);
+
+  // --- TABBED CONTENT RENDER ---
+  const statusEl = document.getElementById("status-list");
+  if(!statusEl) return;
+  statusEl.innerHTML = "";
+
+  const totalProjects = displayList.length;
+
+  // LOGIC 1: By Status (Default)
+  if (activeStatTab === 'status') {
+      const dynamicStatusCounts = {};
+      displayList.forEach(p => {
+        const s = String(p.STATUS || "Tidak Dinyatakan").trim();
+        if (s) dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
+      });
+
+      const sortedStatuses = Object.entries(dynamicStatusCounts).sort(([, a], [, b]) => b - a);
+
+      sortedStatuses.forEach(([statusName, count], index) => {
+        const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
+        
+        let endColor = "#4F46E5"; 
+        let startColor = "#818cf8";
+        const statusUpper = statusName.toUpperCase();
+        
+        if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#4CAF50"; startColor = "#81c784"; }
+        else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#2196F3"; startColor = "#64b5f6"; }
+        else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#F44336"; startColor = "#e57373"; }
+        else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
+
+        const div = document.createElement("div");
+        div.className = "status-item";
+        div.innerHTML = `
+              <div class="status-header">
+                <span class="status-name"><span class="status-rank">#${index+1}</span> ${escapeHtml(statusName)}</span>
+                <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
+              </div>
+              <div class="progress-bg">
+                <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
+              </div>
+            `;
+        statusEl.appendChild(div);
+      });
+  } 
+  // LOGIC 2: By District / DUN / Parliament
+  else {
+      let key = "DISTRICT"; // default
+      if (activeStatTab === 'dun') key = "DUN";
+      if (activeStatTab === 'parliament') key = "PARLIAMENT";
+
+      const groupCounts = {};
+      displayList.forEach(p => {
+          let val = String(p[key] || "Tidak Dinyatakan").trim();
+          if(val === "" || val === "null") val = "Tidak Dinyatakan";
+          groupCounts[val] = (groupCounts[val] || 0) + 1;
+      });
+
+      // Sort Top 10 only to avoid clutter
+      const sortedGroups = Object.entries(groupCounts).sort(([, a], [, b]) => b - a);
+      const topGroups = sortedGroups.slice(0, 50); // Show top 50 rows (scrollable)
+
+      topGroups.forEach(([name, count], index) => {
+          const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
+          
+          const div = document.createElement("div");
+          div.className = "status-item";
+          // Use neutral colors for grouping
+          div.innerHTML = `
+              <div class="status-header">
+                <span class="status-name"><span class="status-rank">#${index+1}</span> ${escapeHtml(name)}</span>
+                <span class="status-percent" style="color: #4F46E5;">${count}</span>
+              </div>
+              <div class="progress-bg">
+                <div class="progress-fill" style="width: ${percent}%; background: #4F46E5; opacity: 0.6;"></div>
+              </div>
+            `;
+          statusEl.appendChild(div);
+      });
+      
+      if(sortedGroups.length === 0) {
+          statusEl.innerHTML = `<div style="text-align:center; padding:20px; color:#999; font-size:12px;">Tiada data untuk paparan ini.</div>`;
+      }
+  }
+
+}, 200);
+
 // ---------- FILTERING LOGIC ----------
 function filterAndDisplayMarkers() {
   const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
@@ -722,7 +882,6 @@ function filterAndDisplayMarkers() {
 
   let filteredList = allProjects;
 
-  // 1. Tapis mengikut Sempadan (District/Dun/Parliament)
   if (activeFeature && currentBoundaryKey) {
     const areaNameRaw = extractFeatureName(activeFeature);
     const areaName = normalizeString(areaNameRaw); 
@@ -735,10 +894,8 @@ function filterAndDisplayMarkers() {
     });
   }
 
-  // 2. Tapis mengikut Carian (Text Only - Coordinate handling is separate in listener)
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
-    // Jika ia bukan format koordinat, kita filter senarai projek
     if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
         filteredList = filteredList.filter(p =>
         (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
@@ -768,65 +925,6 @@ function filterAndDisplayMarkers() {
     m.setVisible(shouldShow);
   });
 }
-
-const updateDashboard = debounce(function (list) {
-  const displayList = list || [];
-
-  const totalEl = document.getElementById("total-projects");
-  if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
-
-  const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
-  const dynamicStatusCounts = {};
-
-  displayList.forEach(p => {
-    if (p._type === "TOWER") counts.menara++;
-    if (p._type === "BWA") counts.wifi++;
-    if (p._type === "NADI") counts.nadi++;
-    if (p._type === "POP") counts.pop++;
-
-    const s = String(p.STATUS || "Tidak Dinyatakan").trim();
-    if (s) dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
-  });
-
-  const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-  setTxt("menara-count", counts.menara);
-  setTxt("nadi-count", counts.nadi);
-  setTxt("wifi-count", counts.wifi);
-  setTxt("pop-count", counts.pop);
-
-  const statusEl = document.getElementById("status-list");
-  if(!statusEl) return;
-  
-  statusEl.innerHTML = "";
-  const sortedStatuses = Object.entries(dynamicStatusCounts).sort(([, a], [, b]) => b - a);
-  const totalProjects = displayList.length;
-
-  sortedStatuses.forEach(([statusName, count]) => {
-    const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
-    
-    let endColor = "#4F46E5"; 
-    let startColor = "#818cf8";
-    const statusUpper = statusName.toUpperCase();
-    
-    if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#4CAF50"; startColor = "#81c784"; }
-    else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#2196F3"; startColor = "#64b5f6"; }
-    else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#F44336"; startColor = "#e57373"; }
-    else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
-
-    const div = document.createElement("div");
-    div.className = "status-item";
-    div.innerHTML = `
-          <div class="status-header">
-            <span class="status-name">${escapeHtml(statusName)}</span>
-            <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
-          </div>
-          <div class="progress-bg">
-            <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
-          </div>
-        `;
-    statusEl.appendChild(div);
-  });
-}, 200);
 
 function animateValue(id, start, end, duration) {
   if (start === end) return;
@@ -975,25 +1073,48 @@ function setupToggles() {
     });
   });
 
-  // UPDATE: Carian Responsif + Koordinat
+  // SEARCH + COORD
   document.getElementById("search-input")?.addEventListener("input", (e) => {
     searchTerm = e.target.value;
-    
-    // Check regex untuk format "Lat, Long"
     const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
     if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
         const lng = parseFloat(coordMatch[2]);
         if (!isNaN(lat) && !isNaN(lng)) {
-            // Pan terus ke lokasi tanpa filter markers
             map.panTo({lat, lng});
             map.setZoom(14);
-            // Optional: Letak marker sementara atau biarkan user melihat kawasan
         }
     } else {
-        // Jika teks biasa, jalankan filter standard
         filterAndDisplayMarkers();
     }
+  });
+
+  // RESET BUTTON
+  document.getElementById("btn-reset-map")?.addEventListener("click", () => {
+     // Reset View
+     map.setCenter({ lat: 5.9804, lng: 116.0735 });
+     map.setZoom(8);
+     
+     // Reset Search
+     searchTerm = "";
+     const input = document.getElementById("search-input");
+     if(input) input.value = "";
+
+     // Reset Boundary
+     if(currentBoundaryKey && dataLayers[currentBoundaryKey]) {
+        dataLayers[currentBoundaryKey].setMap(null);
+     }
+     // Default back to district map if needed, or just clear. Let's allow District map to stay hidden or reset to District.
+     // Let's reset to default state (District ON, but no specific feature selected)
+     dataLayers['district'].setMap(map);
+     currentBoundaryKey = 'district';
+     activeFeature = null;
+     resetAllLayerStyles();
+     
+     document.getElementById("selected-area").textContent = "SELURUH SABAH";
+     updateToggleButtonsUI('district'); // Ensure UI matches
+
+     filterAndDisplayMarkers();
   });
 }
 
@@ -1001,10 +1122,8 @@ async function autoRefreshLoop() {
   try {
     const newProjects = await loadAllSheetsAndNormalize();
     newProjects.forEach(np => createOrUpdateMarker(np));
-    
     markersList = Array.from(markersBySite.values());
     allProjects = newProjects;
-    
     filterAndDisplayMarkers();
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
@@ -1029,23 +1148,18 @@ async function initMap() {
   map = new google.maps.Map(mapDiv, {
     center: { lat: 5.9804, lng: 116.0735 },
     zoom: 8,
-    mapTypeId: "satellite", /* SMS - sebelumnya roadmap */
+    mapTypeId: "roadmap",
     styles: silverStyle,
     disableDefaultUI: false,
-    
-    // UPDATE: Pilihan View (Satellite/Map)
     mapTypeControl: true,
     mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
         position: google.maps.ControlPosition.TOP_RIGHT
     },
-    
-    // UPDATE: Butang Zoom (+ -)
     zoomControl: true,
     zoomControlOptions: {
         position: google.maps.ControlPosition.RIGHT_BOTTOM
     },
-    
     streetViewControl: false,
     fullscreenControl: false
   });
@@ -1089,6 +1203,7 @@ async function initMap() {
 }
 
 window.initMap = initMap;
+    
   </script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
