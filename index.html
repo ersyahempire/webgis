@@ -375,27 +375,8 @@ body {
       <!-- Status Progress Bars (Enhanced / Interactive) -->
       <div class="status-section-title">Status Kemajuan</div>
 
-      <!-- Controls for the status panel: view mode and type filter -->
-      <div class="status-controls">
-        <select id="status-view-select" title="Papar mengikut">
-          <option value="status">Mengikut Status</option>
-          <option value="project">Mengikut Projek (Kategori)</option>
-          <option value="district">Mengikut Daerah</option>
-          <option value="dun">Mengikut DUN</option>
-          <option value="parliament">Mengikut Parlimen</option>
-        </select>
-      </div>
-
-      <div class="status-controls" style="margin-top:8px;">
-        <select id="status-project-filter" title="Tapis Kategori">
-          <option value="all">Semua Kategori</option>
-          <option value="TOWER">Menara</option>
-          <option value="NADI">NADI</option>
-          <option value="BWA">WiFi</option>
-          <option value="POP">POP</option>
-        </select>
-      </div>
-
+      <!-- DROPDOWNS REMOVED: UI simplified as requested -->
+      <!-- Status list -->
       <div id="status-list">
         <!-- JS will inject a more detailed, interactive status breakdown here -->
       </div>
@@ -437,7 +418,7 @@ body {
     <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      <!-- Default: All inactive as requested (removed 'active' class) -->
+      <!-- Default: All inactive as requested -->
       <button class="toggle-btn" id="toggle-menara" title="Menara">
         <i class="fas fa-broadcast-tower" style="color: #FF5722;"></i> <span>Menara</span>
       </button>
@@ -470,10 +451,13 @@ body {
   </script>
 
   <script>
-    // Projek Web GIS - Debug & fixes for dashboard interactivity and counts
-// ---------------------------------------------------
+    // Projek Web GIS - Update v3 (dropdowns removed from Status Kemajuan)
+    // Core logic is preserved; the two dropdowns in the status panel were removed.
+    // Status panel now follows the same source rules implemented earlier:
+    // - If a boundary is selected, status list shows statuses for all categories within that boundary.
+    // - Otherwise, status list shows statuses for the currently active category toggles (if any), otherwise all projects.
 
-// ---------- CONFIG ----------
+    // ---------- CONFIG ----------
 const URLs = {
   district: "district.json",
   dun: "dun.json",
@@ -515,10 +499,8 @@ let batchSize = 300;
 let activeFeature = null;
 let activeLayer = null;
 let searchTerm = "";
-// UI state for status panel
-let statusViewMode = 'status'; // status | project | district | dun | parliament
-let statusTextFilter = '';
-let projectCategoryFilter = 'all';
+// statusViewMode kept default to 'status' (no dropdown to change it now)
+let statusViewMode = 'status';
 
 // ---------- UTIL HELPER ----------
 function showLoading(on) {
@@ -611,7 +593,7 @@ async function fetchSheetObjects(sheetId) {
 function normalizeRows(rows, sheetKey, rawCols) {
   const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
 
-  const normalized = rows.map((r, i) => {
+  const normalized = rows.map((r) => {
     const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
     const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
     const district = get("DISTRICT") || get("DAERAH") || "";
@@ -758,7 +740,6 @@ function renderMarkersInBatches(projects, onComplete) {
     if (i < total) {
       setTimeout(runChunk, 50); 
     } else {
-      // ensure markersList is up-to-date after creation
       markersList = Array.from(markersBySite.values());
       if (onComplete) onComplete();
     }
@@ -767,11 +748,21 @@ function renderMarkersInBatches(projects, onComplete) {
 }
 
 // ---------- FILTERING LOGIC ----------
-// Centralized filter logic so both map markers and status panel use the exact same filtered list.
+// Helper to read which category toggles are active (uses toggle buttons)
+function getActiveCategoriesFromToggles() {
+  const cats = [];
+  if (document.getElementById("toggle-menara")?.classList.contains("active")) cats.push("TOWER");
+  if (document.getElementById("toggle-nadi")?.classList.contains("active")) cats.push("NADI");
+  if (document.getElementById("toggle-wifi")?.classList.contains("active")) cats.push("BWA");
+  if (document.getElementById("toggle-pop")?.classList.contains("active")) cats.push("POP");
+  return cats;
+}
+
+// Current filtered list used to update dashboard counts & map markers (follows rules below)
 function getCurrentFilteredList() {
   let filteredList = allProjects.slice();
 
-  // 1. Boundary filter
+  // If a boundary feature is selected -> apply boundary filter and IGNORE category toggles
   if (activeFeature && currentBoundaryKey) {
     const areaNameRaw = extractFeatureName(activeFeature);
     const areaName = normalizeString(areaNameRaw); 
@@ -782,9 +773,20 @@ function getCurrentFilteredList() {
       if (currentBoundaryKey === 'parliament') return normalizeString(p.PARLIAMENT) === areaName;
       return false;
     });
+
+    return filteredList;
   }
 
-  // 2. Text search filter (searchTerm) - ignore coordinate-format strings
+  // Otherwise, if category toggles are active -> filter by those categories
+  const activeCats = getActiveCategoriesFromToggles();
+  if (activeCats.length > 0) {
+    filteredList = filteredList.filter(p => activeCats.includes(p._type));
+  } else {
+    // If no toggles active, keep all projects (default)
+    filteredList = filteredList;
+  }
+
+  // Apply text search (if any) - same behaviour as before
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
     if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
@@ -796,16 +798,37 @@ function getCurrentFilteredList() {
     }
   }
 
-  // 3. Project category filter from status panel
-  if (projectCategoryFilter && projectCategoryFilter !== 'all') {
-    filteredList = filteredList.filter(p => p._type === projectCategoryFilter);
-  }
-
   return filteredList;
 }
 
+// Special source list for Status panel per user's requested logic:
+// - If a boundary is selected -> statuses computed for all categories in that boundary (ignore toggles)
+// - Else -> statuses computed based on currently selected category toggles (if any), otherwise all projects
+function getStatusesSourceList() {
+  // boundary active => all categories within boundary
+  if (activeFeature && currentBoundaryKey) {
+    const areaNameRaw = extractFeatureName(activeFeature);
+    const areaName = normalizeString(areaNameRaw); 
+
+    return allProjects.filter(p => {
+      if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
+      if (currentBoundaryKey === 'dun') return normalizeString(p.DUN) === areaName;
+      if (currentBoundaryKey === 'parliament') return normalizeString(p.PARLIAMENT) === areaName;
+      return false;
+    });
+  }
+
+  // else use toggles
+  const activeCats = getActiveCategoriesFromToggles();
+  if (activeCats.length > 0) {
+    return allProjects.filter(p => activeCats.includes(p._type));
+  }
+
+  // if no toggles active -> entire dataset
+  return allProjects.slice();
+}
+
 function filterAndDisplayMarkers() {
-  // refresh cached markersList
   markersList = Array.from(markersBySite.values());
 
   const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
@@ -818,24 +841,29 @@ function filterAndDisplayMarkers() {
 
   const visibleLocationIds = new Set(filteredList.map(p => p._id));
 
-  // iterate over markersBySite to ensure every marker is considered (not relying on older markersList)
   for (const m of markersBySite.values()) {
     if (!m || !m._meta) continue;
     const meta = m._meta;
     const type = meta._type;
 
+    // category visibility toggles still influence marker visibility if no boundary selected.
+    // However if boundary is selected, getCurrentFilteredList already restricted to the boundary and here we simply show/hide accordingly.
     let isCategoryActive = false;
     if (type === "TOWER") isCategoryActive = menaraActive;
     else if (type === "BWA") isCategoryActive = wifiActive;
     else if (type === "NADI") isCategoryActive = nadiActive;
     else if (type === "POP") isCategoryActive = popActive;
 
-    const shouldShow = visibleLocationIds.has(meta._id) && isCategoryActive && meta._validCoord;
+    // Determine visibility:
+    // - If boundary is active: visible if marker in visibleLocationIds (boundary filtered list) AND meta._validCoord
+    // - Else: visible if in visibleLocationIds (category filtered list) AND corresponding toggle active
+    const inFiltered = visibleLocationIds.has(meta._id);
+    const shouldShow = inFiltered && meta._validCoord && (activeFeature && currentBoundaryKey ? true : isCategoryActive);
     m.setVisible(!!shouldShow);
   }
 }
 
-// ---------- STATUS PANEL RENDER (NEW) ----------
+// ---------- STATUS PANEL RENDER ----------
 function getColorForName(name, fallback="#4F46E5") {
   const s = normalizeString(name || "");
   if (!s) return fallback;
@@ -882,18 +910,19 @@ function renderStatusDetailed(list) {
   const el = document.getElementById("status-list");
   if (!el) return;
 
-  const filteredList = list || [];
-  const groups = computeGroups(filteredList, statusViewMode);
-  let entries = Object.entries(groups).map(([k,v]) => ({ name: k, count: v }));
+  // Source list follows the rules: boundary selected -> all categories within boundary; else -> selected toggles or all
+  const sourceList = getStatusesSourceList();
 
+  const groups = computeGroups(sourceList, statusViewMode);
+  let entries = Object.entries(groups).map(([k,v]) => ({ name: k, count: v }));
   entries.sort((a,b) => b.count - a.count);
 
   el.innerHTML = "";
 
-  const total = filteredList.length || 0;
+  const total = sourceList.length || 0;
   if (entries.length === 0) {
     el.innerHTML = `<div style="color:var(--text-sub);font-size:13px;padding:8px 6px;">Tiada data untuk paparan ini.</div>`;
-    renderTop5(filteredList);
+    renderTop5(sourceList);
     return;
   }
 
@@ -906,7 +935,7 @@ function renderStatusDetailed(list) {
     const startColor = shadeColor(color, 18);
     const wrap = document.createElement('div');
     wrap.className = 'status-item';
-    wrap.title = `Klik untuk lihat / tapis: ${entry.name}`;
+    wrap.title = `Klik untuk lihat marker: ${entry.name}`;
     wrap.innerHTML = `
       <div class="status-header">
         <div style="display:flex;align-items:center;gap:8px;">
@@ -922,7 +951,7 @@ function renderStatusDetailed(list) {
       </div>
     `;
     wrap.addEventListener('click', () => {
-      handleStatusRowClick(entry.name, filteredList);
+      handleStatusRowClick(entry.name);
     });
     el.appendChild(wrap);
   });
@@ -940,7 +969,7 @@ function renderStatusDetailed(list) {
         const startColor = shadeColor(color, 18);
         const wrap = document.createElement('div');
         wrap.className = 'status-item';
-        wrap.title = `Klik untuk lihat / tapis: ${entry.name}`;
+        wrap.title = `Klik untuk lihat marker: ${entry.name}`;
         wrap.innerHTML = `
           <div class="status-header">
             <div style="display:flex;align-items:center;gap:8px;">
@@ -956,75 +985,40 @@ function renderStatusDetailed(list) {
           </div>
         `;
         wrap.addEventListener('click', () => {
-          handleStatusRowClick(entry.name, filteredList);
+          handleStatusRowClick(entry.name);
         });
         el.appendChild(wrap);
       });
     });
   }
 
-  renderTop5(filteredList);
+  renderTop5(sourceList);
 }
 
-function handleStatusRowClick(name, currentList) {
-  if (statusViewMode === 'project') {
-    const mapping = { 'Menara': 'TOWER', 'NADI': 'NADI', 'WiFi': 'BWA', 'POP': 'POP' };
-    const key = mapping[name] || null;
-    if (key) {
-      projectCategoryFilter = key;
-      document.getElementById('status-project-filter').value = key;
-      filterAndDisplayMarkers();
-      // re-render status panel for current filtered set
-      renderStatusDetailed(getCurrentFilteredList());
-    }
-  } else if (statusViewMode === 'district' || statusViewMode === 'dun' || statusViewMode === 'parliament') {
-    const layerKey = statusViewMode === 'district' ? 'district' : (statusViewMode === 'dun' ? 'dun' : 'parliament');
-    const f = findFeatureByName(layerKey, name);
-    if (f) {
-      handleFeatureClick(layerKey, f);
-      try {
-        // try to zoom to feature bounds (best-effort; Data geometry API varies)
-        const bounds = new google.maps.LatLngBounds();
-        const geom = f.getGeometry();
-        geom.forEachLatLng ? geom.forEachLatLng(ll => bounds.extend(ll)) : null;
-        map.fitBounds(bounds);
-      } catch (e) {}
-    } else {
-      document.getElementById("selected-area").textContent = name;
-      currentBoundaryKey = null;
-      activeFeature = null;
-      filterAndDisplayMarkers();
-    }
-  } else if (statusViewMode === 'status') {
-    const subset = (currentList || allProjects).filter(p => (p.STATUS || '').trim() === name);
-    // update dashboard numbers to this subset and highlight markers
-    updateDashboard(subset);
-    const visibleLocationIds = new Set(subset.map(p => p._id));
-    for (const m of markersBySite.values()) {
-      if (!m || !m._meta) continue;
-      const meta = m._meta;
-      const type = meta._type;
-      const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
-      const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
-      const popActive = document.getElementById("toggle-pop")?.classList.contains("active");
-      const wifiActive = document.getElementById("toggle-wifi")?.classList.contains("active");
+function handleStatusRowClick(name) {
+  // Determine source per current rules
+  const source = getStatusesSourceList();
+  const subset = source.filter(p => (p.STATUS || '').trim() === name);
 
-      let isCategoryActive = false;
-      if (type === "TOWER") isCategoryActive = menaraActive;
-      else if (type === "BWA") isCategoryActive = wifiActive;
-      else if (type === "NADI") isCategoryActive = nadiActive;
-      else if (type === "POP") isCategoryActive = popActive;
+  // Show only markers corresponding to this subset
+  const visibleLocationIds = new Set(subset.map(p => p._id));
 
-      m.setVisible(visibleLocationIds.has(meta._id) && isCategoryActive && meta._validCoord);
-    }
+  for (const m of markersBySite.values()) {
+    if (!m || !m._meta) continue;
+    const meta = m._meta;
+    const shouldShow = visibleLocationIds.has(meta._id) && meta._validCoord;
+    m.setVisible(!!shouldShow);
   }
+
+  // Update dashboard counts to reflect the shown subset
+  updateDashboard(subset);
 }
 
+// Find feature by name (safe)
 function findFeatureByName(layerKey, name) {
   const layer = dataLayers[layerKey];
   if (!layer) return null;
   let found = null;
-  // google.maps.Data.forEach exists - it's safe to call
   try {
     layer.forEach(feature => {
       const fname = extractFeatureName(feature);
@@ -1033,7 +1027,6 @@ function findFeatureByName(layerKey, name) {
       }
     });
   } catch (e) {
-    // fallback: iterate via features if available
     try {
       const features = layer.getFeatures ? layer.getFeatures() : [];
       for (const f of features) {
@@ -1099,13 +1092,12 @@ const updateDashboard = debounce(function (list) {
   setTxt("wifi-count", counts.wifi);
   setTxt("pop-count", counts.pop);
 
-  // Render status panel using the current filtered list
+  // Render status panel based on the current rules
   renderStatusDetailed(displayList);
 }, 200);
 
 function animateValue(id, start, end, duration) {
   if (start === end) {
-    // ensure value is set even if equal (e.g., initial load)
     const obj = document.getElementById(id);
     if (obj) obj.innerHTML = end;
     return;
@@ -1180,6 +1172,7 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
 
     layer.addListener("click", e => {
       handleFeatureClick(key, e.feature);
+      renderStatusDetailed(getStatusesSourceList());
     });
 
     dataLayers[key] = layer;
@@ -1205,7 +1198,10 @@ function handleFeatureClick(key, feature) {
   activeLayer = layerObj;
   currentBoundaryKey = key;
 
+  // Update markers and dashboard (boundary rules override toggles for status panel)
   filterAndDisplayMarkers();
+  // Ensure Status panel shows statuses for all categories in this boundary
+  renderStatusDetailed(getStatusesSourceList());
 }
 
 function toggleBoundaryLayerVisibility(key) {
@@ -1225,10 +1221,13 @@ function updateToggleButtonsUI(activeKey) {
 }
 
 function setupToggles() {
+  // Category toggles: when used, status panel should reflect selected categories
   ["menara", "nadi", "pop", "wifi"].forEach(cat => {
-    document.getElementById(`toggle-${cat}`)?.addEventListener("click", function () {
+    const el = document.getElementById(`toggle-${cat}`);
+    el?.addEventListener("click", function () {
       this.classList.toggle("active");
       filterAndDisplayMarkers();
+      renderStatusDetailed(getStatusesSourceList());
     });
   });
 
@@ -1252,6 +1251,7 @@ function setupToggles() {
         currentBoundaryKey = b.key; 
       }
       filterAndDisplayMarkers();
+      renderStatusDetailed(getStatusesSourceList());
     });
   });
 
@@ -1270,28 +1270,9 @@ function setupToggles() {
         }
     } else {
         filterAndDisplayMarkers();
+        renderStatusDetailed(getStatusesSourceList());
     }
   });
-
-  // Status panel interactions
-  const viewSelect = document.getElementById('status-view-select');
-  const projectFilter = document.getElementById('status-project-filter');
-
-  if (viewSelect) {
-    viewSelect.addEventListener('change', (e) => {
-      statusViewMode = e.target.value;
-      // render status panel using the CURRENT filtered list (so view respects active filters)
-      renderStatusDetailed(getCurrentFilteredList());
-    });
-  }
-  if (projectFilter) {
-    projectFilter.addEventListener('change', (e) => {
-      projectCategoryFilter = e.target.value;
-      // update both markers and the status panel after category filter change
-      filterAndDisplayMarkers();
-      renderStatusDetailed(getCurrentFilteredList());
-    });
-  }
 }
 
 async function autoRefreshLoop() {
@@ -1303,6 +1284,7 @@ async function autoRefreshLoop() {
     allProjects = newProjects;
     
     filterAndDisplayMarkers();
+    renderStatusDetailed(getStatusesSourceList());
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
   }
@@ -1349,7 +1331,6 @@ async function initMap() {
     
     renderMarkersInBatches(projects, () => {
       markersList = Array.from(markersBySite.values());
-      // ensure initial UI is rendered based on default toggles
       filterAndDisplayMarkers();
     });
 
@@ -1368,8 +1349,8 @@ async function initMap() {
       }
       
       setupToggles();
-      // render status panel using current filtered list (reflect initial category toggles)
-      renderStatusDetailed(getCurrentFilteredList());
+      // initial status panel follows rules: district boundary default active, show statuses for that boundary
+      renderStatusDetailed(getStatusesSourceList());
       filterAndDisplayMarkers(); 
     });
 
