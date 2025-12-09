@@ -375,7 +375,7 @@ body {
       <!-- Status Progress Bars (Enhanced / Interactive) -->
       <div class="status-section-title">Status Kemajuan</div>
 
-      <!-- Controls for the status panel: view mode, type filter, search, export -->
+      <!-- Controls for the status panel: view mode and type filter (search + CSV removed as requested) -->
       <div class="status-controls">
         <select id="status-view-select" title="Papar mengikut">
           <option value="status">Mengikut Status</option>
@@ -384,7 +384,6 @@ body {
           <option value="dun">Mengikut DUN</option>
           <option value="parliament">Mengikut Parlimen</option>
         </select>
-        <input id="status-search" placeholder="Cari..." />
       </div>
 
       <div class="status-controls" style="margin-top:8px;">
@@ -395,7 +394,6 @@ body {
           <option value="BWA">WiFi</option>
           <option value="POP">POP</option>
         </select>
-        <button class="small-btn" id="export-csv" title="Export CSV">CSV</button>
       </div>
 
       <div id="status-list">
@@ -519,7 +517,7 @@ let activeLayer = null;
 let searchTerm = "";
 // UI state for status panel
 let statusViewMode = 'status'; // status | project | district | dun | parliament
-let statusTextFilter = '';
+let statusTextFilter = ''; // kept for compatibility though search UI removed
 let projectCategoryFilter = 'all';
 
 // ---------- UTIL HELPER ----------
@@ -868,7 +866,7 @@ function renderStatusDetailed(list) {
   const el = document.getElementById("status-list");
   if (!el) return;
 
-  // apply text filter
+  // apply text filter (still supported in code, though input removed)
   const textFilter = (statusTextFilter || "").trim().toLowerCase();
 
   const groups = computeGroups(list, statusViewMode);
@@ -928,7 +926,7 @@ function renderStatusDetailed(list) {
     more.innerHTML = `<button class="small-btn" id="show-more-status">Tunjuk Lagi (${entries.length - MAX_SHOW})</button>`;
     el.appendChild(more);
     more.querySelector('#show-more-status').addEventListener('click', () => {
-      // render full list in modal-like expanded area (simple)
+      // render full list in expanded area
       el.innerHTML = '';
       entries.forEach(entry => {
         const percent = total > 0 ? Math.round((entry.count / total) * 100) : 0;
@@ -1038,13 +1036,9 @@ function handleStatusRowClick(name) {
     }
   } else if (statusViewMode === 'status') {
     // clicking a status will filter the dashboard to only projects with that status
-    // adjust search/filter state temporarily: set statusTextFilter to the status name and re-render with filtering
     statusTextFilter = name;
-    // implement a simple temporary filter: we will filter allProjects by p.STATUS === name, then call filterAndDisplayMarkers
-    // to make it consistent, we will create a temporary subset for updateDashboard
     const subset = allProjects.filter(p => (p.STATUS || '').trim() === name);
     updateDashboard(subset);
-    // highlight map markers of subset
     const visibleLocationIds = new Set(subset.map(p => p._id));
     markersList.forEach(m => {
       const meta = m._meta;
@@ -1111,23 +1105,6 @@ function renderTop5(list) {
     });
     el.appendChild(div);
   });
-}
-
-// export CSV of current grouped view
-function exportCurrentCSV(list) {
-  const groups = computeGroups(list, statusViewMode);
-  const rows = [['Group','Count']];
-  Object.entries(groups).forEach(([k,v]) => rows.push([k, v]));
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `status-${statusViewMode}-${(new Date()).toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 // ---------- DASHBOARD UPDATE (integrate new panel) ----------
@@ -1328,11 +1305,9 @@ function setupToggles() {
     }
   });
 
-  // Status panel interactions
+  // Status panel interactions (search and export removed)
   const viewSelect = document.getElementById('status-view-select');
-  const statusSearch = document.getElementById('status-search');
   const projectFilter = document.getElementById('status-project-filter');
-  const exportBtn = document.getElementById('export-csv');
 
   if (viewSelect) {
     viewSelect.addEventListener('change', (e) => {
@@ -1340,21 +1315,10 @@ function setupToggles() {
       renderStatusDetailed(allProjects); // re-render using the current list (updateDashboard will also refresh)
     });
   }
-  if (statusSearch) {
-    statusSearch.addEventListener('input', debounce((e) => {
-      statusTextFilter = e.target.value || '';
-      renderStatusDetailed(allProjects);
-    }, 200));
-  }
   if (projectFilter) {
     projectFilter.addEventListener('change', (e) => {
       projectCategoryFilter = e.target.value;
       filterAndDisplayMarkers();
-    });
-  }
-  if (exportBtn) {
-    exportBtn.addEventListener('click', () => {
-      exportCurrentCSV(allProjects);
     });
   }
 }
