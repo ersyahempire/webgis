@@ -15,7 +15,7 @@
   --primary: #4F46E5;
   --primary-dark: #4338ca;
   --glass-bg: rgba(255, 255, 255, 0.45);  /* SMS dulu 0.85 */
-  --glass-border: rgba(255,255,255,0.5);
+  --glass-border: rgba(255, 255, 255, 0.5);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   --blur: 12px;
   --text-main: #1f2937;
@@ -156,31 +156,12 @@ body {
 
 /* Status List Styles - UPDATED FOR PROGRESS BAR & PERCENTAGE */
 .status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; }
-.status-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.status-controls select, .status-controls input {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.06);
-  font-size: 13px;
-}
-.status-controls .small-btn {
-  padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.04); cursor: pointer; font-size: 13px;
-}
 .status-item { 
-  margin-bottom: 12px; 
+  margin-bottom: 16px; 
   background: rgba(0,0,0,0.02); 
   padding: 8px; 
   border-radius: 8px; 
-  cursor: pointer;
-  transition: var(--transition);
 } 
-.status-item:hover { transform: translateY(-3px); background: rgba(255,255,255,0.7); }
 .status-header { 
   display: flex; 
   justify-content: space-between; 
@@ -189,17 +170,17 @@ body {
   margin-bottom: 6px; 
   font-weight: 600; 
 } 
-.status-name { font-weight: 700; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-name { font-weight: 700; }
 .status-count { color: var(--text-sub); font-weight: 500; margin-left: 5px; font-size: 12px; }
-.status-percent { font-size: 13px; font-weight: 700; } 
+.status-percent { font-size: 14px; font-weight: 700; } 
 
 .progress-bg { 
   width: 100%; 
   height: 10px; /* Thicker bar */
-  background: rgba(0,0,0,0.08); /* Darker background */
+  background: rgba(0,0,0,0.1); /* Darker background */
   border-radius: 5px; 
   overflow: hidden; 
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); /* Inner shadow for depth */
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); /* Inner shadow for depth */
 }
 .progress-fill { 
   height: 100%; 
@@ -209,11 +190,6 @@ body {
   transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smoother transition */
 }
 
-/* Small helpers for top items list */
-.top-list { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
-.top-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; padding:6px; border-radius:6px; background:rgba(255,255,255,0.35); border:1px solid rgba(0,0,0,0.03); }
-.top-row .lbl { color:var(--text-sub); font-weight:600; }
-.top-row .val { font-weight:700; color:var(--text-main); }
 
 /* ----- CONTROLS (RIGHT) ----- */
 .controls-container {
@@ -372,19 +348,10 @@ body {
         </div>
       </div>
 
-      <!-- Status Progress Bars (Enhanced / Interactive) -->
+      <!-- Status Progress Bars (Real Data) -->
       <div class="status-section-title">Status Kemajuan</div>
-
-      <!-- DROPDOWNS REMOVED: UI simplified as requested -->
-      <!-- Status list -->
       <div id="status-list">
-        <!-- JS will inject a more detailed, interactive status breakdown here -->
-      </div>
-
-      <!-- Quick Top 5 list for current area -->
-      <div class="section-header" style="margin-top:12px;">Top 5 (Mengikut Daerah / Status)</div>
-      <div id="top5-list" class="top-list">
-        <!-- Populated dynamically -->
+        <!-- JS will inject status bars here -->
       </div>
 
       <!-- Mini Legend -->
@@ -418,7 +385,7 @@ body {
     <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      <!-- Default: All inactive as requested -->
+      <!-- Default: All inactive as requested (removed 'active' class) -->
       <button class="toggle-btn" id="toggle-menara" title="Menara">
         <i class="fas fa-broadcast-tower" style="color: #FF5722;"></i> <span>Menara</span>
       </button>
@@ -451,13 +418,10 @@ body {
   </script>
 
   <script>
-    // Projek Web GIS - Update v3 (dropdowns removed from Status Kemajuan)
-    // Core logic is preserved; the two dropdowns in the status panel were removed.
-    // Status panel now follows the same source rules implemented earlier:
-    // - If a boundary is selected, status list shows statuses for all categories within that boundary.
-    // - Otherwise, status list shows statuses for the currently active category toggles (if any), otherwise all projects.
+    // Projek Web GIS - Debugged & Optimized Logic
+// ---------------------------------------------------
 
-    // ---------- CONFIG ----------
+// ---------- CONFIG ----------
 const URLs = {
   district: "district.json",
   dun: "dun.json",
@@ -499,8 +463,6 @@ let batchSize = 300;
 let activeFeature = null;
 let activeLayer = null;
 let searchTerm = "";
-// statusViewMode kept default to 'status' (no dropdown to change it now)
-let statusViewMode = 'status';
 
 // ---------- UTIL HELPER ----------
 function showLoading(on) {
@@ -518,6 +480,7 @@ function debounce(fn, wait = 250) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
 }
 
+// FIX: Helper untuk membersihkan string bagi tujuan perbandingan (Trim + Uppercase)
 function normalizeString(str) {
   return String(str || "").trim().toUpperCase();
 }
@@ -525,11 +488,13 @@ function normalizeString(str) {
 function cleanFloat(val) {
   if (typeof val === 'number') return val;
   if (!val) return 0;
+  // Buang semua character pelik, tukar koma jadi titik
   const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
   const floatVal = parseFloat(str);
   return isNaN(floatVal) ? 0 : floatVal;
 }
 
+// FIX: Generate ID berdasarkan kandungan, bukan nombor baris
 function generateStableId(rowObj, type) {
   const name = normalizeString(rowObj.SITE_NAME || "UNKNOWN");
   const district = normalizeString(rowObj.DISTRICT || "SABAH");
@@ -593,7 +558,7 @@ async function fetchSheetObjects(sheetId) {
 function normalizeRows(rows, sheetKey, rawCols) {
   const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
 
-  const normalized = rows.map((r) => {
+  const normalized = rows.map((r, i) => {
     const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
     const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
     const district = get("DISTRICT") || get("DAERAH") || "";
@@ -672,6 +637,7 @@ function createOrUpdateMarker(project) {
     }
     return m;
   } else {
+    // Bina HTML InfoWindow
     let rawDetailsHtml = project._raw_details.map(detail =>
       `<div class="info-row"><span class="info-label">${escapeHtml(detail.label)}</span><span class="info-val">${escapeHtml(detail.value)}</span></div>`
     ).join('');
@@ -684,7 +650,7 @@ function createOrUpdateMarker(project) {
       position: { lat: project.LATITUDE, lng: project.LONGITUDE },
       map: map,
       title: project.SITE_NAME || "",
-      visible: false, // Default hidden, controlled by filters
+      visible: false, // Default hidden
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 6,
@@ -695,6 +661,7 @@ function createOrUpdateMarker(project) {
       }
     });
 
+    // UPDATE: Menambah DUN dan Parlimen dalam Maklumat Utama
     const infowin = new google.maps.InfoWindow({
       content: `
             <div class="info-popup">
@@ -740,7 +707,6 @@ function renderMarkersInBatches(projects, onComplete) {
     if (i < total) {
       setTimeout(runChunk, 50); 
     } else {
-      markersList = Array.from(markersBySite.values());
       if (onComplete) onComplete();
     }
   };
@@ -748,329 +714,61 @@ function renderMarkersInBatches(projects, onComplete) {
 }
 
 // ---------- FILTERING LOGIC ----------
-// Helper to read which category toggles are active (uses toggle buttons)
-function getActiveCategoriesFromToggles() {
-  const cats = [];
-  if (document.getElementById("toggle-menara")?.classList.contains("active")) cats.push("TOWER");
-  if (document.getElementById("toggle-nadi")?.classList.contains("active")) cats.push("NADI");
-  if (document.getElementById("toggle-wifi")?.classList.contains("active")) cats.push("BWA");
-  if (document.getElementById("toggle-pop")?.classList.contains("active")) cats.push("POP");
-  return cats;
-}
-
-// Current filtered list used to update dashboard counts & map markers (follows rules below)
-function getCurrentFilteredList() {
-  let filteredList = allProjects.slice();
-
-  // If a boundary feature is selected -> apply boundary filter and IGNORE category toggles
-  if (activeFeature && currentBoundaryKey) {
-    const areaNameRaw = extractFeatureName(activeFeature);
-    const areaName = normalizeString(areaNameRaw); 
-
-    filteredList = filteredList.filter(p => {
-      if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
-      if (currentBoundaryKey === 'dun') return normalizeString(p.DUN) === areaName;
-      if (currentBoundaryKey === 'parliament') return normalizeString(p.PARLIAMENT) === areaName;
-      return false;
-    });
-
-    return filteredList;
-  }
-
-  // Otherwise, if category toggles are active -> filter by those categories
-  const activeCats = getActiveCategoriesFromToggles();
-  if (activeCats.length > 0) {
-    filteredList = filteredList.filter(p => activeCats.includes(p._type));
-  } else {
-    // If no toggles active, keep all projects (default)
-    filteredList = filteredList;
-  }
-
-  // Apply text search (if any) - same behaviour as before
-  if (searchTerm && searchTerm.length > 0) {
-    const term = searchTerm.toLowerCase();
-    if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
-      filteredList = filteredList.filter(p =>
-        (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
-        (p.DISTRICT && p.DISTRICT.toLowerCase().includes(term)) ||
-        (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term))
-      );
-    }
-  }
-
-  return filteredList;
-}
-
-// Special source list for Status panel per user's requested logic:
-// - If a boundary is selected -> statuses computed for all categories in that boundary (ignore toggles)
-// - Else -> statuses computed based on currently selected category toggles (if any), otherwise all projects
-function getStatusesSourceList() {
-  // boundary active => all categories within boundary
-  if (activeFeature && currentBoundaryKey) {
-    const areaNameRaw = extractFeatureName(activeFeature);
-    const areaName = normalizeString(areaNameRaw); 
-
-    return allProjects.filter(p => {
-      if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
-      if (currentBoundaryKey === 'dun') return normalizeString(p.DUN) === areaName;
-      if (currentBoundaryKey === 'parliament') return normalizeString(p.PARLIAMENT) === areaName;
-      return false;
-    });
-  }
-
-  // else use toggles
-  const activeCats = getActiveCategoriesFromToggles();
-  if (activeCats.length > 0) {
-    return allProjects.filter(p => activeCats.includes(p._type));
-  }
-
-  // if no toggles active -> entire dataset
-  return allProjects.slice();
-}
-
 function filterAndDisplayMarkers() {
-  markersList = Array.from(markersBySite.values());
-
   const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
   const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
   const popActive = document.getElementById("toggle-pop")?.classList.contains("active");
   const wifiActive = document.getElementById("toggle-wifi")?.classList.contains("active");
 
-  const filteredList = getCurrentFilteredList();
+  let filteredList = allProjects;
+
+  // 1. Tapis mengikut Sempadan (District/Dun/Parliament)
+  if (activeFeature && currentBoundaryKey) {
+    const areaNameRaw = extractFeatureName(activeFeature);
+    const areaName = normalizeString(areaNameRaw); 
+
+    filteredList = allProjects.filter(p => {
+      if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
+      if (currentBoundaryKey === 'dun') return normalizeString(p.DUN) === areaName;
+      if (currentBoundaryKey === 'parliament') return normalizeString(p.PARLIAMENT) === areaName;
+      return false;
+    });
+  }
+
+  // 2. Tapis mengikut Carian (Text Only - Coordinate handling is separate in listener)
+  if (searchTerm && searchTerm.length > 0) {
+    const term = searchTerm.toLowerCase();
+    // Jika ia bukan format koordinat, kita filter senarai projek
+    if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
+        filteredList = filteredList.filter(p =>
+        (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
+        (p.DISTRICT && p.DISTRICT.toLowerCase().includes(term)) ||
+        (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term))
+        );
+    }
+  }
+
   updateDashboard(filteredList);
 
   const visibleLocationIds = new Set(filteredList.map(p => p._id));
 
-  for (const m of markersBySite.values()) {
-    if (!m || !m._meta) continue;
+  markersList.forEach(m => {
+    if(!m) return;
     const meta = m._meta;
     const type = meta._type;
 
-    // category visibility toggles still influence marker visibility if no boundary selected.
-    // However if boundary is selected, getCurrentFilteredList already restricted to the boundary and here we simply show/hide accordingly.
     let isCategoryActive = false;
     if (type === "TOWER") isCategoryActive = menaraActive;
     else if (type === "BWA") isCategoryActive = wifiActive;
     else if (type === "NADI") isCategoryActive = nadiActive;
     else if (type === "POP") isCategoryActive = popActive;
 
-    // Determine visibility:
-    // - If boundary is active: visible if marker in visibleLocationIds (boundary filtered list) AND meta._validCoord
-    // - Else: visible if in visibleLocationIds (category filtered list) AND corresponding toggle active
-    const inFiltered = visibleLocationIds.has(meta._id);
-    const shouldShow = inFiltered && meta._validCoord && (activeFeature && currentBoundaryKey ? true : isCategoryActive);
-    m.setVisible(!!shouldShow);
-  }
-}
-
-// ---------- STATUS PANEL RENDER ----------
-function getColorForName(name, fallback="#4F46E5") {
-  const s = normalizeString(name || "");
-  if (!s) return fallback;
-  if (s.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) return "#4CAF50";
-  if (s.match(/BINA|IMPLEMENTASI|PROGRESS|DALAM PROSES/)) return "#2196F3";
-  if (s.match(/TANGGUH|BATAL|CANCEL|TIDAK JALAN/)) return "#F44336";
-  if (s.match(/RANCANG|BARU|PLAN|PROPOSED/)) return "#FF9800";
-  if (s.includes("MENARA") || s.includes("TOWER")) return "#FF5722";
-  if (s.includes("NADI")) return "#2196F3";
-  if (s.includes("WIFI") || s.includes("BWA")) return "#4CAF50";
-  if (s.includes("POP")) return "#FF9800";
-  return "#4F46E5";
-}
-
-function computeGroups(list, mode) {
-  const groups = {};
-  list.forEach(p => {
-    let key = "";
-    if (mode === 'status') key = p.STATUS || "Tidak Dinyatakan";
-    else if (mode === 'project') key = TYPE_CFG[p._type]?.label || p._type || "Lain-lain";
-    else if (mode === 'district') key = p.DISTRICT || "LAIN-LAIN";
-    else if (mode === 'dun') key = p.DUN || "LAIN-LAIN";
-    else if (mode === 'parliament') key = p.PARLIAMENT || "LAIN-LAIN";
-    key = String(key).trim() || "LAIN-LAIN";
-    groups[key] = (groups[key] || 0) + 1;
-  });
-  return groups;
-}
-
-function shadeColor(hex, percent) {
-  try {
-    const c = hex.replace('#','');
-    const num = parseInt(c,16);
-    const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent/100)));
-    const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent/100)));
-    const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent/100)));
-    return `rgb(${r},${g},${b})`;
-  } catch (e) {
-    return hex;
-  }
-}
-
-function renderStatusDetailed(list) {
-  const el = document.getElementById("status-list");
-  if (!el) return;
-
-  // Source list follows the rules: boundary selected -> all categories within boundary; else -> selected toggles or all
-  const sourceList = getStatusesSourceList();
-
-  const groups = computeGroups(sourceList, statusViewMode);
-  let entries = Object.entries(groups).map(([k,v]) => ({ name: k, count: v }));
-  entries.sort((a,b) => b.count - a.count);
-
-  el.innerHTML = "";
-
-  const total = sourceList.length || 0;
-  if (entries.length === 0) {
-    el.innerHTML = `<div style="color:var(--text-sub);font-size:13px;padding:8px 6px;">Tiada data untuk paparan ini.</div>`;
-    renderTop5(sourceList);
-    return;
-  }
-
-  const MAX_SHOW = 10;
-  const toShow = entries.slice(0, MAX_SHOW);
-
-  toShow.forEach(entry => {
-    const percent = total > 0 ? Math.round((entry.count / total) * 100) : 0;
-    const color = getColorForName(entry.name);
-    const startColor = shadeColor(color, 18);
-    const wrap = document.createElement('div');
-    wrap.className = 'status-item';
-    wrap.title = `Klik untuk lihat marker: ${entry.name}`;
-    wrap.innerHTML = `
-      <div class="status-header">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
-          <div class="status-name">${escapeHtml(entry.name)}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div class="status-percent" style="color:${color}">${entry.count} (${percent}%)</div>
-        </div>
-      </div>
-      <div class="progress-bg">
-        <div class="progress-fill" style="width:${percent}%; background: linear-gradient(90deg, ${startColor}, ${color});"></div>
-      </div>
-    `;
-    wrap.addEventListener('click', () => {
-      handleStatusRowClick(entry.name);
-    });
-    el.appendChild(wrap);
-  });
-
-  if (entries.length > MAX_SHOW) {
-    const more = document.createElement('div');
-    more.style.marginTop = '8px';
-    more.innerHTML = `<button class="small-btn" id="show-more-status">Tunjuk Lagi (${entries.length - MAX_SHOW})</button>`;
-    el.appendChild(more);
-    more.querySelector('#show-more-status').addEventListener('click', () => {
-      el.innerHTML = '';
-      entries.forEach(entry => {
-        const percent = total > 0 ? Math.round((entry.count / total) * 100) : 0;
-        const color = getColorForName(entry.name);
-        const startColor = shadeColor(color, 18);
-        const wrap = document.createElement('div');
-        wrap.className = 'status-item';
-        wrap.title = `Klik untuk lihat marker: ${entry.name}`;
-        wrap.innerHTML = `
-          <div class="status-header">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
-              <div class="status-name">${escapeHtml(entry.name)}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div class="status-percent" style="color:${color}">${entry.count} (${percent}%)</div>
-            </div>
-          </div>
-          <div class="progress-bg">
-            <div class="progress-fill" style="width:${percent}%; background: linear-gradient(90deg, ${startColor}, ${color});"></div>
-          </div>
-        `;
-        wrap.addEventListener('click', () => {
-          handleStatusRowClick(entry.name);
-        });
-        el.appendChild(wrap);
-      });
-    });
-  }
-
-  renderTop5(sourceList);
-}
-
-function handleStatusRowClick(name) {
-  // Determine source per current rules
-  const source = getStatusesSourceList();
-  const subset = source.filter(p => (p.STATUS || '').trim() === name);
-
-  // Show only markers corresponding to this subset
-  const visibleLocationIds = new Set(subset.map(p => p._id));
-
-  for (const m of markersBySite.values()) {
-    if (!m || !m._meta) continue;
-    const meta = m._meta;
-    const shouldShow = visibleLocationIds.has(meta._id) && meta._validCoord;
-    m.setVisible(!!shouldShow);
-  }
-
-  // Update dashboard counts to reflect the shown subset
-  updateDashboard(subset);
-}
-
-// Find feature by name (safe)
-function findFeatureByName(layerKey, name) {
-  const layer = dataLayers[layerKey];
-  if (!layer) return null;
-  let found = null;
-  try {
-    layer.forEach(feature => {
-      const fname = extractFeatureName(feature);
-      if (normalizeString(fname) === normalizeString(name)) {
-        found = feature;
-      }
-    });
-  } catch (e) {
-    try {
-      const features = layer.getFeatures ? layer.getFeatures() : [];
-      for (const f of features) {
-        const fname = extractFeatureName(f);
-        if (normalizeString(fname) === normalizeString(name)) { found = f; break; }
-      }
-    } catch (_) {}
-  }
-  return found;
-}
-
-function renderTop5(list) {
-  const el = document.getElementById('top5-list');
-  if (!el) return;
-  const byDistrict = {};
-  list.forEach(p => {
-    const d = (p.DISTRICT || "LAIN-LAIN").trim();
-    byDistrict[d] = (byDistrict[d] || 0) + 1;
-  });
-  const rows = Object.entries(byDistrict).map(([k,v]) => ({k,v})).sort((a,b) => b.v - a.v).slice(0,5);
-  el.innerHTML = '';
-  if (rows.length === 0) {
-    el.innerHTML = `<div style="color:var(--text-sub);font-size:13px;">Tiada data</div>`;
-    return;
-  }
-  rows.forEach(r => {
-    const div = document.createElement('div');
-    div.className = 'top-row';
-    div.innerHTML = `<div class="lbl">${escapeHtml(r.k)}</div><div class="val">${r.v}</div>`;
-    div.addEventListener('click', () => {
-      const f = findFeatureByName('district', r.k);
-      if (f) handleFeatureClick('district', f);
-      else {
-        document.getElementById("selected-area").textContent = r.k;
-        currentBoundaryKey = null;
-        activeFeature = null;
-        filterAndDisplayMarkers();
-      }
-    });
-    el.appendChild(div);
+    const shouldShow = visibleLocationIds.has(meta._id) && isCategoryActive && meta._validCoord;
+    
+    m.setVisible(shouldShow);
   });
 }
 
-// ---------- DASHBOARD UPDATE ----------
 const updateDashboard = debounce(function (list) {
   const displayList = list || [];
 
@@ -1078,12 +776,16 @@ const updateDashboard = debounce(function (list) {
   if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
 
   const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
+  const dynamicStatusCounts = {};
 
   displayList.forEach(p => {
     if (p._type === "TOWER") counts.menara++;
     if (p._type === "BWA") counts.wifi++;
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
+
+    const s = String(p.STATUS || "Tidak Dinyatakan").trim();
+    if (s) dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
   });
 
   const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
@@ -1092,16 +794,42 @@ const updateDashboard = debounce(function (list) {
   setTxt("wifi-count", counts.wifi);
   setTxt("pop-count", counts.pop);
 
-  // Render status panel based on the current rules
-  renderStatusDetailed(displayList);
+  const statusEl = document.getElementById("status-list");
+  if(!statusEl) return;
+  
+  statusEl.innerHTML = "";
+  const sortedStatuses = Object.entries(dynamicStatusCounts).sort(([, a], [, b]) => b - a);
+  const totalProjects = displayList.length;
+
+  sortedStatuses.forEach(([statusName, count]) => {
+    const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
+    
+    let endColor = "#4F46E5"; 
+    let startColor = "#818cf8";
+    const statusUpper = statusName.toUpperCase();
+    
+    if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#4CAF50"; startColor = "#81c784"; }
+    else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#2196F3"; startColor = "#64b5f6"; }
+    else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#F44336"; startColor = "#e57373"; }
+    else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
+
+    const div = document.createElement("div");
+    div.className = "status-item";
+    div.innerHTML = `
+          <div class="status-header">
+            <span class="status-name">${escapeHtml(statusName)}</span>
+            <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
+          </div>
+          <div class="progress-bg">
+            <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
+          </div>
+        `;
+    statusEl.appendChild(div);
+  });
 }, 200);
 
 function animateValue(id, start, end, duration) {
-  if (start === end) {
-    const obj = document.getElementById(id);
-    if (obj) obj.innerHTML = end;
-    return;
-  }
+  if (start === end) return;
   const range = end - start;
   let current = start;
   const increment = end > start ? 1 : -1;
@@ -1172,7 +900,6 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
 
     layer.addListener("click", e => {
       handleFeatureClick(key, e.feature);
-      renderStatusDetailed(getStatusesSourceList());
     });
 
     dataLayers[key] = layer;
@@ -1198,10 +925,7 @@ function handleFeatureClick(key, feature) {
   activeLayer = layerObj;
   currentBoundaryKey = key;
 
-  // Update markers and dashboard (boundary rules override toggles for status panel)
   filterAndDisplayMarkers();
-  // Ensure Status panel shows statuses for all categories in this boundary
-  renderStatusDetailed(getStatusesSourceList());
 }
 
 function toggleBoundaryLayerVisibility(key) {
@@ -1221,13 +945,10 @@ function updateToggleButtonsUI(activeKey) {
 }
 
 function setupToggles() {
-  // Category toggles: when used, status panel should reflect selected categories
   ["menara", "nadi", "pop", "wifi"].forEach(cat => {
-    const el = document.getElementById(`toggle-${cat}`);
-    el?.addEventListener("click", function () {
+    document.getElementById(`toggle-${cat}`)?.addEventListener("click", function () {
       this.classList.toggle("active");
       filterAndDisplayMarkers();
-      renderStatusDetailed(getStatusesSourceList());
     });
   });
 
@@ -1251,11 +972,10 @@ function setupToggles() {
         currentBoundaryKey = b.key; 
       }
       filterAndDisplayMarkers();
-      renderStatusDetailed(getStatusesSourceList());
     });
   });
 
-  // Carian Responsif + Koordinat
+  // UPDATE: Carian Responsif + Koordinat
   document.getElementById("search-input")?.addEventListener("input", (e) => {
     searchTerm = e.target.value;
     
@@ -1265,12 +985,14 @@ function setupToggles() {
         const lat = parseFloat(coordMatch[1]);
         const lng = parseFloat(coordMatch[2]);
         if (!isNaN(lat) && !isNaN(lng)) {
+            // Pan terus ke lokasi tanpa filter markers
             map.panTo({lat, lng});
             map.setZoom(14);
+            // Optional: Letak marker sementara atau biarkan user melihat kawasan
         }
     } else {
+        // Jika teks biasa, jalankan filter standard
         filterAndDisplayMarkers();
-        renderStatusDetailed(getStatusesSourceList());
     }
   });
 }
@@ -1284,7 +1006,6 @@ async function autoRefreshLoop() {
     allProjects = newProjects;
     
     filterAndDisplayMarkers();
-    renderStatusDetailed(getStatusesSourceList());
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
   }
@@ -1308,18 +1029,23 @@ async function initMap() {
   map = new google.maps.Map(mapDiv, {
     center: { lat: 5.9804, lng: 116.0735 },
     zoom: 8,
-    mapTypeId: "satellite",
+    mapTypeId: "satellite", /* SMS - sebelumnya roadmap */
     styles: silverStyle,
     disableDefaultUI: false,
+    
+    // UPDATE: Pilihan View (Satellite/Map)
     mapTypeControl: true,
     mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
         position: google.maps.ControlPosition.TOP_RIGHT
     },
+    
+    // UPDATE: Butang Zoom (+ -)
     zoomControl: true,
     zoomControlOptions: {
         position: google.maps.ControlPosition.RIGHT_BOTTOM
     },
+    
     streetViewControl: false,
     fullscreenControl: false
   });
@@ -1349,8 +1075,6 @@ async function initMap() {
       }
       
       setupToggles();
-      // initial status panel follows rules: district boundary default active, show statuses for that boundary
-      renderStatusDetailed(getStatusesSourceList());
       filterAndDisplayMarkers(); 
     });
 
@@ -1371,3 +1095,4 @@ window.initMap = initMap;
     
 </body>
 </html>
+
