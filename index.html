@@ -14,8 +14,8 @@
 :root {
   --primary: #4F46E5;
   --primary-dark: #4338ca;
-  --glass-bg: rgba(255, 255, 255, 0.65); /* Increased opacity slightly for better readability */
-  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-bg: rgba(255, 255, 255, 0.45);  /* SMS dulu 0.85 */
+  --glass-border: rgba(255,255,255,0.5);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   --blur: 12px;
   --text-main: #1f2937;
@@ -90,7 +90,7 @@ body {
 
 .dashboard-panel {
   position: absolute; top: 75px; left: 20px; bottom: 20px;
-  width: 340px; /* Sedikit lebar untuk tab */
+  width: 320px;
   z-index: 10;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--blur));
@@ -122,6 +122,7 @@ body {
   overflow-y: auto;
   scrollbar-width: thin;
 }
+/* Custom Scrollbar */
 .panel-content::-webkit-scrollbar { width: 6px; }
 .panel-content::-webkit-scrollbar-track { background: transparent; }
 .panel-content::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 20px; }
@@ -153,71 +154,66 @@ body {
 .mini-stat-val { font-size: 20px; font-weight: 700; color: var(--text-main); }
 .mini-stat-lbl { font-size: 11px; color: var(--text-sub); }
 
-/* --- NEW TABS STYLE --- */
-.stats-tabs {
+/* Status List Styles - UPDATED FOR PROGRESS BAR & PERCENTAGE */
+.status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; }
+.status-controls {
   display: flex;
-  background: rgba(0,0,0,0.05);
-  padding: 4px;
-  border-radius: 10px;
-  margin-bottom: 15px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
 }
-.stats-tab {
+.status-controls select, .status-controls input {
   flex: 1;
-  border: none;
-  background: none;
-  padding: 8px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-sub);
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s;
-  text-align: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.06);
+  font-size: 13px;
 }
-.stats-tab.active {
-  background: white;
-  color: var(--primary);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+.status-controls .small-btn {
+  padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.04); cursor: pointer; font-size: 13px;
 }
-
-/* Status List Styles */
-.status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; display: flex; justify-content: space-between; align-items: center; }
-
 .status-item { 
-  margin-bottom: 10px; 
-  background: rgba(255,255,255,0.4); 
-  padding: 10px; 
-  border-radius: 10px; 
-  border: 1px solid rgba(255,255,255,0.3);
-  transition: transform 0.2s;
-}
-.status-item:hover { transform: translateX(2px); background: rgba(255,255,255,0.6); }
-
+  margin-bottom: 12px; 
+  background: rgba(0,0,0,0.02); 
+  padding: 8px; 
+  border-radius: 8px; 
+  cursor: pointer;
+  transition: var(--transition);
+} 
+.status-item:hover { transform: translateY(-3px); background: rgba(255,255,255,0.7); }
 .status-header { 
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
-  font-size: 13px; 
+  font-size: 14px; 
   margin-bottom: 6px; 
   font-weight: 600; 
 } 
-.status-name { font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-.status-rank { font-size: 10px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; color: var(--text-sub); }
+.status-name { font-weight: 700; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-count { color: var(--text-sub); font-weight: 500; margin-left: 5px; font-size: 12px; }
+.status-percent { font-size: 13px; font-weight: 700; } 
 
 .progress-bg { 
   width: 100%; 
-  height: 6px; 
-  background: rgba(0,0,0,0.05); 
-  border-radius: 10px; 
+  height: 10px; /* Thicker bar */
+  background: rgba(0,0,0,0.08); /* Darker background */
+  border-radius: 5px; 
   overflow: hidden; 
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); /* Inner shadow for depth */
 }
 .progress-fill { 
   height: 100%; 
-  background: var(--primary); 
-  border-radius: 10px; 
+  background: var(--primary); /* Will be overridden by JS gradient */
+  border-radius: 5px; 
   width: 0%; 
-  transition: width 1s ease; 
+  transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smoother transition */
 }
+
+/* Small helpers for top items list */
+.top-list { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+.top-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; padding:6px; border-radius:6px; background:rgba(255,255,255,0.35); border:1px solid rgba(0,0,0,0.03); }
+.top-row .lbl { color:var(--text-sub); font-weight:600; }
+.top-row .val { font-weight:700; color:var(--text-main); }
 
 /* ----- CONTROLS (RIGHT) ----- */
 .controls-container {
@@ -233,7 +229,7 @@ body {
   padding: 5px;
   border-radius: 12px;
   box-shadow: var(--glass-shadow);
-  width: 50px; 
+  width: 50px; /* Collapsed width */
   overflow: hidden;
   transition: width 0.3s ease, background 0.3s;
   border: 1px solid var(--glass-border);
@@ -241,14 +237,14 @@ body {
 }
 
 .control-card:hover, .control-card.expanded {
-  width: 180px; 
-  background: rgba(255, 255, 255, 0.85);
+  width: 180px; /* Expanded width */
+  background: rgba(255, 255, 255, 0.55); /* SMS dulu 0.95 */
 }
 
 .control-group-title {
   padding: 10px 15px; font-size: 11px; font-weight: 700; 
   text-transform: uppercase; color: var(--text-sub); letter-spacing: 0.5px;
-  display: none; 
+  display: none; /* Hide when collapsed */
 }
 .control-card.expanded .control-group-title { display: block; }
 
@@ -263,15 +259,12 @@ body {
 .toggle-btn i { width: 30px; text-align: center; font-size: 16px; flex-shrink: 0; }
 .toggle-btn span { opacity: 0; transition: opacity 0.2s; font-size: 13px; font-weight: 500; }
 
+/* Show text on hover/expand */
 .control-card:hover .toggle-btn span, .control-card.expanded .toggle-btn span { opacity: 1; }
 .control-card:hover .toggle-btn, .control-card.expanded .toggle-btn { padding: 10px 15px; }
 
 .toggle-btn:hover { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
 .toggle-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
-
-/* Extra Button: Reset */
-.btn-reset { color: #F44336 !important; }
-.btn-reset:hover { background: rgba(244, 67, 54, 0.1) !important; color: #d32f2f !important; }
 
 /* Legend Mini */
 .legend-mini {
@@ -298,7 +291,11 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.gm-style .gm-style-iw-c { padding: 0 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important; }
+/* InfoWindow Customization */
+.gm-style .gm-style-iw-c {
+  padding: 0 !important; border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+}
 .gm-style-iw-d { overflow: hidden !important; max-height: 400px !important; }
 .info-popup { padding: 0; min-width: 280px; max-width: 320px; }
 .info-header { background: var(--primary); color: white; padding: 12px 16px; font-weight: 600; font-size: 14px; }
@@ -309,7 +306,7 @@ body {
 .section-header { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; margin: 12px 0 8px 0; border-bottom: 2px solid #eee; padding-bottom: 4px; }
 
 @media (max-width: 600px) {
-  .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 55vh; }
+  .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; }
   .controls-container { top: auto; bottom: 80px; right: 20px; }
   .control-card { width: 45px; }
   .control-card:hover, .control-card.expanded { width: 160px; }
@@ -375,20 +372,40 @@ body {
         </div>
       </div>
 
-      <!-- New Tabs for Statistics -->
-      <div class="status-section-title">
-        <span>Perincian Data</span>
+      <!-- Status Progress Bars (Enhanced / Interactive) -->
+      <div class="status-section-title">Status Kemajuan</div>
+
+      <!-- Controls for the status panel: view mode, type filter, search, export -->
+      <div class="status-controls">
+        <select id="status-view-select" title="Papar mengikut">
+          <option value="status">Mengikut Status</option>
+          <option value="project">Mengikut Projek (Kategori)</option>
+          <option value="district">Mengikut Daerah</option>
+          <option value="dun">Mengikut DUN</option>
+          <option value="parliament">Mengikut Parlimen</option>
+        </select>
+        <input id="status-search" placeholder="Cari..." />
       </div>
-      
-      <div class="stats-tabs">
-        <button class="stats-tab active" onclick="window.switchStatTab('status', this)">Status</button>
-        <button class="stats-tab" onclick="window.switchStatTab('district', this)">Daerah</button>
-        <button class="stats-tab" onclick="window.switchStatTab('dun', this)">DUN</button>
-        <button class="stats-tab" onclick="window.switchStatTab('parliament', this)">Parlimen</button>
+
+      <div class="status-controls" style="margin-top:8px;">
+        <select id="status-project-filter" title="Tapis Kategori">
+          <option value="all">Semua Kategori</option>
+          <option value="TOWER">Menara</option>
+          <option value="NADI">NADI</option>
+          <option value="BWA">WiFi</option>
+          <option value="POP">POP</option>
+        </select>
+        <button class="small-btn" id="export-csv" title="Export CSV">CSV</button>
       </div>
 
       <div id="status-list">
-        <!-- JS will inject lists here -->
+        <!-- JS will inject a more detailed, interactive status breakdown here -->
+      </div>
+
+      <!-- Quick Top 5 list for current area -->
+      <div class="section-header" style="margin-top:12px;">Top 5 (Mengikut Daerah / Status)</div>
+      <div id="top5-list" class="top-list">
+        <!-- Populated dynamically -->
       </div>
 
       <!-- Mini Legend -->
@@ -404,18 +421,10 @@ body {
   <!-- Right Side Controls (Expandable Cards) -->
   <div class="controls-container">
     
-    <!-- General Controls (New) -->
-    <div class="control-card" id="general-card">
-        <div class="control-group-title">Kawalan</div>
-        <button class="toggle-btn btn-reset" id="btn-reset-map" title="Reset Peta">
-          <i class="fas fa-undo-alt"></i> <span>Reset Peta</span>
-        </button>
-    </div>
-
     <!-- Layer Toggle Group -->
     <div class="control-card" id="layer-card">
       <div class="control-group-title">Sempadan</div>
-      <!-- Default: Daerah Active -->
+      <!-- Default: Daerah Active, others inactive -->
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
         <i class="fas fa-map-marked-alt"></i> <span>Daerah</span>
       </button>
@@ -430,6 +439,7 @@ body {
     <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
+      <!-- Default: All inactive as requested (removed 'active' class) -->
       <button class="toggle-btn" id="toggle-menara" title="Menara">
         <i class="fas fa-broadcast-tower" style="color: #FF5722;"></i> <span>Menara</span>
       </button>
@@ -444,7 +454,7 @@ body {
       </button>
     </div>
   </div>
-   
+  
   <!-- UI Interactions Script -->
   <script>
     function toggleDashboard() {
@@ -454,15 +464,15 @@ body {
       btn.innerHTML = panel.classList.contains('closed') ? '<i class="fas fa-chart-pie"></i>' : '<i class="fas fa-times"></i>';
     }
 
+    // Auto-expand controls on mouseover
     document.querySelectorAll('.control-card').forEach(card => {
       card.addEventListener('mouseenter', () => card.classList.add('expanded'));
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
   </script>
 
-  <!-- Main script -->
   <script>
-// Projek Web GIS - Debugged & Optimized Logic
+    // Projek Web GIS - Debugged & Optimized Logic with Enhanced Status Panel
 // ---------------------------------------------------
 
 // ---------- CONFIG ----------
@@ -507,8 +517,10 @@ let batchSize = 300;
 let activeFeature = null;
 let activeLayer = null;
 let searchTerm = "";
-// New: State for Stats Tab
-let activeStatTab = "status"; 
+// UI state for status panel
+let statusViewMode = 'status'; // status | project | district | dun | parliament
+let statusTextFilter = '';
+let projectCategoryFilter = 'all';
 
 // ---------- UTIL HELPER ----------
 function showLoading(on) {
@@ -526,6 +538,7 @@ function debounce(fn, wait = 250) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
 }
 
+// FIX: Helper untuk membersihkan string bagi tujuan perbandingan (Trim + Uppercase)
 function normalizeString(str) {
   return String(str || "").trim().toUpperCase();
 }
@@ -533,11 +546,13 @@ function normalizeString(str) {
 function cleanFloat(val) {
   if (typeof val === 'number') return val;
   if (!val) return 0;
+  // Buang semua character pelik, tukar koma jadi titik
   const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
   const floatVal = parseFloat(str);
   return isNaN(floatVal) ? 0 : floatVal;
 }
 
+// FIX: Generate ID berdasarkan kandungan, bukan nombor baris
 function generateStableId(rowObj, type) {
   const name = normalizeString(rowObj.SITE_NAME || "UNKNOWN");
   const district = normalizeString(rowObj.DISTRICT || "SABAH");
@@ -626,6 +641,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
     }
 
     const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
+    
     const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100); 
 
     const rowObj = {
@@ -643,6 +659,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
     };
 
     rowObj._id = generateStableId(rowObj, type);
+
     return rowObj;
   }).filter(o => o.SITE_NAME !== "N/A"); 
 
@@ -678,6 +695,7 @@ function createOrUpdateMarker(project) {
     }
     return m;
   } else {
+    // Bina HTML InfoWindow
     let rawDetailsHtml = project._raw_details.map(detail =>
       `<div class="info-row"><span class="info-label">${escapeHtml(detail.label)}</span><span class="info-val">${escapeHtml(detail.value)}</span></div>`
     ).join('');
@@ -690,7 +708,7 @@ function createOrUpdateMarker(project) {
       position: { lat: project.LATITUDE, lng: project.LONGITUDE },
       map: map,
       title: project.SITE_NAME || "",
-      visible: false,
+      visible: false, // Default hidden
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 6,
@@ -701,6 +719,7 @@ function createOrUpdateMarker(project) {
       }
     });
 
+    // UPDATE: Menambah DUN dan Parlimen dalam Maklumat Utama
     const infowin = new google.maps.InfoWindow({
       content: `
             <div class="info-popup">
@@ -732,6 +751,7 @@ function createOrUpdateMarker(project) {
 function renderMarkersInBatches(projects, onComplete) {
   const total = projects.length;
   let i = 0;
+  
   if (total === 0) {
     if (onComplete) onComplete();
     return;
@@ -751,128 +771,6 @@ function renderMarkersInBatches(projects, onComplete) {
   runChunk();
 }
 
-// ---------- DASHBOARD & TABS LOGIC ----------
-
-// UI Helper: Switch Tabs
-window.switchStatTab = function(tabName, btnElement) {
-    activeStatTab = tabName;
-    
-    // Update Button Classes
-    document.querySelectorAll('.stats-tab').forEach(b => b.classList.remove('active'));
-    if(btnElement) btnElement.classList.add('active');
-
-    // Force Dashboard Update with current list
-    const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
-    // (We re-trigger the filter to get the latest list, which calls updateDashboard)
-    filterAndDisplayMarkers();
-};
-
-const updateDashboard = debounce(function (list) {
-  const displayList = list || [];
-
-  // Update Top Stats
-  const totalEl = document.getElementById("total-projects");
-  if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
-
-  const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
-  displayList.forEach(p => {
-    if (p._type === "TOWER") counts.menara++;
-    if (p._type === "BWA") counts.wifi++;
-    if (p._type === "NADI") counts.nadi++;
-    if (p._type === "POP") counts.pop++;
-  });
-
-  const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-  setTxt("menara-count", counts.menara);
-  setTxt("nadi-count", counts.nadi);
-  setTxt("wifi-count", counts.wifi);
-  setTxt("pop-count", counts.pop);
-
-  // --- TABBED CONTENT RENDER ---
-  const statusEl = document.getElementById("status-list");
-  if(!statusEl) return;
-  statusEl.innerHTML = "";
-
-  const totalProjects = displayList.length;
-
-  // LOGIC 1: By Status (Default)
-  if (activeStatTab === 'status') {
-      const dynamicStatusCounts = {};
-      displayList.forEach(p => {
-        const s = String(p.STATUS || "Tidak Dinyatakan").trim();
-        if (s) dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
-      });
-
-      const sortedStatuses = Object.entries(dynamicStatusCounts).sort(([, a], [, b]) => b - a);
-
-      sortedStatuses.forEach(([statusName, count], index) => {
-        const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
-        
-        let endColor = "#4F46E5"; 
-        let startColor = "#818cf8";
-        const statusUpper = statusName.toUpperCase();
-        
-        if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#4CAF50"; startColor = "#81c784"; }
-        else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#2196F3"; startColor = "#64b5f6"; }
-        else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#F44336"; startColor = "#e57373"; }
-        else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
-
-        const div = document.createElement("div");
-        div.className = "status-item";
-        div.innerHTML = `
-              <div class="status-header">
-                <span class="status-name"><span class="status-rank">#${index+1}</span> ${escapeHtml(statusName)}</span>
-                <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
-              </div>
-              <div class="progress-bg">
-                <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
-              </div>
-            `;
-        statusEl.appendChild(div);
-      });
-  } 
-  // LOGIC 2: By District / DUN / Parliament
-  else {
-      let key = "DISTRICT"; // default
-      if (activeStatTab === 'dun') key = "DUN";
-      if (activeStatTab === 'parliament') key = "PARLIAMENT";
-
-      const groupCounts = {};
-      displayList.forEach(p => {
-          let val = String(p[key] || "Tidak Dinyatakan").trim();
-          if(val === "" || val === "null") val = "Tidak Dinyatakan";
-          groupCounts[val] = (groupCounts[val] || 0) + 1;
-      });
-
-      // Sort Top 10 only to avoid clutter
-      const sortedGroups = Object.entries(groupCounts).sort(([, a], [, b]) => b - a);
-      const topGroups = sortedGroups.slice(0, 50); // Show top 50 rows (scrollable)
-
-      topGroups.forEach(([name, count], index) => {
-          const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
-          
-          const div = document.createElement("div");
-          div.className = "status-item";
-          // Use neutral colors for grouping
-          div.innerHTML = `
-              <div class="status-header">
-                <span class="status-name"><span class="status-rank">#${index+1}</span> ${escapeHtml(name)}</span>
-                <span class="status-percent" style="color: #4F46E5;">${count}</span>
-              </div>
-              <div class="progress-bg">
-                <div class="progress-fill" style="width: ${percent}%; background: #4F46E5; opacity: 0.6;"></div>
-              </div>
-            `;
-          statusEl.appendChild(div);
-      });
-      
-      if(sortedGroups.length === 0) {
-          statusEl.innerHTML = `<div style="text-align:center; padding:20px; color:#999; font-size:12px;">Tiada data untuk paparan ini.</div>`;
-      }
-  }
-
-}, 200);
-
 // ---------- FILTERING LOGIC ----------
 function filterAndDisplayMarkers() {
   const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
@@ -882,6 +780,7 @@ function filterAndDisplayMarkers() {
 
   let filteredList = allProjects;
 
+  // 1. Tapis mengikut Sempadan (District/Dun/Parliament)
   if (activeFeature && currentBoundaryKey) {
     const areaNameRaw = extractFeatureName(activeFeature);
     const areaName = normalizeString(areaNameRaw); 
@@ -894,8 +793,10 @@ function filterAndDisplayMarkers() {
     });
   }
 
+  // 2. Tapis mengikut Carian (Text Only - Coordinate handling is separate in listener)
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
+    // Jika ia bukan format koordinat, kita filter senarai projek
     if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
         filteredList = filteredList.filter(p =>
         (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
@@ -903,6 +804,11 @@ function filterAndDisplayMarkers() {
         (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term))
         );
     }
+  }
+
+  // 3. Tapis mengikut kategori di panel status (projectCategoryFilter)
+  if (projectCategoryFilter && projectCategoryFilter !== 'all') {
+    filteredList = filteredList.filter(p => p._type === projectCategoryFilter);
   }
 
   updateDashboard(filteredList);
@@ -925,6 +831,334 @@ function filterAndDisplayMarkers() {
     m.setVisible(shouldShow);
   });
 }
+
+// ---------- STATUS PANEL RENDER (NEW) ----------
+function getColorForName(name, fallback="#4F46E5") {
+  const s = normalizeString(name || "");
+  if (!s) return fallback;
+  if (s.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) return "#4CAF50";
+  if (s.match(/BINA|IMPLEMENTASI|PROGRESS|DALAM PROSES/)) return "#2196F3";
+  if (s.match(/TANGGUH|BATAL|CANCEL|TIDAK JALAN/)) return "#F44336";
+  if (s.match(/RANCANG|BARU|PLAN|PROPOSED/)) return "#FF9800";
+  // For categories:
+  if (s.includes("MENARA") || s.includes("TOWER")) return "#FF5722";
+  if (s.includes("NADI")) return "#2196F3";
+  if (s.includes("WIFI") || s.includes("BWA")) return "#4CAF50";
+  if (s.includes("POP")) return "#FF9800";
+  // default gradient
+  return "#4F46E5";
+}
+
+function computeGroups(list, mode) {
+  const groups = {};
+  list.forEach(p => {
+    let key = "";
+    if (mode === 'status') key = p.STATUS || "Tidak Dinyatakan";
+    else if (mode === 'project') key = TYPE_CFG[p._type]?.label || p._type || "Lain-lain";
+    else if (mode === 'district') key = p.DISTRICT || "LAIN-LAIN";
+    else if (mode === 'dun') key = p.DUN || "LAIN-LAIN";
+    else if (mode === 'parliament') key = p.PARLIAMENT || "LAIN-LAIN";
+    key = String(key).trim() || "LAIN-LAIN";
+    groups[key] = (groups[key] || 0) + 1;
+  });
+  return groups;
+}
+
+function renderStatusDetailed(list) {
+  const el = document.getElementById("status-list");
+  if (!el) return;
+
+  // apply text filter
+  const textFilter = (statusTextFilter || "").trim().toLowerCase();
+
+  const groups = computeGroups(list, statusViewMode);
+  let entries = Object.entries(groups).map(([k,v]) => ({ name: k, count: v }));
+
+  if (textFilter) {
+    entries = entries.filter(e => e.name.toLowerCase().includes(textFilter));
+  }
+
+  entries.sort((a,b) => b.count - a.count);
+
+  el.innerHTML = "";
+
+  const total = list.length || 0;
+  // Show a helpful message if empty
+  if (entries.length === 0) {
+    el.innerHTML = `<div style="color:var(--text-sub);font-size:13px;padding:8px 6px;">Tiada data untuk paparan ini.</div>`;
+    renderTop5(list);
+    return;
+  }
+
+  // render top N (all but keep compact)
+  const MAX_SHOW = 10;
+  const toShow = entries.slice(0, MAX_SHOW);
+
+  toShow.forEach(entry => {
+    const percent = total > 0 ? Math.round((entry.count / total) * 100) : 0;
+    const color = getColorForName(entry.name);
+    const startColor = shadeColor(color, 18);
+    const wrap = document.createElement('div');
+    wrap.className = 'status-item';
+    wrap.title = `Klik untuk lihat / tapis: ${entry.name}`;
+    wrap.innerHTML = `
+      <div class="status-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
+          <div class="status-name">${escapeHtml(entry.name)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="status-percent" style="color:${color}">${entry.count} (${percent}%)</div>
+        </div>
+      </div>
+      <div class="progress-bg">
+        <div class="progress-fill" style="width:${percent}%; background: linear-gradient(90deg, ${startColor}, ${color});"></div>
+      </div>
+    `;
+    wrap.addEventListener('click', () => {
+      handleStatusRowClick(entry.name);
+    });
+    el.appendChild(wrap);
+  });
+
+  // if more than MAX_SHOW, add a "show more" button
+  if (entries.length > MAX_SHOW) {
+    const more = document.createElement('div');
+    more.style.marginTop = '8px';
+    more.innerHTML = `<button class="small-btn" id="show-more-status">Tunjuk Lagi (${entries.length - MAX_SHOW})</button>`;
+    el.appendChild(more);
+    more.querySelector('#show-more-status').addEventListener('click', () => {
+      // render full list in modal-like expanded area (simple)
+      el.innerHTML = '';
+      entries.forEach(entry => {
+        const percent = total > 0 ? Math.round((entry.count / total) * 100) : 0;
+        const color = getColorForName(entry.name);
+        const startColor = shadeColor(color, 18);
+        const wrap = document.createElement('div');
+        wrap.className = 'status-item';
+        wrap.title = `Klik untuk lihat / tapis: ${entry.name}`;
+        wrap.innerHTML = `
+          <div class="status-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
+              <div class="status-name">${escapeHtml(entry.name)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="status-percent" style="color:${color}">${entry.count} (${percent}%)</div>
+            </div>
+          </div>
+          <div class="progress-bg">
+            <div class="progress-fill" style="width:${percent}%; background: linear-gradient(90deg, ${startColor}, ${color});"></div>
+          </div>
+        `;
+        wrap.addEventListener('click', () => {
+          handleStatusRowClick(entry.name);
+        });
+        el.appendChild(wrap);
+      });
+    });
+  }
+
+  renderTop5(list);
+}
+
+// Utility to slightly lighten a hex color
+function shadeColor(hex, percent) {
+  try {
+    const c = hex.replace('#','');
+    const num = parseInt(c,16);
+    const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent/100)));
+    const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent/100)));
+    const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent/100)));
+    return `rgb(${r},${g},${b})`;
+  } catch (e) {
+    return hex;
+  }
+}
+
+// When user clicks a row in the status panel
+function handleStatusRowClick(name) {
+  // Behavior depends on current view mode
+  if (statusViewMode === 'project') {
+    // Toggle project category filters
+    const mapping = { 'Menara': 'TOWER', 'NADI': 'NADI', 'WiFi': 'BWA', 'POP': 'POP' };
+    const key = mapping[name] || null;
+    if (key) {
+      projectCategoryFilter = key;
+      document.getElementById('status-project-filter').value = key;
+      filterAndDisplayMarkers();
+    }
+  } else if (statusViewMode === 'district') {
+    // try to find and select district feature
+    const f = findFeatureByName('district', name);
+    if (f) {
+      handleFeatureClick('district', f);
+      // zoom to feature bounds if possible
+      try {
+        const bounds = new google.maps.LatLngBounds();
+        f.getGeometry().forEachLatLng((latlng) => bounds.extend(latlng));
+        map.fitBounds(bounds);
+      } catch (e) {}
+    } else {
+      // fallback: filter by text and update selected area badge
+      document.getElementById("selected-area").textContent = name;
+      currentBoundaryKey = null;
+      activeFeature = null;
+      filterAndDisplayMarkers();
+    }
+  } else if (statusViewMode === 'dun') {
+    const f = findFeatureByName('dun', name);
+    if (f) {
+      handleFeatureClick('dun', f);
+      try {
+        const bounds = new google.maps.LatLngBounds();
+        f.getGeometry().forEachLatLng((latlng) => bounds.extend(latlng));
+        map.fitBounds(bounds);
+      } catch (e) {}
+    } else {
+      document.getElementById("selected-area").textContent = name;
+      currentBoundaryKey = null;
+      activeFeature = null;
+      filterAndDisplayMarkers();
+    }
+  } else if (statusViewMode === 'parliament') {
+    const f = findFeatureByName('parliament', name);
+    if (f) {
+      handleFeatureClick('parliament', f);
+      try {
+        const bounds = new google.maps.LatLngBounds();
+        f.getGeometry().forEachLatLng((latlng) => bounds.extend(latlng));
+        map.fitBounds(bounds);
+      } catch (e) {}
+    } else {
+      document.getElementById("selected-area").textContent = name;
+      currentBoundaryKey = null;
+      activeFeature = null;
+      filterAndDisplayMarkers();
+    }
+  } else if (statusViewMode === 'status') {
+    // clicking a status will filter the dashboard to only projects with that status
+    // adjust search/filter state temporarily: set statusTextFilter to the status name and re-render with filtering
+    statusTextFilter = name;
+    // implement a simple temporary filter: we will filter allProjects by p.STATUS === name, then call filterAndDisplayMarkers
+    // to make it consistent, we will create a temporary subset for updateDashboard
+    const subset = allProjects.filter(p => (p.STATUS || '').trim() === name);
+    updateDashboard(subset);
+    // highlight map markers of subset
+    const visibleLocationIds = new Set(subset.map(p => p._id));
+    markersList.forEach(m => {
+      const meta = m._meta;
+      const type = meta._type;
+      const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
+      const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
+      const popActive = document.getElementById("toggle-pop")?.classList.contains("active");
+      const wifiActive = document.getElementById("toggle-wifi")?.classList.contains("active");
+
+      let isCategoryActive = false;
+      if (type === "TOWER") isCategoryActive = menaraActive;
+      else if (type === "BWA") isCategoryActive = wifiActive;
+      else if (type === "NADI") isCategoryActive = nadiActive;
+      else if (type === "POP") isCategoryActive = popActive;
+
+      m.setVisible(visibleLocationIds.has(meta._id) && isCategoryActive && meta._validCoord);
+    });
+  }
+}
+
+function findFeatureByName(layerKey, name) {
+  const layer = dataLayers[layerKey];
+  if (!layer) return null;
+  let found = null;
+  layer.forEach(feature => {
+    const fname = extractFeatureName(feature);
+    if (normalizeString(fname) === normalizeString(name)) {
+      found = feature;
+    }
+  });
+  return found;
+}
+
+// Top 5 render helper (by district counts or status)
+function renderTop5(list) {
+  const el = document.getElementById('top5-list');
+  if (!el) return;
+  // For quick insight, show top 5 districts by project count in current filtered list
+  const byDistrict = {};
+  list.forEach(p => {
+    const d = (p.DISTRICT || "LAIN-LAIN").trim();
+    byDistrict[d] = (byDistrict[d] || 0) + 1;
+  });
+  const rows = Object.entries(byDistrict).map(([k,v]) => ({k,v})).sort((a,b) => b.v - a.v).slice(0,5);
+  el.innerHTML = '';
+  if (rows.length === 0) {
+    el.innerHTML = `<div style="color:var(--text-sub);font-size:13px;">Tiada data</div>`;
+    return;
+  }
+  rows.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'top-row';
+    div.innerHTML = `<div class="lbl">${escapeHtml(r.k)}</div><div class="val">${r.v}</div>`;
+    div.addEventListener('click', () => {
+      // attempt to select district boundary
+      const f = findFeatureByName('district', r.k);
+      if (f) handleFeatureClick('district', f);
+      else {
+        document.getElementById("selected-area").textContent = r.k;
+        currentBoundaryKey = null;
+        activeFeature = null;
+        filterAndDisplayMarkers();
+      }
+    });
+    el.appendChild(div);
+  });
+}
+
+// export CSV of current grouped view
+function exportCurrentCSV(list) {
+  const groups = computeGroups(list, statusViewMode);
+  const rows = [['Group','Count']];
+  Object.entries(groups).forEach(([k,v]) => rows.push([k, v]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `status-${statusViewMode}-${(new Date()).toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- DASHBOARD UPDATE (integrate new panel) ----------
+const updateDashboard = debounce(function (list) {
+  const displayList = list || [];
+
+  const totalEl = document.getElementById("total-projects");
+  if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
+
+  const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
+  const dynamicStatusCounts = {};
+
+  displayList.forEach(p => {
+    if (p._type === "TOWER") counts.menara++;
+    if (p._type === "BWA") counts.wifi++;
+    if (p._type === "NADI") counts.nadi++;
+    if (p._type === "POP") counts.pop++;
+
+    const s = String(p.STATUS || "Tidak Dinyatakan").trim();
+    if (s) dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
+  });
+
+  const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  setTxt("menara-count", counts.menara);
+  setTxt("nadi-count", counts.nadi);
+  setTxt("wifi-count", counts.wifi);
+  setTxt("pop-count", counts.pop);
+
+  // Render the enhanced status panel according to current mode and filters
+  renderStatusDetailed(displayList);
+}, 200);
 
 function animateValue(id, start, end, duration) {
   if (start === end) return;
@@ -1073,57 +1307,66 @@ function setupToggles() {
     });
   });
 
-  // SEARCH + COORD
+  // UPDATE: Carian Responsif + Koordinat
   document.getElementById("search-input")?.addEventListener("input", (e) => {
     searchTerm = e.target.value;
+    
+    // Check regex untuk format "Lat, Long"
     const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
     if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
         const lng = parseFloat(coordMatch[2]);
         if (!isNaN(lat) && !isNaN(lng)) {
+            // Pan terus ke lokasi tanpa filter markers
             map.panTo({lat, lng});
             map.setZoom(14);
+            // Optional: Letak marker sementara atau biarkan user melihat kawasan
         }
     } else {
+        // Jika teks biasa, jalankan filter standard
         filterAndDisplayMarkers();
     }
   });
 
-  // RESET BUTTON
-  document.getElementById("btn-reset-map")?.addEventListener("click", () => {
-     // Reset View
-     map.setCenter({ lat: 5.9804, lng: 116.0735 });
-     map.setZoom(8);
-     
-     // Reset Search
-     searchTerm = "";
-     const input = document.getElementById("search-input");
-     if(input) input.value = "";
+  // Status panel interactions
+  const viewSelect = document.getElementById('status-view-select');
+  const statusSearch = document.getElementById('status-search');
+  const projectFilter = document.getElementById('status-project-filter');
+  const exportBtn = document.getElementById('export-csv');
 
-     // Reset Boundary
-     if(currentBoundaryKey && dataLayers[currentBoundaryKey]) {
-        dataLayers[currentBoundaryKey].setMap(null);
-     }
-     // Default back to district map if needed, or just clear. Let's allow District map to stay hidden or reset to District.
-     // Let's reset to default state (District ON, but no specific feature selected)
-     dataLayers['district'].setMap(map);
-     currentBoundaryKey = 'district';
-     activeFeature = null;
-     resetAllLayerStyles();
-     
-     document.getElementById("selected-area").textContent = "SELURUH SABAH";
-     updateToggleButtonsUI('district'); // Ensure UI matches
-
-     filterAndDisplayMarkers();
-  });
+  if (viewSelect) {
+    viewSelect.addEventListener('change', (e) => {
+      statusViewMode = e.target.value;
+      renderStatusDetailed(allProjects); // re-render using the current list (updateDashboard will also refresh)
+    });
+  }
+  if (statusSearch) {
+    statusSearch.addEventListener('input', debounce((e) => {
+      statusTextFilter = e.target.value || '';
+      renderStatusDetailed(allProjects);
+    }, 200));
+  }
+  if (projectFilter) {
+    projectFilter.addEventListener('change', (e) => {
+      projectCategoryFilter = e.target.value;
+      filterAndDisplayMarkers();
+    });
+  }
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      exportCurrentCSV(allProjects);
+    });
+  }
 }
 
 async function autoRefreshLoop() {
   try {
     const newProjects = await loadAllSheetsAndNormalize();
     newProjects.forEach(np => createOrUpdateMarker(np));
+    
     markersList = Array.from(markersBySite.values());
     allProjects = newProjects;
+    
     filterAndDisplayMarkers();
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
@@ -1148,18 +1391,23 @@ async function initMap() {
   map = new google.maps.Map(mapDiv, {
     center: { lat: 5.9804, lng: 116.0735 },
     zoom: 8,
-    mapTypeId: "roadmap",
+    mapTypeId: "satellite", /* SMS - sebelumnya roadmap */
     styles: silverStyle,
     disableDefaultUI: false,
+    
+    // UPDATE: Pilihan View (Satellite/Map)
     mapTypeControl: true,
     mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
         position: google.maps.ControlPosition.TOP_RIGHT
     },
+    
+    // UPDATE: Butang Zoom (+ -)
     zoomControl: true,
     zoomControlOptions: {
         position: google.maps.ControlPosition.RIGHT_BOTTOM
     },
+    
     streetViewControl: false,
     fullscreenControl: false
   });
@@ -1203,7 +1451,6 @@ async function initMap() {
 }
 
 window.initMap = initMap;
-    
   </script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
