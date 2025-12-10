@@ -14,7 +14,7 @@
 :root {
   --primary: #4F46E5;
   --primary-dark: #4338ca;
-  --glass-bg: rgba(255, 255, 255, 0.45); 
+  --glass-bg: rgba(255, 255, 255, 0.65); 
   --glass-border: rgba(255, 255, 255, 0.5);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   --blur: 12px;
@@ -221,7 +221,7 @@ body {
 
 .control-card:hover, .control-card.expanded {
   width: 180px; /* Expanded width */
-  background: rgba(255, 255, 255, 0.55); /* SMS dulu 0.95 */
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .control-group-title {
@@ -288,6 +288,33 @@ body {
 .info-val { color: #111; font-weight: 600; text-align: right; overflow-wrap: break-word; max-width: 180px; }
 .section-header { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; margin: 12px 0 8px 0; border-bottom: 2px solid #eee; padding-bottom: 4px; }
 
+/* ----- API KEY MODAL ----- */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+    z-index: 2000; display: flex; justify-content: center; align-items: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.modal-overlay.show { opacity: 1; pointer-events: auto; }
+.modal-box {
+    background: white; width: 90%; max-width: 400px; padding: 25px;
+    border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    text-align: center;
+}
+.modal-title { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 15px; }
+.modal-desc { font-size: 14px; color: var(--text-sub); margin-bottom: 20px; line-height: 1.5; }
+.api-input {
+    width: 100%; padding: 12px; border: 2px solid #e0e7ff; border-radius: 8px;
+    font-size: 14px; margin-bottom: 15px; transition: border 0.3s;
+}
+.api-input:focus { border-color: var(--primary); }
+.modal-btn {
+    background: var(--primary); color: white; border: none; padding: 12px 24px;
+    border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%;
+    transition: background 0.3s;
+}
+.modal-btn:hover { background: var(--primary-dark); }
+.modal-sub { margin-top: 15px; font-size: 12px; color: #9ca3af; }
+
 @media (max-width: 600px) {
   .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; }
   .controls-container { top: auto; bottom: 80px; right: 20px; }
@@ -313,6 +340,20 @@ body {
   <div class="loading-overlay" id="loading">
     <div class="spinner"></div>
     <div style="font-weight: 600; color: var(--primary);">Memuatkan Data GIS...</div>
+  </div>
+
+  <!-- API Key Modal -->
+  <div class="modal-overlay" id="apikey-modal">
+    <div class="modal-box">
+        <div class="modal-title"><i class="fas fa-key"></i> Kunci API Diperlukan</div>
+        <div class="modal-desc">
+            Sila masukkan <b>Google Maps API Key</b> anda untuk memulakan peta.<br>
+            <small>(Contoh: AIzaSy...)</small>
+        </div>
+        <input type="text" class="api-input" id="api-key-input" placeholder="AIzaSy...">
+        <button class="modal-btn" onclick="saveApiKey()">Mula Peta</button>
+        <div class="modal-sub">Kunci disimpan dalam pelayar anda.</div>
+    </div>
   </div>
 
   <!-- Top Search Bar -->
@@ -399,17 +440,17 @@ body {
     <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      <!-- Default: All inactive as requested (removed 'active' class) -->
-      <button class="toggle-btn" id="toggle-menara" title="Menara">
+      <!-- FIXED: Added 'active' class so map shows data on load -->
+      <button class="toggle-btn active" id="toggle-menara" title="Menara">
         <i class="fas fa-broadcast-tower" style="color: #FF5722;"></i> <span>Menara</span>
       </button>
-      <button class="toggle-btn" id="toggle-nadi" title="NADI">
+      <button class="toggle-btn active" id="toggle-nadi" title="NADI">
         <i class="fas fa-satellite-dish" style="color: #2196F3;"></i> <span>NADI</span>
       </button>
-      <button class="toggle-btn" id="toggle-wifi" title="WiFi">
+      <button class="toggle-btn active" id="toggle-wifi" title="WiFi">
         <i class="fas fa-wifi" style="color: #4CAF50;"></i> <span>WiFi</span>
       </button>
-      <button class="toggle-btn" id="toggle-pop" title="POP">
+      <button class="toggle-btn active" id="toggle-pop" title="POP">
         <i class="fas fa-globe" style="color: #FF9800;"></i> <span>POP</span>
       </button>
     </div>
@@ -431,9 +472,9 @@ body {
     });
   </script>
 
-   <!-- Main script -->
+  <!-- Main script -->
   <script>
-// ---------- CONFIG ----------
+    // ---------- script.js ----------
 const URLs = {
   district: "district.json",
   dun: "dun.json",
@@ -475,7 +516,61 @@ let batchSize = 300;
 let activeFeature = null;
 let activeLayer = null;
 let searchTerm = "";
-let currentStatusFilter = null; // New variable to track status filter
+let currentStatusFilter = null; 
+
+// ---------- AUTH & LOADING ----------
+// Global handler for auth failure
+window.gm_authFailure = function() {
+    showLoading(false);
+    alert("Kunci API Google Maps tidak sah atau disekat. Sila masukkan kunci baru.");
+    localStorage.removeItem("sabah_gis_api_key");
+    document.getElementById("apikey-modal").classList.add("show");
+}
+
+function checkApiKeyAndLoad() {
+    // 1. Check if global variable from index.html (if any) or LocalStorage
+    const key = localStorage.getItem("sabah_gis_api_key");
+    if (key) {
+        loadMapScript(key);
+    } else {
+        showLoading(false);
+        document.getElementById("apikey-modal").classList.add("show");
+    }
+}
+
+window.saveApiKey = function() {
+    const input = document.getElementById("api-key-input");
+    const key = input.value.trim();
+    if (key) {
+        localStorage.setItem("sabah_gis_api_key", key);
+        document.getElementById("apikey-modal").classList.remove("show");
+        showLoading(true);
+        loadMapScript(key);
+    } else {
+        alert("Sila masukkan kunci API.");
+    }
+}
+
+function loadMapScript(key) {
+    if (window.google && window.google.maps) {
+        initMap();
+        return;
+    }
+    
+    // Define global callback
+    window.initMap = initMap;
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => {
+        showLoading(false);
+        alert("Gagal memuatkan skrip Google Maps (Network Error).");
+    };
+    document.body.appendChild(script);
+}
+
 
 // ---------- UTIL HELPER ----------
 function showLoading(on) {
@@ -638,7 +733,7 @@ function createOrUpdateMarker(project) {
   if (markersBySite.has(uniqueKey)) {
     const m = markersBySite.get(uniqueKey);
     m._meta = project; 
-    
+     
     const pos = m.getPosition();
     if (!pos || Math.abs(pos.lat() - project.LATITUDE) > 0.0001 || Math.abs(pos.lng() - project.LONGITUDE) > 0.0001) {
        m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
@@ -742,7 +837,7 @@ function filterAndDisplayMarkers() {
     });
   }
 
-  // 2. Tapis mengikut Carian (Text Only - Coordinate handling is separate in listener)
+  // 2. Tapis mengikut Carian
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
     if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
@@ -754,7 +849,7 @@ function filterAndDisplayMarkers() {
     }
   }
   
-  // 3. Tapis mengikut Status (Jika dipilih) - NEW LOGIC
+  // 3. Tapis mengikut Status
   if (currentStatusFilter) {
       filteredList = filteredList.filter(p => 
           normalizeString(p.STATUS) === normalizeString(currentStatusFilter)
@@ -784,7 +879,7 @@ function filterAndDisplayMarkers() {
 
 const updateDashboard = debounce(function (list) {
   const displayList = list || [];
-  const totalProjects = displayList.length; // Capture total for percentage calc
+  const totalProjects = displayList.length; 
 
   const totalEl = document.getElementById("total-projects");
   if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, totalProjects, 500);
@@ -808,7 +903,6 @@ const updateDashboard = debounce(function (list) {
   setTxt("wifi-count", counts.wifi);
   setTxt("pop-count", counts.pop);
 
-  // FIX: Menggunakan renderStatusList yang baru untuk menjana senarai status
   renderStatusList(dynamicStatusCounts, totalProjects);
 
 }, 200);
@@ -991,8 +1085,6 @@ async function autoRefreshLoop() {
 }
 
 // ---------- NEW STATUS LOGIC & REPAIRED FUNCTIONS ----------
-
-// FIXED: renderStatusList logic (removed infinite recursion)
 function renderStatusList(statusCounts, totalProjects) {
     const container = document.getElementById("status-list");
     if (!container) return;
@@ -1003,7 +1095,6 @@ function renderStatusList(statusCounts, totalProjects) {
     sortedStatuses.forEach(([statusName, count]) => {
         const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
         
-        // Warna status
         let endColor = "#4F46E5"; 
         let startColor = "#818cf8";
         const statusUpper = statusName.toUpperCase();
@@ -1015,9 +1106,8 @@ function renderStatusList(statusCounts, totalProjects) {
 
         const div = document.createElement("div");
         div.className = "status-item";
-        div.dataset.status = statusName; // Penting untuk klik filter
+        div.dataset.status = statusName; 
         
-        // Highlight active status if selected
         if (currentStatusFilter && normalizeString(currentStatusFilter) === normalizeString(statusName)) {
             div.classList.add("active-status");
         }
@@ -1038,7 +1128,6 @@ function renderStatusList(statusCounts, totalProjects) {
     enableStatusClick();
 }
 
-// FIXED: Click interaction to filter markers
 function enableStatusClick() {
   const items = document.querySelectorAll("#status-list .status-item");
 
@@ -1046,7 +1135,6 @@ function enableStatusClick() {
     item.addEventListener("click", () => {
       const status = item.dataset.status;
 
-      // Logic toggle (jika klik yang sama, nyah-tapis)
       if (currentStatusFilter === status) {
           currentStatusFilter = null;
           item.classList.remove("active-status");
@@ -1056,7 +1144,7 @@ function enableStatusClick() {
           currentStatusFilter = status;
       }
 
-      filterAndDisplayMarkers(); // Panggil fungsi penapis utama
+      filterAndDisplayMarkers(); 
     });
   });
 }
@@ -1105,6 +1193,7 @@ async function initMap() {
       filterAndDisplayMarkers();
     });
 
+    // Handle GeoJSON
     const pDistrict = loadGeoJsonLayer("district", URLs.district).catch(e => null);
     const pDun = loadGeoJsonLayer("dun", URLs.dun).catch(e => null);
     const pPar = loadGeoJsonLayer("parliament", URLs.parliament).catch(e => null);
@@ -1114,7 +1203,8 @@ async function initMap() {
       await pDun; 
       await pPar;
 
-      if (ld) {
+      // Ensure dataLayers exist before trying to setMap
+      if (ld && dataLayers['district']) {
         dataLayers['district'].setMap(map);
         currentBoundaryKey = 'district';
       }
@@ -1127,16 +1217,19 @@ async function initMap() {
 
   } catch (e) {
     console.error("Init Error", e);
-    // alert("Ralat sambungan data. Sila refresh."); // Removed alert as per guidelines
   } finally {
     showLoading(false);
   }
 }
 
-window.initMap = initMap;
+// Start the app when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+    checkApiKeyAndLoad();
+});
+// ---------- end of script ----------
   </script>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
+  <!-- NOTE: Google Maps script tag removed. It is now handled dynamically in script.js to support API Key input -->
     
 </body>
 </html>
