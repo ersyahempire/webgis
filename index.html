@@ -489,6 +489,16 @@ let activeDashboardCategory = null; // Stores 'TOWER', 'NADI', etc.
 let activeStatusFilter = null;      // Stores status string e.g., 'SIAP'
 
 // ---------- UTIL HELPER ----------
+function getRandomColor() {
+  // Generate warna hex rawak
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
 function showLoading(on) {
   const el = document.getElementById("loading");
   if (!el) return;
@@ -1193,15 +1203,7 @@ async function initMap() {
 
 window.initMap = initMap;
 // ---------- end of script ---------- 
-function getRandomColor() {
-  // Generate warna hex rawak
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-}
+
  </script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
