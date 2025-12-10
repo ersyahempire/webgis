@@ -14,7 +14,7 @@
 :root {
   --primary: #4F46E5;
   --primary-dark: #4338ca;
-  --glass-bg: rgba(255, 255, 255, 0.65); 
+  --glass-bg: rgba(255, 255, 255, 0.45);  /* SMS dulu 0.85 */
   --glass-border: rgba(255, 255, 255, 0.5);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   --blur: 12px;
@@ -161,15 +161,7 @@ body {
   background: rgba(0,0,0,0.02); 
   padding: 8px; 
   border-radius: 8px; 
-  cursor: pointer; /* Interaction */
-  transition: var(--transition);
-  border: 1px solid transparent;
 } 
-
-.status-item:hover {
-  background: rgba(255,255,255,0.5);
-}
-
 .status-header { 
   display: flex; 
   justify-content: space-between; 
@@ -198,6 +190,7 @@ body {
   transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smoother transition */
 }
 
+
 /* ----- CONTROLS (RIGHT) ----- */
 .controls-container {
   position: absolute; top: 80px; right: 20px;
@@ -221,7 +214,7 @@ body {
 
 .control-card:hover, .control-card.expanded {
   width: 180px; /* Expanded width */
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.55); /* SMS dulu 0.95 */
 }
 
 .control-group-title {
@@ -288,33 +281,6 @@ body {
 .info-val { color: #111; font-weight: 600; text-align: right; overflow-wrap: break-word; max-width: 180px; }
 .section-header { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; margin: 12px 0 8px 0; border-bottom: 2px solid #eee; padding-bottom: 4px; }
 
-/* ----- API KEY MODAL ----- */
-.modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
-    z-index: 2000; display: flex; justify-content: center; align-items: center;
-    opacity: 0; pointer-events: none; transition: opacity 0.3s;
-}
-.modal-overlay.show { opacity: 1; pointer-events: auto; }
-.modal-box {
-    background: white; width: 90%; max-width: 400px; padding: 25px;
-    border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-    text-align: center;
-}
-.modal-title { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 15px; }
-.modal-desc { font-size: 14px; color: var(--text-sub); margin-bottom: 20px; line-height: 1.5; }
-.api-input {
-    width: 100%; padding: 12px; border: 2px solid #e0e7ff; border-radius: 8px;
-    font-size: 14px; margin-bottom: 15px; transition: border 0.3s;
-}
-.api-input:focus { border-color: var(--primary); }
-.modal-btn {
-    background: var(--primary); color: white; border: none; padding: 12px 24px;
-    border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%;
-    transition: background 0.3s;
-}
-.modal-btn:hover { background: var(--primary-dark); }
-.modal-sub { margin-top: 15px; font-size: 12px; color: #9ca3af; }
-
 @media (max-width: 600px) {
   .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; }
   .controls-container { top: auto; bottom: 80px; right: 20px; }
@@ -322,13 +288,6 @@ body {
   .control-card:hover, .control-card.expanded { width: 160px; }
   .search-container { width: 75%; }
 }
-
-.active-status {
-  background: rgba(79, 70, 229, 0.15) !important;
-  border: 1px solid var(--primary);
-  transform: scale(1.02);
-}
-
 </style>
 </head>
 <body>
@@ -340,20 +299,6 @@ body {
   <div class="loading-overlay" id="loading">
     <div class="spinner"></div>
     <div style="font-weight: 600; color: var(--primary);">Memuatkan Data GIS...</div>
-  </div>
-
-  <!-- API Key Modal -->
-  <div class="modal-overlay" id="apikey-modal">
-    <div class="modal-box">
-        <div class="modal-title"><i class="fas fa-key"></i> Kunci API Diperlukan</div>
-        <div class="modal-desc">
-            Sila masukkan <b>Google Maps API Key</b> anda untuk memulakan peta.<br>
-            <small>(Contoh: AIzaSy...)</small>
-        </div>
-        <input type="text" class="api-input" id="api-key-input" placeholder="AIzaSy...">
-        <button class="modal-btn" onclick="saveApiKey()">Mula Peta</button>
-        <div class="modal-sub">Kunci disimpan dalam pelayar anda.</div>
-    </div>
   </div>
 
   <!-- Top Search Bar -->
@@ -404,7 +349,7 @@ body {
       </div>
 
       <!-- Status Progress Bars (Real Data) -->
-      <div class="status-section-title">Status Kemajuan (Klik untuk tapis)</div>
+      <div class="status-section-title">Status Kemajuan</div>
       <div id="status-list">
         <!-- JS will inject status bars here -->
       </div>
@@ -440,17 +385,17 @@ body {
     <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      <!-- FIXED: Added 'active' class so map shows data on load -->
-      <button class="toggle-btn active" id="toggle-menara" title="Menara">
+      <!-- Default: All inactive as requested (removed 'active' class) -->
+      <button class="toggle-btn" id="toggle-menara" title="Menara">
         <i class="fas fa-broadcast-tower" style="color: #FF5722;"></i> <span>Menara</span>
       </button>
-      <button class="toggle-btn active" id="toggle-nadi" title="NADI">
+      <button class="toggle-btn" id="toggle-nadi" title="NADI">
         <i class="fas fa-satellite-dish" style="color: #2196F3;"></i> <span>NADI</span>
       </button>
-      <button class="toggle-btn active" id="toggle-wifi" title="WiFi">
+      <button class="toggle-btn" id="toggle-wifi" title="WiFi">
         <i class="fas fa-wifi" style="color: #4CAF50;"></i> <span>WiFi</span>
       </button>
-      <button class="toggle-btn active" id="toggle-pop" title="POP">
+      <button class="toggle-btn" id="toggle-pop" title="POP">
         <i class="fas fa-globe" style="color: #FF9800;"></i> <span>POP</span>
       </button>
     </div>
@@ -472,9 +417,11 @@ body {
     });
   </script>
 
-  <!-- Main script -->
   <script>
-    // ---------- script.js ----------
+    // Projek Web GIS - Debugged & Optimized Logic
+// ---------------------------------------------------
+
+// ---------- CONFIG ----------
 const URLs = {
   district: "district.json",
   dun: "dun.json",
@@ -516,61 +463,6 @@ let batchSize = 300;
 let activeFeature = null;
 let activeLayer = null;
 let searchTerm = "";
-let currentStatusFilter = null; 
-
-// ---------- AUTH & LOADING ----------
-// Global handler for auth failure
-window.gm_authFailure = function() {
-    showLoading(false);
-    alert("Kunci API Google Maps tidak sah atau disekat. Sila masukkan kunci baru.");
-    localStorage.removeItem("sabah_gis_api_key");
-    document.getElementById("apikey-modal").classList.add("show");
-}
-
-function checkApiKeyAndLoad() {
-    // 1. Check if global variable from index.html (if any) or LocalStorage
-    const key = localStorage.getItem("sabah_gis_api_key");
-    if (key) {
-        loadMapScript(key);
-    } else {
-        showLoading(false);
-        document.getElementById("apikey-modal").classList.add("show");
-    }
-}
-
-window.saveApiKey = function() {
-    const input = document.getElementById("api-key-input");
-    const key = input.value.trim();
-    if (key) {
-        localStorage.setItem("sabah_gis_api_key", key);
-        document.getElementById("apikey-modal").classList.remove("show");
-        showLoading(true);
-        loadMapScript(key);
-    } else {
-        alert("Sila masukkan kunci API.");
-    }
-}
-
-function loadMapScript(key) {
-    if (window.google && window.google.maps) {
-        initMap();
-        return;
-    }
-    
-    // Define global callback
-    window.initMap = initMap;
-
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap`;
-    script.async = true;
-    script.defer = true;
-    script.onerror = () => {
-        showLoading(false);
-        alert("Gagal memuatkan skrip Google Maps (Network Error).");
-    };
-    document.body.appendChild(script);
-}
-
 
 // ---------- UTIL HELPER ----------
 function showLoading(on) {
@@ -588,6 +480,7 @@ function debounce(fn, wait = 250) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
 }
 
+// FIX: Helper untuk membersihkan string bagi tujuan perbandingan (Trim + Uppercase)
 function normalizeString(str) {
   return String(str || "").trim().toUpperCase();
 }
@@ -595,11 +488,13 @@ function normalizeString(str) {
 function cleanFloat(val) {
   if (typeof val === 'number') return val;
   if (!val) return 0;
+  // Buang semua character pelik, tukar koma jadi titik
   const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
   const floatVal = parseFloat(str);
   return isNaN(floatVal) ? 0 : floatVal;
 }
 
+// FIX: Generate ID berdasarkan kandungan, bukan nombor baris
 function generateStableId(rowObj, type) {
   const name = normalizeString(rowObj.SITE_NAME || "UNKNOWN");
   const district = normalizeString(rowObj.DISTRICT || "SABAH");
@@ -688,6 +583,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
     }
 
     const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
+    
     const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100); 
 
     const rowObj = {
@@ -705,6 +601,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
     };
 
     rowObj._id = generateStableId(rowObj, type);
+
     return rowObj;
   }).filter(o => o.SITE_NAME !== "N/A"); 
 
@@ -733,7 +630,7 @@ function createOrUpdateMarker(project) {
   if (markersBySite.has(uniqueKey)) {
     const m = markersBySite.get(uniqueKey);
     m._meta = project; 
-     
+    
     const pos = m.getPosition();
     if (!pos || Math.abs(pos.lat() - project.LATITUDE) > 0.0001 || Math.abs(pos.lng() - project.LONGITUDE) > 0.0001) {
        m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
@@ -764,6 +661,7 @@ function createOrUpdateMarker(project) {
       }
     });
 
+    // UPDATE: Menambah DUN dan Parlimen dalam Maklumat Utama
     const infowin = new google.maps.InfoWindow({
       content: `
             <div class="info-popup">
@@ -837,9 +735,10 @@ function filterAndDisplayMarkers() {
     });
   }
 
-  // 2. Tapis mengikut Carian
+  // 2. Tapis mengikut Carian (Text Only - Coordinate handling is separate in listener)
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
+    // Jika ia bukan format koordinat, kita filter senarai projek
     if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
         filteredList = filteredList.filter(p =>
         (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
@@ -847,13 +746,6 @@ function filterAndDisplayMarkers() {
         (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term))
         );
     }
-  }
-  
-  // 3. Tapis mengikut Status
-  if (currentStatusFilter) {
-      filteredList = filteredList.filter(p => 
-          normalizeString(p.STATUS) === normalizeString(currentStatusFilter)
-      );
   }
 
   updateDashboard(filteredList);
@@ -879,10 +771,9 @@ function filterAndDisplayMarkers() {
 
 const updateDashboard = debounce(function (list) {
   const displayList = list || [];
-  const totalProjects = displayList.length; 
 
   const totalEl = document.getElementById("total-projects");
-  if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, totalProjects, 500);
+  if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
 
   const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
   const dynamicStatusCounts = {};
@@ -893,7 +784,7 @@ const updateDashboard = debounce(function (list) {
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
 
-    const s = String(p.STATUS || "Tiada Status").trim();
+    const s = String(p.STATUS || "Tidak Dinyatakan").trim();
     if (s) dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
   });
 
@@ -903,8 +794,38 @@ const updateDashboard = debounce(function (list) {
   setTxt("wifi-count", counts.wifi);
   setTxt("pop-count", counts.pop);
 
-  renderStatusList(dynamicStatusCounts, totalProjects);
+  const statusEl = document.getElementById("status-list");
+  if(!statusEl) return;
+  
+  statusEl.innerHTML = "";
+  const sortedStatuses = Object.entries(dynamicStatusCounts).sort(([, a], [, b]) => b - a);
+  const totalProjects = displayList.length;
 
+  sortedStatuses.forEach(([statusName, count]) => {
+    const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
+    
+    let endColor = "#4F46E5"; 
+    let startColor = "#818cf8";
+    const statusUpper = statusName.toUpperCase();
+    
+    if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#4CAF50"; startColor = "#81c784"; }
+    else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#2196F3"; startColor = "#64b5f6"; }
+    else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#F44336"; startColor = "#e57373"; }
+    else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
+
+    const div = document.createElement("div");
+    div.className = "status-item";
+    div.innerHTML = `
+          <div class="status-header">
+            <span class="status-name">${escapeHtml(statusName)}</span>
+            <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
+          </div>
+          <div class="progress-bg">
+            <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
+          </div>
+        `;
+    statusEl.appendChild(div);
+  });
 }, 200);
 
 function animateValue(id, start, end, duration) {
@@ -1054,17 +975,23 @@ function setupToggles() {
     });
   });
 
+  // UPDATE: Carian Responsif + Koordinat
   document.getElementById("search-input")?.addEventListener("input", (e) => {
     searchTerm = e.target.value;
+    
+    // Check regex untuk format "Lat, Long"
     const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
     if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
         const lng = parseFloat(coordMatch[2]);
         if (!isNaN(lat) && !isNaN(lng)) {
+            // Pan terus ke lokasi tanpa filter markers
             map.panTo({lat, lng});
             map.setZoom(14);
+            // Optional: Letak marker sementara atau biarkan user melihat kawasan
         }
     } else {
+        // Jika teks biasa, jalankan filter standard
         filterAndDisplayMarkers();
     }
   });
@@ -1082,71 +1009,6 @@ async function autoRefreshLoop() {
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
   }
-}
-
-// ---------- NEW STATUS LOGIC & REPAIRED FUNCTIONS ----------
-function renderStatusList(statusCounts, totalProjects) {
-    const container = document.getElementById("status-list");
-    if (!container) return;
-    
-    container.innerHTML = "";
-    const sortedStatuses = Object.entries(statusCounts).sort(([, a], [, b]) => b - a);
-
-    sortedStatuses.forEach(([statusName, count]) => {
-        const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
-        
-        let endColor = "#4F46E5"; 
-        let startColor = "#818cf8";
-        const statusUpper = statusName.toUpperCase();
-        
-        if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#4CAF50"; startColor = "#81c784"; }
-        else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#2196F3"; startColor = "#64b5f6"; }
-        else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#F44336"; startColor = "#e57373"; }
-        else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
-
-        const div = document.createElement("div");
-        div.className = "status-item";
-        div.dataset.status = statusName; 
-        
-        if (currentStatusFilter && normalizeString(currentStatusFilter) === normalizeString(statusName)) {
-            div.classList.add("active-status");
-        }
-
-        div.innerHTML = `
-          <div class="status-header">
-            <span class="status-name">${escapeHtml(statusName)}</span>
-            <span class="status-count">${count}</span>
-            <span class="status-percent" style="color: ${endColor};">${percent}%</span>
-          </div>
-          <div class="progress-bg">
-            <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
-          </div>
-        `;
-        container.appendChild(div);
-    });
-
-    enableStatusClick();
-}
-
-function enableStatusClick() {
-  const items = document.querySelectorAll("#status-list .status-item");
-
-  items.forEach(item => {
-    item.addEventListener("click", () => {
-      const status = item.dataset.status;
-
-      if (currentStatusFilter === status) {
-          currentStatusFilter = null;
-          item.classList.remove("active-status");
-      } else {
-          items.forEach(i => i.classList.remove("active-status"));
-          item.classList.add("active-status");
-          currentStatusFilter = status;
-      }
-
-      filterAndDisplayMarkers(); 
-    });
-  });
 }
 
 // ---------- MAIN INIT ----------
@@ -1167,18 +1029,23 @@ async function initMap() {
   map = new google.maps.Map(mapDiv, {
     center: { lat: 5.9804, lng: 116.0735 },
     zoom: 8,
-    mapTypeId: "satellite",
+    mapTypeId: "satellite", /* SMS - sebelumnya roadmap */
     styles: silverStyle,
     disableDefaultUI: false,
+    
+    // UPDATE: Pilihan View (Satellite/Map)
     mapTypeControl: true,
     mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
         position: google.maps.ControlPosition.TOP_RIGHT
     },
+    
+    // UPDATE: Butang Zoom (+ -)
     zoomControl: true,
     zoomControlOptions: {
         position: google.maps.ControlPosition.RIGHT_BOTTOM
     },
+    
     streetViewControl: false,
     fullscreenControl: false
   });
@@ -1193,7 +1060,6 @@ async function initMap() {
       filterAndDisplayMarkers();
     });
 
-    // Handle GeoJSON
     const pDistrict = loadGeoJsonLayer("district", URLs.district).catch(e => null);
     const pDun = loadGeoJsonLayer("dun", URLs.dun).catch(e => null);
     const pPar = loadGeoJsonLayer("parliament", URLs.parliament).catch(e => null);
@@ -1203,8 +1069,7 @@ async function initMap() {
       await pDun; 
       await pPar;
 
-      // Ensure dataLayers exist before trying to setMap
-      if (ld && dataLayers['district']) {
+      if (ld) {
         dataLayers['district'].setMap(map);
         currentBoundaryKey = 'district';
       }
@@ -1217,19 +1082,17 @@ async function initMap() {
 
   } catch (e) {
     console.error("Init Error", e);
+    alert("Ralat sambungan data. Sila refresh.");
   } finally {
     showLoading(false);
   }
 }
 
-// Start the app when DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
-    checkApiKeyAndLoad();
-});
-// ---------- end of script ----------
+window.initMap = initMap;
   </script>
 
-  <!-- NOTE: Google Maps script tag removed. It is now handled dynamically in script.js to support API Key input -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
     
 </body>
 </html>
+
