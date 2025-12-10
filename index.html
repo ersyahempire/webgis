@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Web GIS Projek Sabah - Moden</title>
   
+  <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -173,10 +174,13 @@ body {
   border: 1px solid transparent;
 } 
 .status-item:hover { background: rgba(0,0,0,0.05); }
+
+/* Gaya apabila Status dipilih - Lebih jelas tetapi tidak menghilangkan yang lain */
 .status-item.selected {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--primary);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.15);
+  transform: scale(1.02);
 }
 
 .status-header { 
@@ -309,13 +313,16 @@ body {
 </head>
 <body>
 
+  <!-- Map Background -->
   <div id="map"></div>
 
+  <!-- Loading Screen -->
   <div class="loading-overlay" id="loading">
     <div class="spinner"></div>
     <div style="font-weight: 600; color: var(--primary);">Memuatkan Data GIS...</div>
   </div>
 
+  <!-- Top Search Bar -->
   <div class="search-container">
     <div class="search-box">
       <i class="fas fa-search"></i>
@@ -323,22 +330,26 @@ body {
     </div>
   </div>
 
+  <!-- Sidebar Toggle Button -->
   <button class="panel-toggle" id="sidebar-toggle" onclick="toggleDashboard()">
     <i class="fas fa-bars"></i>
   </button>
 
+  <!-- Floating Dashboard Panel -->
   <div class="dashboard-panel" id="dashboard-panel">
     <div class="panel-header">
       <h2><i class="fas fa-layer-group"></i> Statistik Projek</h2>
     </div>
     
     <div class="panel-content">
+      <!-- Main Count -->
       <div class="main-stat">
         <div class="main-stat-value" id="total-projects">0</div>
         <div class="main-stat-label">Jumlah Projek</div>
         <div id="selected-area" class="area-badge">SELURUH SABAH</div>
       </div>
 
+      <!-- Category Grid (With Click Handlers) -->
       <div class="grid-stats">
         <div class="mini-stat" id="stat-card-menara" onclick="handleCategoryClick('TOWER', 'stat-card-menara')">
           <div class="mini-stat-val" id="menara-count" style="color: #FF5722;">0</div>
@@ -358,10 +369,13 @@ body {
         </div>
       </div>
 
+      <!-- Status Progress Bars (Real Data) -->
       <div class="status-section-title">Status Kemajuan</div>
       <div id="status-list">
-        </div>
+        <!-- JS will inject status bars here -->
+      </div>
 
+      <!-- Mini Legend -->
       <div class="legend-mini">
         <div class="legend-row"><span class="dot" style="background: #FF5722;"></span> Menara Komunikasi</div>
         <div class="legend-row"><span class="dot" style="background: #2196F3;"></span> Pusat NADI</div>
@@ -371,10 +385,13 @@ body {
     </div>
   </div>
 
+  <!-- Right Side Controls (Expandable Cards) -->
   <div class="controls-container">
     
+    <!-- Layer Toggle Group -->
     <div class="control-card" id="layer-card">
       <div class="control-group-title">Sempadan</div>
+      <!-- Default: Daerah Active, others inactive -->
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
         <i class="fas fa-map-marked-alt"></i> <span>Daerah</span>
       </button>
@@ -386,8 +403,10 @@ body {
       </button>
     </div>
 
+    <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
+      <!-- Default: All inactive as requested (removed 'active' class) -->
       <button class="toggle-btn" id="toggle-menara" title="Menara">
         <i class="fas fa-broadcast-tower" style="color: #FF5722;"></i> <span>Menara</span>
       </button>
@@ -403,6 +422,7 @@ body {
     </div>
   </div>
   
+  <!-- UI Interactions Script -->
   <script>
     function toggleDashboard() {
       const panel = document.getElementById('dashboard-panel');
@@ -418,7 +438,8 @@ body {
     });
   </script>
 
- <script>
+ <!-- Main script -->
+  <script>
    // script.js
 // ---------- CONFIG ----------
 const URLs = {
@@ -664,7 +685,6 @@ function createOrUpdateMarker(project) {
       }
     });
 
-    // UPDATE: Menambah DUN dan Parlimen dalam Maklumat Utama
     const infowin = new google.maps.InfoWindow({
       content: `
             <div class="info-popup">
@@ -788,15 +808,22 @@ function filterAndDisplayMarkers() {
      filteredList = filteredList.filter(p => p._type === activeDashboardCategory);
   }
 
-  // 4. Tapis mengikut Dashboard Status Click
+  // ----- PEMBAIKAN UTAMA DI SINI -----
+  // Kita kemaskini Dashboard menggunakan data yang telah ditapis mengikut Sempadan/Kategori/Carian,
+  // TETAPI SEBELUM ditapis mengikut Status.
+  // Ini memastikan peratusan status kekal betul (berdasarkan jumlah projek dalam kawasan itu),
+  // dan bar-bar lain tidak hilang.
+  
+  updateDashboard(filteredList); 
+
+  // 4. Tapis mengikut Dashboard Status Click (Untuk Marker Peta SAHAJA)
+  let mapDisplayList = filteredList;
+  
   if (activeStatusFilter) {
-    filteredList = filteredList.filter(p => String(p.STATUS || "").trim() === activeStatusFilter);
+    mapDisplayList = filteredList.filter(p => String(p.STATUS || "").trim() === activeStatusFilter);
   }
 
-  // Update Dashboard numbers based on current filtered list
-  updateDashboard(filteredList);
-
-  const visibleLocationIds = new Set(filteredList.map(p => p._id));
+  const visibleLocationIds = new Set(mapDisplayList.map(p => p._id));
 
   // Update Markers Visibility
   markersList.forEach(m => {
@@ -1156,7 +1183,7 @@ async function initMap() {
 
 window.initMap = initMap;
 // ---------- end of script ---------- 
- </script>
+  </script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
     
