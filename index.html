@@ -14,7 +14,7 @@
 :root {
   --primary: #4F46E5;
   --primary-dark: #4338ca;
-  --glass-bg: rgba(255, 255, 255, 0.45);
+  --glass-bg: rgba(255, 255, 255, 0.45);  /* SMS dulu 0.85 */
   --glass-border: rgba(255, 255, 255, 0.5);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   --blur: 12px;
@@ -162,10 +162,10 @@ body {
   padding: 8px; 
   border-radius: 8px; 
   cursor: pointer;
-  transition: transform .12s ease;
+  transition: transform 0.18s;
 } 
-.status-item:hover { transform: translateY(-2px); }
-.status-item.active { box-shadow: 0 6px 18px rgba(79,70,229,0.12); border: 1px solid rgba(79,70,229,0.12); background: rgba(79,70,229,0.04); }
+.status-item:hover { transform: translateY(-3px); }
+.status-item.active { box-shadow: 0 6px 18px rgba(79,70,229,0.12); border-left: 4px solid var(--primary); background: rgba(255,255,255,0.8); }
 .status-header { 
   display: flex; 
   justify-content: space-between; 
@@ -194,17 +194,25 @@ body {
   transition: width 1s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smoother transition */
 }
 
-/* Status Details Card (injected) */
-.status-details {
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.85);
-  border: 1px solid rgba(0,0,0,0.04);
+/* Status detail card shown after a click */
+.status-detail-card {
+  margin-top: 10px; padding: 12px; border-radius: 10px;
+  background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: 0 8px 24px rgba(15,23,42,0.06);
+  transition: max-height 0.25s ease; overflow: hidden;
 }
-.status-details h3 { margin: 0 0 8px 0; font-size: 14px; color: var(--primary); }
-.status-details .row { display:flex; justify-content:space-between; margin-bottom:6px; }
-.status-details .muted { color: var(--text-sub); font-size: 13px; }
+.status-detail-row { display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px; }
+.status-detail-title { font-weight:700; color:var(--primary); font-size:13px; margin-bottom:8px; }
+.small-pill { font-size:12px; padding:6px 8px; border-radius:999px; background:rgba(0,0,0,0.04); }
+
+/* Category quick filter inside the detail card */
+.category-list { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.category-chip {
+  padding:6px 10px; border-radius:999px; cursor:pointer; font-size:12px;
+  background: rgba(0,0,0,0.04);
+  transition: all .15s;
+}
+.category-chip.active { background: linear-gradient(90deg,#818cf8,#4F46E5); color: white; box-shadow: 0 6px 18px rgba(79,70,229,0.12); transform: translateY(-2px); }
 
 /* ----- CONTROLS (RIGHT) ----- */
 .controls-container {
@@ -369,8 +377,8 @@ body {
         <!-- JS will inject status bars here -->
       </div>
 
-      <!-- Container for status details (injected when status clicked) -->
-      <div id="status-details-container"></div>
+      <!-- Status Detail Area (Injected via JS) -->
+      <div id="status-detail-area"></div>
 
       <!-- Mini Legend -->
       <div class="legend-mini">
@@ -435,9 +443,9 @@ body {
     });
   </script>
 
- <!-- Main script -->
- <script>
-    // script.js
+<!-- Main script -->
+<script>
+// script.js
 // ---------- CONFIG ----------
 const URLs = {
   district: "district.json",
@@ -480,9 +488,10 @@ let batchSize = 300;
 let activeFeature = null;
 let activeLayer = null;
 let searchTerm = "";
-let lastDisplayList = []; // list used to render status items (respecting boundary & search)
-let overallCounts = { total: 0, menara: 0, nadi: 0, wifi: 0, pop: 0 };
-let activeStatusFilter = null; // currently selected status (string) or null
+
+// NEW: filters controlled by status / category chips
+let selectedStatusFilter = null; // string or null (exact match compared case-insensitive/trim)
+let selectedCategoryFilter = null; // "TOWER"/"BWA"/"NADI"/"POP" or null
 
 // ---------- UTIL HELPER ----------
 function showLoading(on) {
@@ -500,6 +509,7 @@ function debounce(fn, wait = 250) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
 }
 
+// FIX: Helper untuk membersihkan string bagi tujuan perbandingan (Trim + Uppercase)
 function normalizeString(str) {
   return String(str || "").trim().toUpperCase();
 }
@@ -507,11 +517,13 @@ function normalizeString(str) {
 function cleanFloat(val) {
   if (typeof val === 'number') return val;
   if (!val) return 0;
+  // Buang semua character pelik, tukar koma jadi titik
   const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
   const floatVal = parseFloat(str);
   return isNaN(floatVal) ? 0 : floatVal;
 }
 
+// FIX: Generate ID berdasarkan kandungan, bukan nombor baris
 function generateStableId(rowObj, type) {
   const name = normalizeString(rowObj.SITE_NAME || "UNKNOWN");
   const district = normalizeString(rowObj.DISTRICT || "SABAH");
@@ -601,7 +613,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
 
     const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
     
-    const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100);
+    const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100); 
 
     const rowObj = {
       SITE_NAME: String(site || "N/A").trim(),
@@ -620,7 +632,7 @@ function normalizeRows(rows, sheetKey, rawCols) {
     rowObj._id = generateStableId(rowObj, type);
 
     return rowObj;
-  }).filter(o => o.SITE_NAME !== "N/A");
+  }).filter(o => o.SITE_NAME !== "N/A"); 
 
   return normalized;
 }
@@ -647,12 +659,14 @@ function createOrUpdateMarker(project) {
   if (markersBySite.has(uniqueKey)) {
     const m = markersBySite.get(uniqueKey);
     m._meta = project; 
+    
     const pos = m.getPosition();
     if (!pos || Math.abs(pos.lat() - project.LATITUDE) > 0.0001 || Math.abs(pos.lng() - project.LONGITUDE) > 0.0001) {
        m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
     }
     return m;
   } else {
+    // Bina HTML InfoWindow
     let rawDetailsHtml = project._raw_details.map(detail =>
       `<div class="info-row"><span class="info-label">${escapeHtml(detail.label)}</span><span class="info-val">${escapeHtml(detail.value)}</span></div>`
     ).join('');
@@ -665,7 +679,7 @@ function createOrUpdateMarker(project) {
       position: { lat: project.LATITUDE, lng: project.LONGITUDE },
       map: map,
       title: project.SITE_NAME || "",
-      visible: false,
+      visible: false, // Default hidden
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 6,
@@ -676,6 +690,7 @@ function createOrUpdateMarker(project) {
       }
     });
 
+    // UPDATE: Menambah DUN dan Parlimen dalam Maklumat Utama
     const infowin = new google.maps.InfoWindow({
       content: `
             <div class="info-popup">
@@ -719,7 +734,7 @@ function renderMarkersInBatches(projects, onComplete) {
       createOrUpdateMarker(projects[i]);
     }
     if (i < total) {
-      setTimeout(runChunk, 50);
+      setTimeout(runChunk, 50); 
     } else {
       if (onComplete) onComplete();
     }
@@ -736,10 +751,10 @@ function filterAndDisplayMarkers() {
 
   let filteredList = allProjects;
 
-  // 1. filter by active boundary
+  // 1. Tapis mengikut Sempadan (District/Dun/Parliament)
   if (activeFeature && currentBoundaryKey) {
     const areaNameRaw = extractFeatureName(activeFeature);
-    const areaName = normalizeString(areaNameRaw);
+    const areaName = normalizeString(areaNameRaw); 
 
     filteredList = allProjects.filter(p => {
       if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
@@ -749,23 +764,31 @@ function filterAndDisplayMarkers() {
     });
   }
 
-  // 2. filter by search term (text)
+  // 2. Tapis mengikut Carian (Text Only - Coordinate handling is separate in listener)
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
+    // Jika ia bukan format koordinat, kita filter senarai projek
     if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
-      filteredList = filteredList.filter(p =>
+        filteredList = filteredList.filter(p =>
         (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
         (p.DISTRICT && p.DISTRICT.toLowerCase().includes(term)) ||
         (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term))
-      );
+        );
     }
   }
 
-  // Save for status detail use
-  lastDisplayList = filteredList;
+  // 3. Jika ada selectedStatusFilter (dari klik status), tapis
+  if (selectedStatusFilter) {
+    const sf = normalizeString(selectedStatusFilter);
+    filteredList = filteredList.filter(p => normalizeString(p.STATUS) === sf);
+  }
 
-  // Build status list (counts) - this updates status-list UI but NOT main stats
-  buildStatusItems(filteredList);
+  // 4. Jika ada selectedCategoryFilter (dari card), tapis
+  if (selectedCategoryFilter) {
+    filteredList = filteredList.filter(p => p._type === selectedCategoryFilter);
+  }
+
+  updateDashboard(filteredList);
 
   const visibleLocationIds = new Set(filteredList.map(p => p._id));
 
@@ -780,55 +803,62 @@ function filterAndDisplayMarkers() {
     else if (type === "NADI") isCategoryActive = nadiActive;
     else if (type === "POP") isCategoryActive = popActive;
 
-    // If there is an active status filter, only show markers matching the status and category
-    if (activeStatusFilter) {
-      const shouldShow = visibleLocationIds.has(meta._id) && isCategoryActive && meta._validCoord && String(meta.STATUS).trim() === activeStatusFilter;
-      m.setVisible(shouldShow);
-    } else {
-      const shouldShow = visibleLocationIds.has(meta._id) && isCategoryActive && meta._validCoord;
-      m.setVisible(shouldShow);
+    // If category chips inside detail card selected, they override category toggle buttons visually for filtering:
+    if (selectedCategoryFilter) {
+      isCategoryActive = (meta._type === selectedCategoryFilter);
     }
+
+    const statusMatch = selectedStatusFilter ? (normalizeString(meta.STATUS) === normalizeString(selectedStatusFilter)) : true;
+
+    const shouldShow = visibleLocationIds.has(meta._id) && isCategoryActive && meta._validCoord && statusMatch;
+    
+    m.setVisible(shouldShow);
   });
+
+  // Optional: zoom to visible markers when status filter applied
+  if (selectedStatusFilter || selectedCategoryFilter) {
+    const bounds = new google.maps.LatLngBounds();
+    let any = false;
+    markersList.forEach(m => { if (m.getVisible()) { bounds.extend(m.getPosition()); any = true; } });
+    if (any) {
+      map.fitBounds(bounds);
+      // ensure not zoomed out too far
+      const zoom = map.getZoom();
+      if (zoom > 14) map.setZoom(14);
+    }
+  }
 }
 
-// ---------- DASHBOARD / STATUS UI ----------
-function computeOverallCounts() {
+const updateDashboard = debounce(function (list) {
+  const displayList = list || [];
+
+  const totalEl = document.getElementById("total-projects");
+  if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
+
   const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
-  allProjects.forEach(p => {
+  const dynamicStatusCounts = {};
+
+  displayList.forEach(p => {
     if (p._type === "TOWER") counts.menara++;
     if (p._type === "BWA") counts.wifi++;
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
-  });
-  overallCounts = {
-    total: allProjects.length,
-    menara: counts.menara,
-    nadi: counts.nadi,
-    wifi: counts.wifi,
-    pop: counts.pop
-  };
 
-  // Update main dashboard numbers (these remain global and won't change on status click)
-  const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-  setTxt("total-projects", overallCounts.total);
-  setTxt("menara-count", overallCounts.menara);
-  setTxt("nadi-count", overallCounts.nadi);
-  setTxt("wifi-count", overallCounts.wifi);
-  setTxt("pop-count", overallCounts.pop);
-}
-
-// Build status items dynamically (from provided list)
-function buildStatusItems(displayList) {
-  const statusEl = document.getElementById("status-list");
-  if(!statusEl) return;
-  statusEl.innerHTML = "";
-
-  const dynamicStatusCounts = {};
-  displayList.forEach(p => {
     const s = String(p.STATUS || "Tidak Dinyatakan").trim();
     if (s) dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
   });
 
+  const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  setTxt("menara-count", counts.menara);
+  setTxt("nadi-count", counts.nadi);
+  setTxt("wifi-count", counts.wifi);
+  setTxt("pop-count", counts.pop);
+
+  // Build status list (auto from dynamicStatusCounts)
+  const statusEl = document.getElementById("status-list");
+  if(!statusEl) return;
+  
+  statusEl.innerHTML = "";
   const sortedStatuses = Object.entries(dynamicStatusCounts).sort(([, a], [, b]) => b - a);
   const totalProjects = displayList.length;
 
@@ -840,128 +870,160 @@ function buildStatusItems(displayList) {
     const statusUpper = statusName.toUpperCase();
     
     if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#4CAF50"; startColor = "#81c784"; }
-    else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS|DALAM/)) { endColor = "#2196F3"; startColor = "#64b5f6"; }
-    else if (statusUpper.match(/TANGGUH|BATAL|CANCEL|TERBENGKALAI/)) { endColor = "#F44336"; startColor = "#e57373"; }
-    else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
+    else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS|ON GOING|ONGOING/)) { endColor = "#2196F3"; startColor = "#64b5f6"; }
+    else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#F44336"; startColor = "#e57373"; }
+    else if (statusUpper.match(/RANCANG|BARU|PLAN|PLANNING/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
 
     const div = document.createElement("div");
     div.className = "status-item";
     div.setAttribute("data-status", statusName);
     div.innerHTML = `
-      <div class="status-header">
-        <span class="status-name">${escapeHtml(statusName)}</span>
-        <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
-      </div>
-      <div class="progress-bg">
-        <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
-      </div>
-    `;
-    // click handler toggles details + marker filter
-    div.addEventListener("click", () => {
-      const clickedStatus = statusName;
-      const currentlyActive = div.classList.contains("active");
-      // Clear active class on all
-      document.querySelectorAll("#status-list .status-item").forEach(n => n.classList.remove("active"));
-      if (currentlyActive) {
-        // deactivate
-        activeStatusFilter = null;
-        document.getElementById("status-details-container").innerHTML = "";
-        // refresh markers to default filtered state
-        filterAndDisplayMarkers();
-      } else {
-        // activate this one
-        div.classList.add("active");
-        activeStatusFilter = clickedStatus;
-        // show details card
-        showStatusDetails(clickedStatus);
-        // update markers (will show only markers with this status and respecting category toggles & boundary/search)
-        filterMarkersByStatus(clickedStatus);
-      }
+          <div class="status-header">
+            <span class="status-name">${escapeHtml(statusName)}</span>
+            <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
+          </div>
+          <div class="progress-bg">
+            <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
+          </div>
+        `;
+    // Click handler to open detail card + filter markers
+    div.addEventListener("click", (ev) => {
+      handleStatusClick(statusName);
     });
 
     statusEl.appendChild(div);
   });
+
+  // If no statuses found, clear detail area
+  if (sortedStatuses.length === 0) {
+    document.getElementById("status-detail-area").innerHTML = "";
+  }
+}, 200);
+
+function animateValue(id, start, end, duration) {
+  if (start === end) return;
+  const range = end - start;
+  let current = start;
+  const increment = end > start ? 1 : -1;
+  const stepTime = Math.abs(Math.floor(duration / range));
+  const obj = document.getElementById(id);
+  if (!obj) return;
+  
+  const timer = setInterval(() => {
+    current += increment;
+    obj.innerHTML = current;
+    if (current == end) clearInterval(timer);
+  }, Math.max(stepTime, 10));
 }
 
-// Show a details card below the status list with breakdown by category for that status
-function showStatusDetails(statusName) {
-  const container = document.getElementById("status-details-container");
-  if(!container) return;
+// ---------- STATUS DETAIL / INTERACTION ----------
+function handleStatusClick(statusName) {
+  // toggle selection
+  const wasSelected = (selectedStatusFilter && normalizeString(selectedStatusFilter) === normalizeString(statusName));
+  selectedStatusFilter = wasSelected ? null : statusName;
+  // reset category chip when toggling status (but keep category toggles on right unchanged)
+  selectedCategoryFilter = null;
 
-  const listSource = lastDisplayList && lastDisplayList.length ? lastDisplayList : allProjects;
-  const filtered = listSource.filter(p => String(p.STATUS || "").trim() === String(statusName).trim());
-
-  // calculate breakdown by type
-  const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
-  filtered.forEach(p => {
-    if (p._type === "TOWER") counts.menara++;
-    if (p._type === "BWA") counts.wifi++;
-    if (p._type === "NADI") counts.nadi++;
-    if (p._type === "POP") counts.pop++;
+  // highlight the clicked status item visually
+  document.querySelectorAll(".status-item").forEach(el => {
+    if (normalizeString(el.getAttribute("data-status")) === normalizeString(statusName) && !wasSelected) el.classList.add("active");
+    else el.classList.remove("active");
   });
 
-  const total = filtered.length;
-  const pct = (n) => total > 0 ? Math.round((n / total) * 100) + "%" : "0%";
+  // build detail card for the selected status (or remove if unselected)
+  buildStatusDetailCard(selectedStatusFilter);
 
-  // create HTML
-  container.innerHTML = `
-    <div class="status-details" id="status-details-card">
-      <h3>${escapeHtml(statusName)} — ${total} Projek</h3>
-      <div class="row"><div class="muted">Menara</div><div>${counts.menara} (${pct(counts.menara)})</div></div>
-      <div class="row"><div class="muted">NADI</div><div>${counts.nadi} (${pct(counts.nadi)})</div></div>
-      <div class="row"><div class="muted">WiFi</div><div>${counts.wifi} (${pct(counts.wifi)})</div></div>
-      <div class="row"><div class="muted">POP</div><div>${counts.pop} (${pct(counts.pop)})</div></div>
-      <div style="margin-top:8px; display:flex; gap:8px;">
-        <button id="sd-zoom-btn" style="flex:1; padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer;">Zoom to markers</button>
-        <button id="sd-clear-btn" style="flex:1; padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer;">Tutup</button>
+  // Apply filtering
+  filterAndDisplayMarkers();
+}
+
+function buildStatusDetailCard(statusName) {
+  const area = document.getElementById("status-detail-area");
+  if (!area) return;
+  if (!statusName) {
+    area.innerHTML = "";
+    return;
+  }
+
+  // calculate breakdown for this status across categories
+  const target = allProjects.filter(p => normalizeString(p.STATUS) === normalizeString(statusName));
+  const total = target.length;
+  const byType = {};
+  target.forEach(p => {
+    byType[p._type] = (byType[p._type] || 0) + 1;
+  });
+
+  // build HTML
+  const html = `
+    <div class="status-detail-card">
+      <div class="status-detail-title">Butiran: ${escapeHtml(statusName)} — ${total} projek</div>
+      <div class="status-detail-row"><div>Peratus keseluruhan:</div><div class="small-pill">${ total>0 ? Math.round((total / Math.max(1, allProjects.length)) * 100) : 0 }%</div></div>
+      <div class="status-detail-row"><div>Menara (TOWER)</div><div class="small-pill">${byType['TOWER'] || 0}</div></div>
+      <div class="status-detail-row"><div>Pusat NADI (NADI)</div><div class="small-pill">${byType['NADI'] || 0}</div></div>
+      <div class="status-detail-row"><div>WiFi (BWA)</div><div class="small-pill">${byType['BWA'] || 0}</div></div>
+      <div class="status-detail-row"><div>POP (POP)</div><div class="small-pill">${byType['POP'] || 0}</div></div>
+
+      <div style="margin-top:10px; display:flex; gap:8px; align-items:center; justify-content:space-between;">
+        <div style="font-size:13px; color:#666;">Tapis mengikut kategori projek:</div>
+        <div style="display:flex; gap:8px;">
+          <div class="category-chip" data-type="TOWER">Menara</div>
+          <div class="category-chip" data-type="NADI">NADI</div>
+          <div class="category-chip" data-type="BWA">WiFi</div>
+          <div class="category-chip" data-type="POP">POP</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button id="btn-apply-status-filter" style="flex:1; padding:8px 10px; border-radius:8px; border:none; background:var(--primary); color:white; cursor:pointer;">Tapis Pada Peta</button>
+        <button id="btn-clear-status-filter" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(0,0,0,0.08); background:white; cursor:pointer;">Reset</button>
       </div>
     </div>
   `;
+  area.innerHTML = html;
 
-  document.getElementById("sd-clear-btn")?.addEventListener("click", () => {
-    activeStatusFilter = null;
-    document.querySelectorAll("#status-list .status-item").forEach(n => n.classList.remove("active"));
-    container.innerHTML = "";
-    filterAndDisplayMarkers();
+  // add listeners to category chips
+  document.querySelectorAll(".category-chip").forEach(chip => {
+    chip.addEventListener("click", function() {
+      const t = this.getAttribute("data-type");
+      if (selectedCategoryFilter === t) {
+        selectedCategoryFilter = null;
+        this.classList.remove("active");
+      } else {
+        selectedCategoryFilter = t;
+        // visually set only this active
+        document.querySelectorAll(".category-chip").forEach(c => c.classList.remove("active"));
+        this.classList.add("active");
+      }
+      // update markers immediately for preview
+      filterAndDisplayMarkers();
+    });
   });
 
-  document.getElementById("sd-zoom-btn")?.addEventListener("click", () => {
-    // Fit bounds to visible markers for current status
-    const bounds = new google.maps.LatLngBounds();
-    let any = false;
-    markersBySite.forEach(m => {
-      if (!m || !m._meta) return;
-      if (String(m._meta.STATUS).trim() === String(statusName).trim() && m.getVisible()) {
-        bounds.extend(m.getPosition());
-        any = true;
-      }
-    });
-    if (any) map.fitBounds(bounds);
+  document.getElementById("btn-apply-status-filter")?.addEventListener("click", () => {
+    // selectedStatusFilter is already set; just ensure markers filtered and zoom
+    filterAndDisplayMarkers();
+    // optional: flash selection
+    flashSelectedMarkers();
+  });
+
+  document.getElementById("btn-clear-status-filter")?.addEventListener("click", () => {
+    selectedStatusFilter = null;
+    selectedCategoryFilter = null;
+    document.querySelectorAll(".status-item").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".category-chip").forEach(c => c.classList.remove("active"));
+    buildStatusDetailCard(null);
+    filterAndDisplayMarkers();
   });
 }
 
-// Show only markers that match the status (and respect category toggles / area / search)
-function filterMarkersByStatus(statusName) {
-  const menaraActive = document.getElementById("toggle-menara")?.classList.contains("active");
-  const nadiActive = document.getElementById("toggle-nadi")?.classList.contains("active");
-  const popActive = document.getElementById("toggle-pop")?.classList.contains("active");
-  const wifiActive = document.getElementById("toggle-wifi")?.classList.contains("active");
-
-  markersBySite.forEach(m => {
-    if(!m || !m._meta) return;
-    const meta = m._meta;
-    const type = meta._type;
-    let isCategoryActive = false;
-    if (type === "TOWER") isCategoryActive = menaraActive;
-    else if (type === "BWA") isCategoryActive = wifiActive;
-    else if (type === "NADI") isCategoryActive = nadiActive;
-    else if (type === "POP") isCategoryActive = popActive;
-
-    const shouldShow = isCategoryActive && meta._validCoord && String(meta.STATUS).trim() === String(statusName).trim();
-
-    // Also ensure marker is in the lastDisplayList (boundary/search context)
-    const inDisplay = lastDisplayList.some(p => p._id === meta._id);
-    m.setVisible(shouldShow && inDisplay);
+function flashSelectedMarkers() {
+  // small visual cue: bounce visible markers for a short time
+  markersList.forEach(m => {
+    if (!m) return;
+    if (m.getVisible()) {
+      m.setAnimation(google.maps.Animation.BOUNCE);
+      setTimeout(() => m.setAnimation(null), 800);
+    }
   });
 }
 
@@ -1046,11 +1108,6 @@ function handleFeatureClick(key, feature) {
   activeLayer = layerObj;
   currentBoundaryKey = key;
 
-  // Refresh marker/filter context (status list uses this)
-  activeStatusFilter = null;
-  document.getElementById("status-details-container").innerHTML = "";
-  document.querySelectorAll("#status-list .status-item").forEach(n => n.classList.remove("active"));
-
   filterAndDisplayMarkers();
 }
 
@@ -1074,9 +1131,10 @@ function setupToggles() {
   ["menara", "nadi", "pop", "wifi"].forEach(cat => {
     document.getElementById(`toggle-${cat}`)?.addEventListener("click", function () {
       this.classList.toggle("active");
-      // if a status filter active, reapply it
-      if (activeStatusFilter) filterMarkersByStatus(activeStatusFilter);
-      else filterAndDisplayMarkers();
+      // Reset selectedCategoryFilter when using main toggles
+      selectedCategoryFilter = null;
+      document.querySelectorAll(".category-chip").forEach(c => c.classList.remove("active"));
+      filterAndDisplayMarkers();
     });
   });
 
@@ -1097,34 +1155,29 @@ function setupToggles() {
       } else {
         toggleBoundaryLayerVisibility(b.key);
         document.getElementById("selected-area").textContent = "SABAH (" + b.key.toUpperCase() + ")";
-        currentBoundaryKey = b.key;
+        currentBoundaryKey = b.key; 
       }
-      // reset status specifics
-      activeStatusFilter = null;
-      document.getElementById("status-details-container").innerHTML = "";
-      document.querySelectorAll("#status-list .status-item").forEach(n => n.classList.remove("active"));
-
       filterAndDisplayMarkers();
     });
   });
 
-  // Search input handling (with coord detection)
+  // UPDATE: Carian Responsif + Koordinat
   document.getElementById("search-input")?.addEventListener("input", (e) => {
     searchTerm = e.target.value;
     
+    // Check regex untuk format "Lat, Long"
     const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
     if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
         const lng = parseFloat(coordMatch[2]);
         if (!isNaN(lat) && !isNaN(lng)) {
+            // Pan terus ke lokasi tanpa filter markers
             map.panTo({lat, lng});
             map.setZoom(14);
+            // Optional: Letak marker sementara atau biarkan user melihat kawasan
         }
     } else {
-        // when typing text, clear active status filter (user is searching)
-        activeStatusFilter = null;
-        document.getElementById("status-details-container").innerHTML = "";
-        document.querySelectorAll("#status-list .status-item").forEach(n => n.classList.remove("active"));
+        // Jika teks biasa, jalankan filter standard
         filterAndDisplayMarkers();
     }
   });
@@ -1138,7 +1191,6 @@ async function autoRefreshLoop() {
     markersList = Array.from(markersBySite.values());
     allProjects = newProjects;
     
-    computeOverallCounts();
     filterAndDisplayMarkers();
   } catch (e) {
     console.warn("autoRefreshLoop failed", e);
@@ -1163,18 +1215,23 @@ async function initMap() {
   map = new google.maps.Map(mapDiv, {
     center: { lat: 5.9804, lng: 116.0735 },
     zoom: 8,
-    mapTypeId: "satellite",
+    mapTypeId: "satellite", /* SMS - sebelumnya roadmap */
     styles: silverStyle,
     disableDefaultUI: false,
+    
+    // UPDATE: Pilihan View (Satellite/Map)
     mapTypeControl: true,
     mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
         position: google.maps.ControlPosition.TOP_RIGHT
     },
+    
+    // UPDATE: Butang Zoom (+ -)
     zoomControl: true,
     zoomControlOptions: {
         position: google.maps.ControlPosition.RIGHT_BOTTOM
     },
+    
     streetViewControl: false,
     fullscreenControl: false
   });
@@ -1183,18 +1240,9 @@ async function initMap() {
 
   try {
     const projects = await loadAllSheetsAndNormalize();
-
+    
     renderMarkersInBatches(projects, () => {
       markersList = Array.from(markersBySite.values());
-      // compute overall counts and set into main cards
-      computeOverallCounts();
-      // Initial toggles: set all category toggles active by default for visibility convenience
-      // (If you prefer them off by default, remove the next block.)
-      // document.getElementById("toggle-menara").classList.add("active"); // optional
-      // document.getElementById("toggle-nadi").classList.add("active");
-      // document.getElementById("toggle-wifi").classList.add("active");
-      // document.getElementById("toggle-pop").classList.add("active");
-
       filterAndDisplayMarkers();
     });
 
@@ -1229,7 +1277,8 @@ async function initMap() {
 window.initMap = initMap;
 // ---------- end of script ----------
 
- </script>
+
+</script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
     
