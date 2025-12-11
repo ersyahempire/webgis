@@ -165,23 +165,68 @@ body {
 /* Status List Styles - UPDATED FOR PROGRESS BAR & PERCENTAGE */
 .status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; }
 .status-item { 
-  margin-bottom: 16px; 
-  background: rgba(0,0,0,0.02); 
-  padding: 8px; 
+  margin-bottom: 0; /* Changed for accordion effect */
+  background: rgba(255,255,255,0.3); 
+  padding: 8px 10px; 
   border-radius: 8px; 
   cursor: pointer;
   transition: var(--transition);
   border: 1px solid transparent;
+  position: relative;
+  z-index: 2;
 } 
-.status-item:hover { background: rgba(0,0,0,0.05); }
+.status-item:hover { background: rgba(255,255,255,0.6); }
 
-/* Gaya apabila Status dipilih - Lebih jelas tetapi tidak menghilangkan yang lain */
+/* Gaya apabila Status dipilih */
 .status-item.selected {
-  background: rgba(255, 255, 255, 0.9);
+  background: #fff;
   border: 1px solid var(--primary);
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.15);
-  transform: scale(1.02);
+  border-bottom: 1px solid rgba(0,0,0,0.05); /* Separator with details */
+  border-radius: 8px 8px 0 0; /* Flat bottom when open */
+  box-shadow: 0 -2px 10px rgba(79, 70, 229, 0.05);
+  transform: none; /* Removed scale to keep alignment with details */
 }
+
+/* NEW: Status Details Dropdown */
+.status-details {
+  background: rgba(255,255,255,0.5);
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid rgba(255,255,255,0.6);
+  border-top: none;
+  display: none;
+  animation: slideDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: top;
+}
+.status-details.show { display: block; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: scaleY(0.9); max-height: 0; }
+  to { opacity: 1; transform: scaleY(1); max-height: 300px; }
+}
+
+.sub-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.sub-stat-label { color: var(--text-main); font-weight: 500; display: flex; align-items: center; gap: 6px;}
+.sub-stat-val { font-weight: 700; color: var(--text-sub); }
+
+.sub-stat-bar-bg {
+  width: 100%;
+  height: 4px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 2px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.sub-stat-bar-fill { height: 100%; border-radius: 2px; }
+
+/* End New Styles */
 
 .status-header { 
   display: flex; 
@@ -421,7 +466,7 @@ body {
       </button>
     </div>
   </div>
-  
+   
   <!-- UI Interactions Script -->
   <script>
     function toggleDashboard() {
@@ -438,9 +483,9 @@ body {
     });
   </script>
 
- <!-- Main script -->
+  <!-- Main script -->
   <script>
-   // script.js
+// script.js
 // ---------- CONFIG ----------
 const URLs = {
   district: "district.json",
@@ -504,7 +549,6 @@ function debounce(fn, wait = 250) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
 }
 
-// FIX: Helper untuk membersihkan string bagi tujuan perbandingan (Trim + Uppercase)
 function normalizeString(str) {
   return String(str || "").trim().toUpperCase();
 }
@@ -512,13 +556,11 @@ function normalizeString(str) {
 function cleanFloat(val) {
   if (typeof val === 'number') return val;
   if (!val) return 0;
-  // Buang semua character pelik, tukar koma jadi titik
   const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
   const floatVal = parseFloat(str);
   return isNaN(floatVal) ? 0 : floatVal;
 }
 
-// FIX: Generate ID berdasarkan kandungan, bukan nombor baris
 function generateStableId(rowObj, type) {
   const name = normalizeString(rowObj.SITE_NAME || "UNKNOWN");
   const district = normalizeString(rowObj.DISTRICT || "SABAH");
@@ -544,6 +586,16 @@ function resetAllLayerStyles() {
   });
   activeFeature = null;
   activeLayer = null;
+}
+
+// Helper untuk Random Warna Hex
+function getRandomColor() {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
 }
 
 // ---------- DATA PARSING ----------
@@ -657,11 +709,10 @@ function createOrUpdateMarker(project) {
     
     const pos = m.getPosition();
     if (!pos || Math.abs(pos.lat() - project.LATITUDE) > 0.0001 || Math.abs(pos.lng() - project.LONGITUDE) > 0.0001) {
-       m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
+        m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
     }
     return m;
   } else {
-    // Bina HTML InfoWindow
     let rawDetailsHtml = project._raw_details.map(detail =>
       `<div class="info-row"><span class="info-label">${escapeHtml(detail.label)}</span><span class="info-val">${escapeHtml(detail.value)}</span></div>`
     ).join('');
@@ -738,31 +789,26 @@ function renderMarkersInBatches(projects, onComplete) {
 
 // ---------- DASHBOARD INTERACTION HANDLERS ----------
 
-// Function: Called when Category Grid in dashboard is clicked
 function handleCategoryClick(type, elementId) {
-  // If clicking the same one, toggle it off (reset)
   if (activeDashboardCategory === type) {
     activeDashboardCategory = null;
     document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
   } else {
-    // Select new one
     activeDashboardCategory = type;
     document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
     document.getElementById(elementId)?.classList.add('selected');
   }
-
-  // Reset status filter when category changes to avoid confusion
-  activeStatusFilter = null;
   
-  // Re-run filter
+  // Jika kategori ditukar, mungkin kita mahu reset status filter atau kekalkannya.
+  // Untuk flow yang lebih natural, kita reset status filter jika ia tertutup,
+  // tetapi logik 'accordion' akan refresh dalam filterAndDisplayMarkers
+  
   filterAndDisplayMarkers();
 }
 
-// Function: Called when a Progress Bar is clicked
 function handleStatusClick(statusStr) {
-  // Toggle logic
   if (activeStatusFilter === statusStr) {
-    activeStatusFilter = null;
+    activeStatusFilter = null; // Toggle off if clicked again
   } else {
     activeStatusFilter = statusStr;
   }
@@ -803,20 +849,18 @@ function filterAndDisplayMarkers() {
     }
   }
 
-  // 3. Tapis mengikut Dashboard Category Click (Overrides right panel toggles if active)
+  // 3. Tapis mengikut Dashboard Category Click
   if (activeDashboardCategory) {
-     filteredList = filteredList.filter(p => p._type === activeDashboardCategory);
+      filteredList = filteredList.filter(p => p._type === activeDashboardCategory);
   }
 
-  // ----- PEMBAIKAN UTAMA DI SINI -----
-  // Kita kemaskini Dashboard menggunakan data yang telah ditapis mengikut Sempadan/Kategori/Carian,
-  // TETAPI SEBELUM ditapis mengikut Status.
-  // Ini memastikan peratusan status kekal betul (berdasarkan jumlah projek dalam kawasan itu),
-  // dan bar-bar lain tidak hilang.
-  
+  // Update Dashboard dengan data yang telah ditapis mengikut lokasi/kategori
+  // Ini penting supaya angka dalam status bar adalah tepat untuk paparan semasa
   updateDashboard(filteredList); 
 
-  // 4. Tapis mengikut Dashboard Status Click (Untuk Marker Peta SAHAJA)
+  // 4. Tapis mengikut Status (Untuk Marker di Peta sahaja)
+  // Nota: Status bar klik tidak menapis data dashboard itu sendiri (untuk elak bar hilang),
+  // tetapi menapis apa yang terpapar di peta.
   let mapDisplayList = filteredList;
   
   if (activeStatusFilter) {
@@ -831,9 +875,6 @@ function filterAndDisplayMarkers() {
     const meta = m._meta;
     const type = meta._type;
 
-    // Logic Visibiliti:
-    // Jika Dashboard Category dipilih, hanya tunjuk jenis itu.
-    // Jika TIDAK, guna butang toggle kanan.
     let isCategoryAllowed = false;
 
     if (activeDashboardCategory) {
@@ -858,16 +899,32 @@ const updateDashboard = debounce(function (list) {
   if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
 
   const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
-  const dynamicStatusCounts = {};
+  
+  // Struktur data untuk status breakdown: { "SIAP": { total: 10, items: { "TOWER": 5, "NADI": 5 } } }
+  const statusBreakdown = {};
 
   displayList.forEach(p => {
+    // Kiraan umum atas dashboard
     if (p._type === "TOWER") counts.menara++;
     if (p._type === "BWA") counts.wifi++;
     if (p._type === "NADI") counts.nadi++;
     if (p._type === "POP") counts.pop++;
 
     const s = String(p.STATUS || "Tidak Dinyatakan").trim();
-    if (s) dynamicStatusCounts[s] = (dynamicStatusCounts[s] || 0) + 1;
+    
+    // Inisialisasi struktur jika belum wujud
+    if (!statusBreakdown[s]) {
+      statusBreakdown[s] = { total: 0, types: {} };
+    }
+    
+    // Tambah kiraan status total
+    statusBreakdown[s].total++;
+
+    // Tambah kiraan spesifik jenis dalam status ini
+    if (!statusBreakdown[s].types[p._type]) {
+      statusBreakdown[s].types[p._type] = 0;
+    }
+    statusBreakdown[s].types[p._type]++;
   });
 
   const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
@@ -880,10 +937,13 @@ const updateDashboard = debounce(function (list) {
   if(!statusEl) return;
   
   statusEl.innerHTML = "";
-  const sortedStatuses = Object.entries(dynamicStatusCounts).sort(([, a], [, b]) => b - a);
+  
+  // Sort status by count descending
+  const sortedStatuses = Object.entries(statusBreakdown).sort(([, a], [, b]) => b.total - a.total);
   const totalProjects = displayList.length;
 
-  sortedStatuses.forEach(([statusName, count]) => {
+  sortedStatuses.forEach(([statusName, data]) => {
+    const count = data.total;
     const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
     
     let endColor = "#4F46E5"; 
@@ -895,25 +955,49 @@ const updateDashboard = debounce(function (list) {
     else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#F44336"; startColor = "#e57373"; }
     else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#FF9800"; startColor = "#ffb74d"; }
 
-    // Check if this status is currently selected
     const isSelected = (activeStatusFilter === statusName);
     const selectedClass = isSelected ? "selected" : "";
+    
+    // Generate sub-items HTML
+    let detailsHtml = '';
+    
+    // Sort types within this status by count
+    const sortedTypes = Object.entries(data.types).sort(([, a], [, b]) => b - a);
+    
+    sortedTypes.forEach(([typeKey, typeCount]) => {
+      const typeCfg = TYPE_CFG[typeKey] || { label: typeKey, color: "#666" };
+      const typePercent = count > 0 ? Math.round((typeCount / count) * 100) : 0;
+      
+      detailsHtml += `
+        <div class="sub-stat-row">
+           <span class="sub-stat-label" style="color: ${typeCfg.color}">${typeCfg.label}</span>
+           <span class="sub-stat-val">${typeCount} (${typePercent}%)</span>
+        </div>
+        <div class="sub-stat-bar-bg">
+           <div class="sub-stat-bar-fill" style="width: ${typePercent}%; background-color: ${typeCfg.color}; opacity: 0.7;"></div>
+        </div>
+      `;
+    });
 
-    const div = document.createElement("div");
-    div.className = `status-item ${selectedClass}`;
-    // Add Click event to filter markers by this status
-    div.onclick = function() { handleStatusClick(statusName); };
-
-    div.innerHTML = `
-          <div class="status-header">
-            <span class="status-name">${escapeHtml(statusName)}</span>
-            <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
+    // Main Item Container
+    const itemContainer = document.createElement("div");
+    
+    // HTML Structure: Main Bar (Clickable) + Details Panel (Hidden/Shown)
+    itemContainer.innerHTML = `
+          <div class="status-item ${selectedClass}" onclick="handleStatusClick('${escapeHtml(statusName)}')">
+            <div class="status-header">
+              <span class="status-name">${escapeHtml(statusName)}</span>
+              <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
+            </div>
+            <div class="progress-bg">
+              <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
+            </div>
           </div>
-          <div class="progress-bg">
-            <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor});"></div>
+          <div class="status-details ${isSelected ? 'show' : ''}">
+             ${detailsHtml}
           </div>
         `;
-    statusEl.appendChild(div);
+    statusEl.appendChild(itemContainer);
   });
 }, 200);
 
@@ -974,10 +1058,19 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
     layer.addListener("mouseover", e => {
       if (!layer.getMap()) return;
       if (activeFeature === e.feature) return;
-      layer.overrideStyle(e.feature, { strokeWeight: 2, strokeColor: "#4F46E5", fillOpacity: 0.3, fillColor: "#818cf8" });
+      
+      // UPDATE: Generate Random Color on Hover
+      const randomColor = getRandomColor();
+      
+      layer.overrideStyle(e.feature, { 
+          strokeWeight: 2, 
+          strokeColor: randomColor, 
+          fillOpacity: 0.3, // Kekalkan opacity sedia ada
+          fillColor: randomColor 
+      });
       
       if (!hoverInfoWindow) hoverInfoWindow = new google.maps.InfoWindow();
-      hoverInfoWindow.setContent(`<div style="padding:8px 12px; font-weight:600; color:#4F46E5;">${escapeHtml(extractFeatureName(e.feature))}</div>`);
+      hoverInfoWindow.setContent(`<div style="padding:8px 12px; font-weight:600; color:${randomColor}; text-shadow: 0px 0px 1px #000;">${escapeHtml(extractFeatureName(e.feature))}</div>`);
       hoverInfoWindow.setPosition(e.latLng);
       hoverInfoWindow.open(map);
     });
@@ -1069,22 +1162,18 @@ function setupToggles() {
     });
   });
 
-  // UPDATE: Carian Responsif + Koordinat
   document.getElementById("search-input")?.addEventListener("input", (e) => {
     searchTerm = e.target.value;
     
-    // Check regex untuk format "Lat, Long"
     const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
     if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
         const lng = parseFloat(coordMatch[2]);
         if (!isNaN(lat) && !isNaN(lng)) {
-            // Pan terus ke lokasi tanpa filter markers
             map.panTo({lat, lng});
             map.setZoom(14);
         }
     } else {
-        // Jika teks biasa, jalankan filter standard
         filterAndDisplayMarkers();
     }
   });
@@ -1122,18 +1211,16 @@ async function initMap() {
   map = new google.maps.Map(mapDiv, {
     center: { lat: 5.9804, lng: 116.0735 },
     zoom: 8,
-    mapTypeId: "satellite", /* SMS - sebelumnya roadmap */
+    mapTypeId: "satellite",
     styles: silverStyle,
     disableDefaultUI: false,
     
-    // UPDATE: Pilihan View (Satellite/Map)
     mapTypeControl: true,
     mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
         position: google.maps.ControlPosition.TOP_RIGHT
     },
     
-    // UPDATE: Butang Zoom (+ -)
     zoomControl: true,
     zoomControlOptions: {
         position: google.maps.ControlPosition.RIGHT_BOTTOM
@@ -1182,8 +1269,9 @@ async function initMap() {
 }
 
 window.initMap = initMap;
-// ---------- end of script ---------- 
+
   </script>
+
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
     
