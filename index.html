@@ -164,8 +164,14 @@ body {
 
 /* Status List Styles - UPDATED FOR PROGRESS BAR & PERCENTAGE */
 .status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; }
+
+/* WRAPPER BARU UNTUK GAP */
+.status-wrapper {
+  margin-bottom: 12px; /* Jarak antara status item */
+}
+
 .status-item { 
-  margin-bottom: 0; /* Changed for accordion effect */
+  margin-bottom: 0; 
   background: rgba(255,255,255,0.3); 
   padding: 8px 10px; 
   border-radius: 8px; 
@@ -190,7 +196,6 @@ body {
 /* NEW: Status Details Dropdown */
 .status-details {
   background: rgba(255,255,255,0.5);
-  margin-bottom: 16px;
   padding: 12px;
   border-radius: 0 0 8px 8px;
   border: 1px solid rgba(255,255,255,0.6);
@@ -799,10 +804,6 @@ function handleCategoryClick(type, elementId) {
     document.getElementById(elementId)?.classList.add('selected');
   }
   
-  // Jika kategori ditukar, mungkin kita mahu reset status filter atau kekalkannya.
-  // Untuk flow yang lebih natural, kita reset status filter jika ia tertutup,
-  // tetapi logik 'accordion' akan refresh dalam filterAndDisplayMarkers
-  
   filterAndDisplayMarkers();
 }
 
@@ -855,12 +856,9 @@ function filterAndDisplayMarkers() {
   }
 
   // Update Dashboard dengan data yang telah ditapis mengikut lokasi/kategori
-  // Ini penting supaya angka dalam status bar adalah tepat untuk paparan semasa
   updateDashboard(filteredList); 
 
   // 4. Tapis mengikut Status (Untuk Marker di Peta sahaja)
-  // Nota: Status bar klik tidak menapis data dashboard itu sendiri (untuk elak bar hilang),
-  // tetapi menapis apa yang terpapar di peta.
   let mapDisplayList = filteredList;
   
   if (activeStatusFilter) {
@@ -960,8 +958,6 @@ const updateDashboard = debounce(function (list) {
     
     // Generate sub-items HTML
     let detailsHtml = '';
-    
-    // Sort types within this status by count
     const sortedTypes = Object.entries(data.types).sort(([, a], [, b]) => b - a);
     
     sortedTypes.forEach(([typeKey, typeCount]) => {
@@ -979,10 +975,10 @@ const updateDashboard = debounce(function (list) {
       `;
     });
 
-    // Main Item Container
+    // Main Item Container - Add wrapper class here for gap
     const itemContainer = document.createElement("div");
+    itemContainer.className = "status-wrapper"; // UPDATE: Tambah kelas untuk gap
     
-    // HTML Structure: Main Bar (Clickable) + Details Panel (Hidden/Shown)
     itemContainer.innerHTML = `
           <div class="status-item ${selectedClass}" onclick="handleStatusClick('${escapeHtml(statusName)}')">
             <div class="status-header">
@@ -1059,13 +1055,14 @@ async function loadGeoJsonLayer(key, url, baseStyle = {}) {
       if (!layer.getMap()) return;
       if (activeFeature === e.feature) return;
       
-      // UPDATE: Generate Random Color on Hover
+      // UPDATE: Generate Random Color on Hover & Save to Feature
       const randomColor = getRandomColor();
+      e.feature.setProperty('_themeColor', randomColor); // Simpan warna
       
       layer.overrideStyle(e.feature, { 
           strokeWeight: 2, 
           strokeColor: randomColor, 
-          fillOpacity: 0.3, // Kekalkan opacity sedia ada
+          fillOpacity: 0.3, 
           fillColor: randomColor 
       });
       
@@ -1101,7 +1098,16 @@ function handleFeatureClick(key, feature) {
 
   toggleBoundaryLayerVisibility(key);
   resetAllLayerStyles();
-  layerObj.overrideStyle(feature, { strokeWeight: 2, strokeColor: "#4338ca", fillOpacity: 0.5, fillColor: "#4338ca" });
+  
+  // UPDATE: Guna warna yang disimpan dari hover, atau default jika tiada
+  const themeColor = feature.getProperty('_themeColor') || "#4338ca";
+  
+  layerObj.overrideStyle(feature, { 
+      strokeWeight: 2, 
+      strokeColor: themeColor, 
+      fillOpacity: 0.5, // Sedikit lebih terang bila dipilih
+      fillColor: themeColor 
+  });
 
   activeFeature = feature;
   activeLayer = layerObj;
@@ -1271,8 +1277,6 @@ async function initMap() {
 window.initMap = initMap;
 
   </script>
-
-
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
     
 </body>
