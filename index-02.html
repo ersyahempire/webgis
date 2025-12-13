@@ -1,0 +1,169 @@
+<!doctype html>
+.bar{
+height:8px;
+background:#e5e7eb;
+border-radius:8px;
+overflow:hidden;
+margin-top:6px;
+}
+
+
+.bar span{
+display:block;
+height:100%;
+background:linear-gradient(90deg,#818cf8,#4f46e5);
+}
+
+
+/* Search */
+.search{
+position:absolute;
+top:20px;
+left:50%;
+transform:translateX(-50%);
+z-index:10;
+background:var(--glass-bg);
+backdrop-filter:blur(12px);
+border-radius:999px;
+padding:12px 20px;
+width:360px;
+display:flex;
+gap:10px;
+box-shadow:var(--shadow);
+}
+
+
+.search input{
+border:none;
+background:none;
+width:100%;
+font-size:14px;
+outline:none;
+}
+</style>
+</head>
+<body>
+
+
+<div id="map"></div>
+
+
+<div class="search">
+<i class="fas fa-search"></i>
+<input id="search" placeholder="Cari tapak, daerah atau parlimen" />
+</div>
+
+
+<div class="dashboard">
+<header><i class="fas fa-layer-group"></i> Statistik Projek</header>
+<div class="content">
+<div class="stat-main">
+<div class="value" id="total">0</div>
+<div class="badge" id="area">SELURUH SABAH</div>
+</div>
+
+
+<div class="grid">
+<div class="card" data-type="TOWER">🗼<br><b id="tower">0</b><br>Menara</div>
+<div class="card" data-type="NADI">📡<br><b id="nadi">0</b><br>NADI</div>
+<div class="card" data-type="BWA">📶<br><b id="wifi">0</b><br>WiFi</div>
+<div class="card" data-type="POP">🌐<br><b id="pop">0</b><br>POP</div>
+</div>
+
+
+<div class="status" id="status"></div>
+</div>
+</div>
+
+
+<script>
+const UI = {
+markers:[],
+projects:[],
+activeType:null,
+search:''
+};
+
+
+const TYPE = {
+TOWER:{color:'#ff5722'},
+NADI:{color:'#2196f3'},
+BWA:{color:'#4caf50'},
+POP:{color:'#ff9800'}
+};
+
+
+window.initMap = async function(){
+UI.map = new google.maps.Map(document.getElementById('map'),{
+center:{lat:5.98,lng:116.07},
+zoom:8,
+mapTypeId:'roadmap'
+});
+
+
+await loadData();
+renderMarkers();
+updateDashboard(UI.projects);
+bindUI();
+}
+
+
+async function loadData(){
+// mock – sambung Google Sheet anda di sini
+UI.projects = [];
+}
+
+
+function renderMarkers(){
+UI.markers.forEach(m=>m.setMap(null));
+UI.markers=[];
+
+
+UI.projects.forEach(p=>{
+if(UI.activeType && p.type!==UI.activeType) return;
+if(UI.search && !p.name.toLowerCase().includes(UI.search)) return;
+
+
+const m = new google.maps.Marker({
+position:{lat:p.lat,lng:p.lng},
+map:UI.map,
+icon:{
+path:google.maps.SymbolPath.CIRCLE,
+scale:6,
+fillColor:TYPE[p.type].color,
+fillOpacity:1,
+strokeColor:'#fff',
+strokeWeight:2
+}
+});
+UI.markers.push(m);
+});
+}
+
+
+function updateDashboard(list){
+document.getElementById('total').textContent=list.length;
+}
+
+
+function bindUI(){
+document.querySelectorAll('.card').forEach(c=>{
+c.onclick=()=>{
+document.querySelectorAll('.card').forEach(x=>x.classList.remove('active'));
+UI.activeType=c.dataset.type;
+c.classList.add('active');
+renderMarkers();
+}
+});
+
+
+document.getElementById('search').oninput=e=>{
+UI.search=e.target.value.toLowerCase();
+renderMarkers();
+}
+}
+
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
+</body>
+</html>
