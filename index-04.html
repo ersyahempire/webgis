@@ -7,11 +7,13 @@
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Chart.js & html2canvas for Report Card -->
+  <!-- Chart.js, Datalabels Plugin, html2canvas, jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 /* ----- GLOBAL VARS & RESET ----- */
@@ -167,9 +169,7 @@ body {
 
 /* Status List Styles */
 .status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; }
-
 .status-wrapper { margin-bottom: 12px; }
-
 .status-item { 
   margin-bottom: 0; 
   background: rgba(255,255,255,0.3); 
@@ -182,7 +182,6 @@ body {
   z-index: 2;
 } 
 .status-item:hover { background: rgba(255,255,255,0.6); }
-
 .status-item.selected {
   background: #fff;
   border: 1px solid var(--primary);
@@ -191,7 +190,6 @@ body {
   box-shadow: 0 -2px 10px rgba(79, 70, 229, 0.05);
   transform: none;
 }
-
 .status-details {
   background: rgba(255,255,255,0.5);
   padding: 12px;
@@ -212,7 +210,6 @@ body {
 .sub-stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 11px; }
 .sub-stat-label { color: var(--text-main); font-weight: 500; display: flex; align-items: center; gap: 6px;}
 .sub-stat-val { font-weight: 700; color: var(--text-sub); }
-
 .sub-stat-bar-bg { width: 100%; height: 4px; background: rgba(0,0,0,0.05); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
 .sub-stat-bar-fill { height: 100%; border-radius: 2px; }
 
@@ -280,7 +277,7 @@ body {
 .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: var(--text-sub); }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
-/* ----- REPORT CARD MODAL STYLES (NEW) ----- */
+/* ----- REPORT CARD MODAL STYLES (UPDATED TAILWIND STYLE) ----- */
 .report-modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.6);
@@ -293,60 +290,137 @@ body {
 .report-modal-overlay.active { display: flex; }
 
 .report-container {
-  background: #f8fafc;
-  width: 100%; max-width: 900px;
-  height: 90vh;
+  background: #f8fafc; /* Slate-50 */
+  width: 100%; max-width: 1000px;
+  height: 95vh;
   border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   display: flex; flex-direction: column;
   overflow: hidden;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
+/* Tailwind-ish Header */
 .report-header {
-  background: var(--primary); color: white;
-  padding: 15px 25px;
-  display: flex; justify-content: space-between; align-items: center;
+  background: white;
+  color: var(--text-main);
+  padding: 20px 30px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex; 
+  flex-direction: column;
+  position: relative;
 }
-.report-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-.report-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; transition: 0.2s; display:flex; align-items:center; justify-content:center;}
-.report-close:hover { background: rgba(255,255,255,0.4); }
 
+.report-header-top {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+
+.report-meta {
+  position: absolute; top: 20px; right: 60px;
+  text-align: right;
+}
+.report-date { font-size: 14px; font-weight: 600; color: var(--text-sub); }
+
+.report-title-container {
+  text-align: center; width: 100%; margin-top: 10px;
+}
+.report-title { 
+  font-size: 24px; font-weight: 800; color: var(--primary); 
+  display: inline-flex; align-items: center; gap: 10px; 
+  text-transform: uppercase; letter-spacing: -0.5px;
+}
+
+.report-actions {
+    position: absolute; top: 20px; right: 20px;
+    display: flex; gap: 10px;
+}
+.btn-close { 
+    background: #fee2e2; color: #ef4444; border: none; width: 36px; height: 36px; 
+    border-radius: 50%; cursor: pointer; display:flex; align-items:center; justify-content:center;
+    transition: 0.2s;
+}
+.btn-close:hover { background: #fecaca; }
+
+.btn-pdf {
+    background: #e0e7ff; color: var(--primary); border: none; 
+    padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;
+    position: absolute; top: 20px; left: 30px; /* Left aligned PDF button */
+}
+.btn-pdf:hover { background: #c7d2fe; }
+
+/* Body Area */
 .report-body {
-  padding: 25px;
+  padding: 30px;
   overflow-y: auto;
   flex: 1;
+  background: #f1f5f9; /* Slate-100 */
 }
 
-.report-section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
-.report-section h3 { margin: 0 0 15px 0; font-size: 15px; color: var(--primary); text-transform: uppercase; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+/* Cards (Tailwind Style) */
+.report-section { 
+  background: white; 
+  border-radius: 12px; 
+  padding: 24px; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+  margin-bottom: 0; 
+  border: 1px solid #f1f5f9;
+}
+.report-section h3 { 
+  margin: 0 0 20px 0; font-size: 16px; font-weight: 700; 
+  color: #334155; /* Slate-700 */
+  display: flex; align-items: center; gap: 8px;
+}
+.report-section h3 i { color: var(--primary); }
 
-.report-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-.report-full-width { grid-column: span 2; }
-.chart-wrapper { position: relative; height: 250px; width: 100%; display:flex; justify-content:center; }
-.map-capture-box { width: 100%; height: 300px; background: #eee; border-radius: 8px; overflow: hidden; position: relative; }
+.report-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+.col-span-12 { grid-column: span 12; }
+.col-span-8 { grid-column: span 8; }
+.col-span-6 { grid-column: span 6; }
+.col-span-4 { grid-column: span 4; }
+
+/* Map Capture */
+.map-capture-box { 
+    width: 100%; height: 350px; background: #e2e8f0; 
+    border-radius: 8px; overflow: hidden; position: relative; 
+    border: 2px solid white; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
 .map-capture-img { width: 100%; height: 100%; object-fit: cover; }
 
-.report-summary-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-.summary-item { background: #f0fdf4; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #dcfce7; }
-.summary-val { font-size: 24px; font-weight: 800; color: var(--text-main); }
-.summary-lbl { font-size: 11px; text-transform: uppercase; color: var(--text-sub); margin-top: 5px; }
+/* Summary Grid */
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 24px; }
+.summary-card { 
+    background: white; padding: 20px; border-radius: 12px; text-align: center; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f8fafc;
+}
+.summary-val { font-size: 32px; font-weight: 800; color: #1e293b; line-height: 1.1; }
+.summary-lbl { font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748b; margin-top: 5px; letter-spacing: 0.5px; }
 
-.expanded-status-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
-.status-row-report { display: flex; justify-content: space-between; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;}
-
-/* Print styles */
-@media print {
-  body * { visibility: hidden; }
-  .report-modal-overlay, .report-modal-overlay * { visibility: visible; }
-  .report-modal-overlay { position: absolute; left: 0; top: 0; background: white; padding: 0; }
-  .report-container { box-shadow: none; height: auto; max-width: 100%; }
-  .report-close { display: none; }
+/* Detailed Status List */
+.status-list-container {
+    display: flex; flex-direction: column; gap: 12px;
+}
+.status-group {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px;
+}
+.status-header-row {
+    display: flex; justify-content: space-between; font-weight: 700; color: #334155; font-size: 14px; margin-bottom: 8px;
+}
+.status-sub-item {
+    display: flex; justify-content: space-between; font-size: 13px; color: #64748b; 
+    padding: 4px 0 4px 16px; border-left: 2px solid #cbd5e1; margin-left: 4px;
 }
 
-@media (max-width: 768px) {
-  .report-grid { grid-template-columns: 1fr; }
-  .report-full-width { grid-column: span 1; }
-  .report-summary-box { grid-template-columns: 1fr 1fr; }
+/* Charts */
+.chart-wrapper { position: relative; height: 250px; width: 100%; display:flex; justify-content:center; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .col-span-8, .col-span-4, .col-span-6 { grid-column: span 12; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .report-meta { position: static; text-align: center; margin-top: 10px; }
+  .btn-pdf { position: static; margin-bottom: 10px; justify-content: center; }
+  .report-actions { position: absolute; top: 15px; right: 15px; }
 }
 
 /* ----- LOADING & INFO ----- */
@@ -467,7 +541,7 @@ body {
   <!-- Right Side Controls (Expandable Cards) -->
   <div class="controls-container">
     
-    <!-- Report Card Button (NEW) -->
+    <!-- Report Card Button -->
     <div class="control-card" id="report-card-btn">
        <button class="toggle-btn" id="btn-open-report" title="Report Kad">
         <i class="fas fa-file-alt" style="color: #E91E63;"></i> <span>Report Kad</span>
@@ -506,89 +580,88 @@ body {
     </div>
   </div>
 
-  <!-- Report Card Modal (Overlay) -->
+  <!-- Report Card Modal (NEW DESIGN) -->
   <div class="report-modal-overlay" id="report-overlay">
-    <div class="report-container">
+    <div class="report-container" id="report-print-area">
+        
+        <!-- Header -->
         <div class="report-header">
-            <div class="report-title">
-                <i class="fas fa-clipboard-list"></i>
-                <span id="report-title-text">Laporan Projek: SABAH</span>
-            </div>
-            <button class="report-close" onclick="closeReportCard()">
-                <i class="fas fa-times"></i>
+            <button class="btn-pdf" onclick="downloadPDF()">
+                <i class="fas fa-file-pdf"></i> Muat Turun PDF
             </button>
+            <div class="report-meta">
+                <div class="report-date" id="report-date-text">17 Dis 2025, 3:35PM</div>
+            </div>
+            <div class="report-actions">
+                <button class="btn-close" onclick="closeReportCard()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="report-title-container">
+                <div class="report-title" id="report-title-text">Laporan Projek: SABAH</div>
+            </div>
         </div>
+
         <div class="report-body">
             
             <!-- Summary Stats -->
-            <div class="report-summary-box">
-                <div class="summary-item">
-                    <div class="summary-val" id="rpt-total">0</div>
-                    <div class="summary-lbl">Jumlah Projek</div>
-                </div>
-                <div class="summary-item">
+            <div class="summary-grid">
+                <div class="summary-card">
                     <div class="summary-val" id="rpt-menara" style="color:#FF5722">0</div>
-                    <div class="summary-lbl">Menara</div>
+                    <div class="summary-lbl">Menara Komunikasi</div>
                 </div>
-                <div class="summary-item">
+                <div class="summary-card">
                     <div class="summary-val" id="rpt-nadi" style="color:#2196F3">0</div>
-                    <div class="summary-lbl">NADI</div>
+                    <div class="summary-lbl">Pusat NADI</div>
                 </div>
-                <div class="summary-item">
-                    <div class="summary-val" id="rpt-completed" style="color:#4CAF50">0</div>
-                    <div class="summary-lbl">Siap Operasi</div>
+                <div class="summary-card">
+                    <div class="summary-val" id="rpt-bwa" style="color:#4CAF50">0</div>
+                    <div class="summary-lbl">WiFi Komuniti</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-val" id="rpt-pop" style="color:#FF9800">0</div>
+                    <div class="summary-lbl">Point of Presence</div>
                 </div>
             </div>
 
             <div class="report-grid">
                 <!-- Map Capture -->
-                <div class="report-section report-full-width">
-                    <h3>Peta Lokasi & Marker</h3>
+                <div class="report-section col-span-8">
+                    <h3><i class="fas fa-map"></i> Peta Lokasi</h3>
                     <div class="map-capture-box" id="map-capture-container">
-                        <!-- Canvas/Image will go here -->
                         <div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999;">
                              Memproses Peta...
                         </div>
                     </div>
                 </div>
 
+                <!-- Expanded List (Status) -->
+                <div class="report-section col-span-4" style="overflow-y:auto; max-height:450px;">
+                    <h3><i class="fas fa-list-ul"></i> Status Kemajuan</h3>
+                    <div class="status-list-container" id="report-status-text-list">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
                 <!-- Pie Chart: By Category -->
-                <div class="report-section">
-                    <h3>Komposisi Kategori</h3>
+                <div class="report-section col-span-4">
+                    <h3><i class="fas fa-chart-pie"></i> Komposisi Kategori</h3>
                     <div class="chart-wrapper">
                         <canvas id="chart-pie-cat"></canvas>
                     </div>
                 </div>
 
                 <!-- Pie Chart: Overall Status -->
-                <div class="report-section">
-                    <h3>Status Keseluruhan</h3>
+                <div class="report-section col-span-4">
+                    <h3><i class="fas fa-tasks"></i> Status Keseluruhan</h3>
                     <div class="chart-wrapper">
                         <canvas id="chart-pie-status"></canvas>
                     </div>
                 </div>
                 
                 <!-- Bar Chart: Detailed Status -->
-                <div class="report-section report-full-width">
-                    <h3>Perincian Status Kemajuan</h3>
+                <div class="report-section col-span-4">
+                    <h3><i class="fas fa-chart-bar"></i> Carta Status</h3>
                     <div class="chart-wrapper">
                         <canvas id="chart-bar-status"></canvas>
-                    </div>
-                </div>
-                
-                <!-- Expanded List (Text) -->
-                <div class="report-section report-full-width">
-                    <h3>Data Kemajuan Terperinci</h3>
-                    <div class="expanded-status-list" id="report-status-text-list">
-                        <!-- Text rows injected via JS -->
-                    </div>
-                </div>
-
-                <!-- Column Chart: Comparison -->
-                <div class="report-section report-full-width">
-                    <h3>Jumlah Projek Mengikut Kategori</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="chart-col-type"></canvas>
                     </div>
                 </div>
             </div>
@@ -615,7 +688,7 @@ body {
 
   <!-- Main script -->
 <script>
-// ---------- script.js ----------
+  // ---------- script.js ----------
 // ---------- CONFIG ----------
 const URLs = {
   district: "district.json",
@@ -671,6 +744,9 @@ let charts = {
     barStatus: null,
     colType: null
 };
+
+// Register Chart Datalabels Plugin
+Chart.register(ChartDataLabels);
 
 // ---------- UTIL HELPER ----------
 function showLoading(on) {
@@ -925,7 +1001,6 @@ function renderMarkersInBatches(projects, onComplete) {
 }
 
 // ---------- DASHBOARD INTERACTION HANDLERS ----------
-
 function handleCategoryClick(type, elementId) {
   if (activeDashboardCategory === type) {
     activeDashboardCategory = null;
@@ -957,7 +1032,6 @@ function filterAndDisplayMarkers() {
 
   let filteredList = allProjects;
 
-  // 1. Tapis mengikut Sempadan (District/Dun/Parliament)
   if (activeFeature && currentBoundaryKey) {
     const areaNameRaw = extractFeatureName(activeFeature);
     const areaName = normalizeString(areaNameRaw); 
@@ -970,7 +1044,6 @@ function filterAndDisplayMarkers() {
     });
   }
 
-  // 2. Tapis mengikut Carian
   if (searchTerm && searchTerm.length > 0) {
     const term = searchTerm.toLowerCase();
     if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
@@ -982,33 +1055,27 @@ function filterAndDisplayMarkers() {
     }
   }
 
-  // Simpan data ini untuk Report Kad
   currentFilteredData = filteredList;
 
-  // 3. Tapis mengikut Dashboard Category Click
   if (activeDashboardCategory) {
       filteredList = filteredList.filter(p => p._type === activeDashboardCategory);
   }
 
   updateDashboard(filteredList); 
 
-  // 4. Tapis mengikut Status (Untuk Marker di Peta sahaja)
   let mapDisplayList = filteredList;
-  
   if (activeStatusFilter) {
     mapDisplayList = filteredList.filter(p => String(p.STATUS || "").trim() === activeStatusFilter);
   }
 
   const visibleLocationIds = new Set(mapDisplayList.map(p => p._id));
 
-  // Update Markers Visibility
   markersList.forEach(m => {
     if(!m) return;
     const meta = m._meta;
     const type = meta._type;
 
     let isCategoryAllowed = false;
-
     if (activeDashboardCategory) {
       isCategoryAllowed = (type === activeDashboardCategory);
     } else {
@@ -1019,14 +1086,12 @@ function filterAndDisplayMarkers() {
     }
 
     const shouldShow = visibleLocationIds.has(meta._id) && isCategoryAllowed && meta._validCoord;
-    
     m.setVisible(shouldShow);
   });
 }
 
 const updateDashboard = debounce(function (list) {
   const displayList = list || [];
-
   const totalEl = document.getElementById("total-projects");
   if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
 
@@ -1058,7 +1123,6 @@ const updateDashboard = debounce(function (list) {
 
   const statusEl = document.getElementById("status-list");
   if(!statusEl) return;
-  
   statusEl.innerHTML = "";
   
   const sortedStatuses = Object.entries(statusBreakdown).sort(([, a], [, b]) => b.total - a.total);
@@ -1086,7 +1150,6 @@ const updateDashboard = debounce(function (list) {
     sortedTypes.forEach(([typeKey, typeCount]) => {
       const typeCfg = TYPE_CFG[typeKey] || { label: typeKey, color: "#666" };
       const typePercent = count > 0 ? Math.round((typeCount / count) * 100) : 0;
-      
       detailsHtml += `
         <div class="sub-stat-row">
            <span class="sub-stat-label" style="color: ${typeCfg.color}">${typeCfg.label}</span>
@@ -1100,7 +1163,6 @@ const updateDashboard = debounce(function (list) {
 
     const itemContainer = document.createElement("div");
     itemContainer.className = "status-wrapper";
-    
     itemContainer.innerHTML = `
           <div class="status-item ${selectedClass}" onclick="handleStatusClick('${escapeHtml(statusName)}')">
             <div class="status-header">
@@ -1135,57 +1197,112 @@ function animateValue(id, start, end, duration) {
   }, Math.max(stepTime, 10));
 }
 
-// ---------- REPORT CARD LOGIC (NEW) ----------
+// ---------- REPORT CARD LOGIC ----------
 function generateReport() {
-    // 1. Dapatkan Data
+    // 1. Data & Title
     const data = currentFilteredData || allProjects;
     const title = document.getElementById("selected-area").textContent;
     document.getElementById("report-title-text").textContent = "Laporan Projek: " + title;
 
-    // 2. Kira Statistik
+    // 2. Date
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById("report-date-text").textContent = `${dateStr}, ${timeStr}`;
+
+    // 3. Stats Calculation
     let counts = { TOWER: 0, NADI: 0, BWA: 0, POP: 0 };
-    let statusCounts = {};
+    let statusBreakdown = {};
     let completedCount = 0;
 
     data.forEach(p => {
         if(counts[p._type] !== undefined) counts[p._type]++;
         
-        const s = String(p.STATUS || "N/A").trim().toUpperCase();
-        statusCounts[s] = (statusCounts[s] || 0) + 1;
+        const s = String(p.STATUS || "N/A").trim();
+        const sUpper = s.toUpperCase();
+        
+        if (!statusBreakdown[s]) { statusBreakdown[s] = { total: 0, types: {} }; }
+        statusBreakdown[s].total++;
+        if (!statusBreakdown[s].types[p._type]) { statusBreakdown[s].types[p._type] = 0; }
+        statusBreakdown[s].types[p._type]++;
 
-        if(s.includes("SIAP") || s.includes("OPERASI")) completedCount++;
+        if(sUpper.includes("SIAP") || sUpper.includes("OPERASI")) completedCount++;
     });
 
-    // Populate Summary Text
-    document.getElementById("rpt-total").textContent = data.length;
+    // Populate Summary Boxes (Shows all categories even if 0)
     document.getElementById("rpt-menara").textContent = counts.TOWER;
     document.getElementById("rpt-nadi").textContent = counts.NADI;
-    document.getElementById("rpt-completed").textContent = completedCount;
+    document.getElementById("rpt-bwa").textContent = counts.BWA;
+    document.getElementById("rpt-pop").textContent = counts.POP;
 
-    // 3. Jana Carta (Chart.js)
-    renderReportCharts(counts, statusCounts, data.length, completedCount);
-
-    // 4. Populate Status List (Expanded)
+    // 4. Detailed Status List (Expanded)
     const listEl = document.getElementById("report-status-text-list");
     listEl.innerHTML = "";
-    Object.entries(statusCounts).sort(([,a], [,b]) => b-a).forEach(([stat, val]) => {
-        const row = document.createElement("div");
-        row.className = "status-row-report";
-        row.innerHTML = `<span>${stat}</span> <strong>${val}</strong>`;
-        listEl.appendChild(row);
+    
+    // Sort statuses by count descending
+    const sortedStatuses = Object.entries(statusBreakdown).sort(([,a], [,b]) => b.total - a.total);
+    const totalProjects = data.length;
+
+    sortedStatuses.forEach(([statusName, statData]) => {
+        const statTotal = statData.total;
+        const statPercent = totalProjects > 0 ? Math.round((statTotal / totalProjects) * 100) : 0;
+
+        const groupDiv = document.createElement("div");
+        groupDiv.className = "status-group";
+
+        // Main Status Header
+        let html = `<div class="status-header-row">
+                      <span>${escapeHtml(statusName)}</span>
+                      <span>${statTotal} (${statPercent}%)</span>
+                    </div>`;
+
+        // Sub Items
+        const sortedTypes = Object.entries(statData.types).sort(([,a], [,b]) => b - a);
+        sortedTypes.forEach(([typeKey, typeCount]) => {
+            const typeLabel = TYPE_CFG[typeKey]?.label || typeKey;
+            const typePercent = statTotal > 0 ? Math.round((typeCount / statTotal) * 100) : 0;
+            html += `<div class="status-sub-item">
+                        <span>${typeLabel}</span>
+                        <span>${typeCount} (${typePercent}%)</span>
+                     </div>`;
+        });
+
+        groupDiv.innerHTML = html;
+        listEl.appendChild(groupDiv);
     });
 
-    // 5. Capture Map
+    // 5. Generate Charts with Datalabels
+    renderReportCharts(counts, statusBreakdown, totalProjects, completedCount);
+
+    // 6. Map Capture
     captureMapForReport();
 
-    // 6. Buka Modal
+    // 7. Show Modal
     document.getElementById("report-overlay").classList.add("active");
 }
 
-function renderReportCharts(typeCounts, statusCounts, total, completed) {
-    // Reset Canvas (Destroy old charts if exist)
+function renderReportCharts(typeCounts, statusBreakdown, total, completed) {
     const destroyChart = (key) => { if(charts[key]) { charts[key].destroy(); charts[key] = null; } };
-    destroyChart('pieCat'); destroyChart('pieStatus'); destroyChart('barStatus'); destroyChart('colType');
+    destroyChart('pieCat'); destroyChart('pieStatus'); destroyChart('barStatus');
+
+    const commonOptions = {
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: {
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: (value, ctx) => {
+                    let sum = 0;
+                    let dataArr = ctx.chart.data.datasets[0].data;
+                    dataArr.map(data => { sum += data; });
+                    let percentage = (value * 100 / sum).toFixed(0) + "%";
+                    return value > 0 ? `${value}\n(${percentage})` : '';
+                }
+            },
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } }
+        }
+    };
 
     // Pie: Categories
     const ctxPieCat = document.getElementById('chart-pie-cat').getContext('2d');
@@ -1198,7 +1315,7 @@ function renderReportCharts(typeCounts, statusCounts, total, completed) {
                 backgroundColor: ['#FF5722', '#2196F3', '#4CAF50', '#FF9800']
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: commonOptions
     });
 
     // Pie: Overall Status
@@ -1207,45 +1324,44 @@ function renderReportCharts(typeCounts, statusCounts, total, completed) {
     charts.pieStatus = new Chart(ctxPieStat, {
         type: 'doughnut',
         data: {
-            labels: ['Siap Operasi', 'Dalam Perlaksanaan'],
+            labels: ['Siap Operasi', 'Lain-lain'],
             datasets: [{
                 data: [completed, notCompleted],
                 backgroundColor: ['#4CAF50', '#E0E0E0']
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: commonOptions
     });
 
-    // Bar: Detailed Status
-    const statusLabels = Object.keys(statusCounts);
-    const statusData = Object.values(statusCounts);
+    // Bar: Status Detailed
+    const statusLabels = Object.keys(statusBreakdown);
+    const statusData = Object.values(statusBreakdown).map(d => d.total);
     const ctxBar = document.getElementById('chart-bar-status').getContext('2d');
     charts.barStatus = new Chart(ctxBar, {
         type: 'bar',
         data: {
             labels: statusLabels,
             datasets: [{
-                label: 'Bilangan Projek',
+                label: 'Jumlah',
                 data: statusData,
                 backgroundColor: '#3F51B5'
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
-    });
-
-    // Column: Type Comparison
-    const ctxCol = document.getElementById('chart-col-type').getContext('2d');
-    charts.colType = new Chart(ctxCol, {
-        type: 'bar',
-        data: {
-            labels: ['Menara', 'NADI', 'WiFi', 'POP'],
-            datasets: [{
-                label: 'Jumlah Projek',
-                data: [typeCounts.TOWER, typeCounts.NADI, typeCounts.BWA, typeCounts.POP],
-                backgroundColor: ['#FF5722', '#2196F3', '#4CAF50', '#FF9800']
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            plugins: {
+                ...commonOptions.plugins,
+                legend: { display: false },
+                datalabels: {
+                    color: '#333',
+                    anchor: 'end',
+                    align: 'end',
+                    formatter: (value) => value
+                }
+            },
+            scales: { x: { display: false } }
+        }
     });
 }
 
@@ -1254,8 +1370,7 @@ function captureMapForReport() {
     const container = document.getElementById("map-capture-container");
     container.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999;">Memproses Peta...</div>';
 
-    // Nota: Google Maps sukar dicapture kerana CORS. Kita cuba html2canvas dengan tetapan khas.
-    html2canvas(document.body, { // Capture body instead of map div usually works better for overlays
+    html2canvas(document.body, { 
         allowTaint: true,
         useCORS: true,
         x: mapEl.getBoundingClientRect().left,
@@ -1263,7 +1378,6 @@ function captureMapForReport() {
         width: mapEl.offsetWidth,
         height: mapEl.offsetHeight,
         ignoreElements: (el) => {
-             // Ignore overlays to just get the map
              return el.classList.contains('dashboard-panel') || 
                     el.classList.contains('controls-container') ||
                     el.classList.contains('search-container') ||
@@ -1277,7 +1391,41 @@ function captureMapForReport() {
         container.appendChild(img);
     }).catch(err => {
         console.error("Map capture fail", err);
-        container.innerHTML = '<div style="padding:20px; text-align:center; color:#red;">Gagal menangkap imej peta (Isu Keselamatan Browser).</div>';
+        container.innerHTML = '<div style="padding:20px; text-align:center; color:#red; font-size:12px;">Gagal menangkap peta (Isu Keselamatan Browser/CORS).<br>Sila guna screenshot manual untuk peta.</div>';
+    });
+}
+
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const element = document.getElementById('report-print-area');
+    
+    // Hide buttons for capture
+    const btns = element.querySelectorAll('button');
+    btns.forEach(b => b.style.display = 'none');
+
+    html2canvas(element, { scale: 1.5 }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; 
+        const pageHeight = 295; 
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          doc.addPage();
+          doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        
+        doc.save('Laporan_Projek_Sabah.pdf');
+
+        // Restore buttons
+        btns.forEach(b => b.style.display = '');
     });
 }
 
@@ -1385,13 +1533,9 @@ function handleFeatureClick(key, feature) {
 
   filterAndDisplayMarkers();
   
-  // TRIGGER AUTOMATIK REPORT KAD (DATA PREPARATION)
-  // Nota: Kita tidak membuka modal secara automatik untuk mengelakkan gangguan UI,
-  // tetapi kita menyediakan data dan butang report akan berkelip atau sedia ditekan.
-  // Jika anda mahu ia terbuka terus, boleh panggil generateReport() di sini.
-  // generateReport(); // Uncomment this line if you want popup immediately
+  // TRIGGER AUTOMATIK REPORT KAD
+  generateReport();
   
-  // Highlight Report Button to indicate new data available
   const btn = document.getElementById("btn-open-report");
   if(btn) {
       btn.style.animation = "pulse 1s";
@@ -1466,7 +1610,6 @@ function setupToggles() {
     }
   });
 
-  // Setup Report Button
   document.getElementById("btn-open-report")?.addEventListener("click", generateReport);
 }
 
@@ -1505,18 +1648,15 @@ async function initMap() {
     mapTypeId: "satellite",
     styles: silverStyle,
     disableDefaultUI: false,
-    
     mapTypeControl: true,
     mapTypeControlOptions: {
         style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
         position: google.maps.ControlPosition.TOP_RIGHT
     },
-    
     zoomControl: true,
     zoomControlOptions: {
         position: google.maps.ControlPosition.RIGHT_BOTTOM
     },
-    
     streetViewControl: false,
     fullscreenControl: false
   });
@@ -1561,7 +1701,6 @@ async function initMap() {
 
 window.initMap = initMap;
 // ---------- END OF SCRIPT ----------
-
 </script>  
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
     
