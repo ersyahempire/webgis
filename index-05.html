@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem GIS Pengurusan Projek</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        #map { height: 100vh; width: 100%; z-index: 0; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .leaflet-popup-content-wrapper { border-radius: 0.5rem; padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0; width: 300px !important; }
+        #report-modal { transition: opacity 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gray-100 overflow-hidden font-sans">
+
+    <!-- 1. Top Bar (Search & Report) -->
+    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] flex gap-2 w-full max-w-2xl px-4 pointer-events-none">
+        <div class="glass-panel rounded-full shadow-lg flex items-center px-4 py-2 w-full pointer-events-auto">
+            <i class="fa-solid fa-search text-gray-400 mr-3"></i>
+            <input type="text" id="search-input" placeholder="Cari tapak projek, daerah..." class="bg-transparent border-none outline-none w-full text-gray-700 placeholder-gray-500">
+        </div>
+        <button onclick="bukaReportCard()" class="glass-panel pointer-events-auto bg-blue-600 text-white hover:bg-blue-700 px-6 py-2 rounded-full shadow-lg font-semibold transition flex items-center whitespace-nowrap">
+            <i class="fa-solid fa-file-pdf mr-2"></i> Report Kad
+        </button>
+    </div>
+
+    <!-- 2. Sidebar Menu (Layers & Stats) -->
+    <div class="absolute top-24 left-4 z-[1000] w-80 flex flex-col gap-4 pointer-events-none">
+        
+        <!-- Layer Selector -->
+        <div class="glass-panel rounded-xl p-4 shadow-xl pointer-events-auto">
+            <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">Pilih Layer Peta</h3>
+            <div class="flex bg-gray-200 rounded-lg p-1">
+                <button onclick="tukarLayer('district')" id="btn-district" class="flex-1 py-1 text-sm rounded-md bg-white shadow-sm font-medium transition">Daerah</button>
+                <button onclick="tukarLayer('dun')" id="btn-dun" class="flex-1 py-1 text-sm rounded-md text-gray-600 hover:bg-gray-100 transition">DUN</button>
+                <button onclick="tukarLayer('parliament')" id="btn-parliament" class="flex-1 py-1 text-sm rounded-md text-gray-600 hover:bg-gray-100 transition">Parlimen</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Cards -->
+        <div class="glass-panel rounded-xl p-4 shadow-xl pointer-events-auto max-h-[60vh] overflow-y-auto scrollbar-hide">
+            <h3 class="text-xs font-bold text-gray-500 uppercase mb-3">Ringkasan Projek</h3>
+            
+            <!-- Total Card -->
+            <div onclick="filterProjek('all')" class="cursor-pointer bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white mb-3 shadow-md transform hover:scale-102 transition">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs opacity-80">Keseluruhan Projek</p>
+                        <h2 class="text-3xl font-bold" id="total-count">0</h2>
+                    </div>
+                    <i class="fa-solid fa-chart-pie text-2xl opacity-50"></i>
+                </div>
+            </div>
+
+            <!-- Category Cards Container -->
+            <div id="category-cards" class="grid grid-cols-1 gap-2">
+                <!-- Cards will be injected here via JS -->
+            </div>
+        </div>
+
+        <!-- Status Bar (Appears on selection) -->
+        <div id="status-bar-container" class="hidden glass-panel rounded-xl p-4 shadow-xl pointer-events-auto animate-fade-in-up">
+            <h3 class="text-xs font-bold text-gray-500 uppercase mb-2 flex justify-between">
+                <span id="status-title">Status Projek</span>
+                <button onclick="tutupStatus()" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-times"></i></button>
+            </h3>
+            <div class="relative pt-1">
+                <div class="flex mb-2 items-center justify-between">
+                    <div>
+                        <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
+                            Progress
+                        </span>
+                    </div>
+                    <div class="text-right">
+                        <span id="status-percent" class="text-xs font-semibold inline-block text-blue-600">0%</span>
+                    </div>
+                </div>
+                <div onclick="toggleStatusDetails()" class="cursor-pointer overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
+                    <div id="progress-bar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-1000"></div>
+                </div>
+                
+                <!-- Status Details Dropdown -->
+                <div id="status-details" class="hidden text-sm text-gray-600 border-t pt-2 mt-2">
+                    <ul id="status-list" class="space-y-1">
+                        <!-- Status breakdown injected here -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 3. Report Card Modal (Hidden by default) -->
+    <div id="report-modal" class="fixed inset-0 z-[2000] hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gray-800 text-white p-4 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold">Laporan Analisis Projek</h2>
+                    <p class="text-xs text-gray-400">Google Slide Template ID: 17jZmhKKZuII6fseIsyW7FvAcwCj6_gsv8AUJ1UrrExA</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="muatTurunPDF()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm transition">
+                        <i class="fa-solid fa-download mr-1"></i> Muat Turun PDF
+                    </button>
+                    <button onclick="tutupReportCard()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm transition">
+                        <i class="fa-solid fa-times"></i> Tutup
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content (To be captured for PDF) -->
+            <div id="report-content" class="flex-1 overflow-y-auto p-8 bg-gray-50">
+                
+                <!-- Header Report -->
+                <div class="text-center mb-8 border-b pb-4">
+                    <h1 class="text-3xl font-bold text-gray-800">Laporan Kad Prestasi Projek</h1>
+                    <p class="text-gray-600 mt-2">Dijana secara automatik berdasarkan data terkini.</p>
+                </div>
+
+                <!-- Stats Overview -->
+                <div class="grid grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-4 rounded shadow border-l-4 border-blue-500">
+                        <p class="text-gray-500 text-sm">Jumlah Projek</p>
+                        <p class="text-2xl font-bold" id="rpt-total">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded shadow border-l-4 border-green-500">
+                        <p class="text-gray-500 text-sm">Siap</p>
+                        <p class="text-2xl font-bold" id="rpt-completed">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded shadow border-l-4 border-yellow-500">
+                        <p class="text-gray-500 text-sm">Dalam Pelaksanaan</p>
+                        <p class="text-2xl font-bold" id="rpt-ongoing">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded shadow border-l-4 border-red-500">
+                        <p class="text-gray-500 text-sm">Belum Mula/Masalah</p>
+                        <p class="text-2xl font-bold" id="rpt-issues">0</p>
+                    </div>
+                </div>
+
+                <!-- Charts Row 1 -->
+                <div class="grid grid-cols-2 gap-8 mb-8">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">Taburan Kategori Projek</h3>
+                        <div class="h-64"><canvas id="chart-pie-cat"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">Status Projek Keseluruhan</h3>
+                        <div class="h-64"><canvas id="chart-pie-status"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 2 -->
+                <div class="grid grid-cols-2 gap-8 mb-8">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">Status Mengikut Kategori</h3>
+                        <div class="h-64"><canvas id="chart-bar-status"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">Jumlah Projek Mengikut Layer</h3>
+                        <div class="h-64"><canvas id="chart-col-layer"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Map Snapshot Placeholder -->
+                <div class="bg-white p-4 rounded shadow mb-4 break-inside-avoid">
+                    <h3 class="font-bold text-gray-700 mb-2">Peta Lokasi Semasa</h3>
+                    <div class="w-full h-64 bg-gray-200 rounded flex items-center justify-center border-2 border-dashed border-gray-400">
+                        <p class="text-gray-500 italic">Peta Semasa Laporan Dijana (Placeholder)</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Map Container -->
+    <div id="map"></div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- 1. CONFIGURATION & DATA ---
+        const SHEETS = {
+            db_bwa: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU",
+            db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU",
+            db_POP: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8",
+            tower: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
+        };
+
+        const LAYERS = {
+            district: "https://ersyahempire.github.io/webgis/district.json",
+            dun: "https://ersyahempire.github.io/webgis/dun.json",
+            parliament: "https://ersyahempire.github.io/webgis/parliament.json"
+        };
+
+        const CATEGORY_COLORS = {
+            'db_bwa': '#3B82F6', // Blue
+            'db_pim': '#10B981', // Green
+            'db_POP': '#F59E0B', // Yellow
+            'tower': '#EF4444'   // Red
+        };
+
+        const CATEGORY_NAMES = {
+            'db_bwa': 'Projek BWA',
+            'db_pim': 'Projek PIM',
+            'db_POP': 'Projek POP',
+            'tower': 'Menara Telekomunikasi'
+        };
+
+        let map;
+        let geoJsonLayers = {};
+        let activeGeoJsonLayer = null;
+        let allProjects = [];
+        let markersCluster = []; // We'll manage simple markers array
+        let chartInstances = {};
+
+        // --- 2. INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            initMap();
+            await loadAllData();
+            updateDashboard();
+            tukarLayer('district'); // Default layer
+        });
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([4.2105, 101.9758], 6); // Malaysia view
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+        }
+
+        // --- 3. DATA FETCHING ---
+        async function loadAllData() {
+            // Load GeoJSONs
+            const layerPromises = Object.entries(LAYERS).map(async ([key, url]) => {
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    geoJsonLayers[key] = data;
+                } catch (e) { console.error(`Error loading ${key}:`, e); }
+            });
+
+            // Load Google Sheets
+            const sheetPromises = Object.entries(SHEETS).map(([key, id]) => fetchGoogleSheet(id, key));
+
+            await Promise.all([...layerPromises, ...sheetPromises]);
+            console.log("Semua data berjaya dimuat turun.", allProjects.length, "projek.");
+        }
+
+        function fetchGoogleSheet(sheetId, type) {
+            const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
+            return new Promise((resolve) => {
+                Papa.parse(url, {
+                    download: true,
+                    header: true,
+                    complete: (results) => {
+                        const projects = results.data.map(row => ({ ...row, category: type }));
+                        allProjects = [...allProjects, ...projects];
+                        resolve();
+                    },
+                    error: (err) => {
+                        console.error(`Gagal muat sheet ${type}`, err);
+                        resolve(); // Resolve anyway to not break app
+                    }
+                });
+            });
+        }
+
+        // --- 4. MAP LAYERS & INTERACTIVITY ---
+        function tukarLayer(layerName) {
+            // Update UI Buttons
+            ['district', 'dun', 'parliament'].forEach(l => {
+                const btn = document.getElementById(`btn-${l}`);
+                if (l === layerName) {
+                    btn.classList.remove('text-gray-600', 'hover:bg-gray-100', 'bg-white');
+                    btn.classList.add('bg-blue-500', 'text-white', 'shadow-md');
+                } else {
+                    btn.classList.add('text-gray-600', 'hover:bg-gray-100', 'bg-white');
+                    btn.classList.remove('bg-blue-500', 'text-white', 'shadow-md');
+                }
+            });
+
+            // Update Map Layer
+            if (activeGeoJsonLayer) map.removeLayer(activeGeoJsonLayer);
+
+            if (geoJsonLayers[layerName]) {
+                activeGeoJsonLayer = L.geoJSON(geoJsonLayers[layerName], {
+                    style: styleFeature,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+                
+                // Fit bounds if data exists
+                try { map.fitBounds(activeGeoJsonLayer.getBounds()); } catch(e){}
+            }
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function styleFeature(feature) {
+            return {
+                fillColor: '#3B82F6', // Default blueish
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.2
+            };
+        }
+
+        function onEachFeature(feature, layer) {
+            layer.on({
+                mouseover: (e) => {
+                    const layer = e.target;
+                    layer.setStyle({
+                        weight: 3,
+                        color: '#666',
+                        dashArray: '',
+                        fillOpacity: 0.6,
+                        fillColor: getRandomColor()
+                    });
+                },
+                mouseout: (e) => {
+                    if(activeGeoJsonLayer) activeGeoJsonLayer.resetStyle(e.target);
+                },
+                click: (e) => {
+                    map.fitBounds(e.target.getBounds());
+                }
+            });
+        }
+
+        // --- 5. DASHBOARD LOGIC ---
+        function updateDashboard() {
+            const counts = {};
+            let total = 0;
+
+            // Count per category
+            Object.keys(SHEETS).forEach(key => counts[key] = 0);
+            allProjects.forEach(p => {
+                if (counts[p.category] !== undefined) counts[p.category]++;
+                total++;
+            });
+
+            // Update Total
+            document.getElementById('total-count').innerText = total;
+
+            // Generate Cards
+            const container = document.getElementById('category-cards');
+            container.innerHTML = '';
+
+            Object.keys(SHEETS).forEach(key => {
+                const color = CATEGORY_COLORS[key];
+                const name = CATEGORY_NAMES[key];
+                const count = counts[key];
+
+                const card = document.createElement('div');
+                card.className = "cursor-pointer bg-white rounded-lg p-3 border-l-4 shadow-sm hover:shadow-md transition flex justify-between items-center";
+                card.style.borderLeftColor = color;
+                card.onclick = () => filterProjek(key);
+
+                card.innerHTML = `
+                    <div>
+                        <p class="text-xs text-gray-500 font-bold uppercase">${name}</p>
+                        <h4 class="text-xl font-bold text-gray-800">${count}</h4>
+                    </div>
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs" style="background-color: ${color}">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- 6. MARKER & FILTER LOGIC ---
+        function filterProjek(category) {
+            // Clear existing markers
+            markersCluster.forEach(m => map.removeLayer(m));
+            markersCluster = [];
+
+            let filtered = [];
+            let title = "";
+            let color = "";
+
+            if (category === 'all') {
+                filtered = allProjects;
+                title = "Keseluruhan Projek";
+                color = "#3B82F6";
+            } else {
+                filtered = allProjects.filter(p => p.category === category);
+                title = CATEGORY_NAMES[category];
+                color = CATEGORY_COLORS[category];
+            }
+
+            // Show Status Bar
+            showStatusBar(filtered, title, color);
+
+            // Add Markers
+            filtered.forEach(p => {
+                // Heuristic for Coordinate columns (Lat, Long, Latitude, Longitude, Koordinat, etc)
+                // Assuming standard headers or trying to find numeric values
+                let lat = parseFloat(p.Lat || p.Latitude || p.LATITUDE || p.lat);
+                let lng = parseFloat(p.Long || p.Longitude || p.LONGITUDE || p.long || p.lon);
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    const markerColor = CATEGORY_COLORS[p.category];
+                    const circleMarker = L.circleMarker([lat, lng], {
+                        radius: 6,
+                        fillColor: markerColor,
+                        color: "#fff",
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+
+                    // Popup Content
+                    const popupContent = createPopupContent(p);
+                    circleMarker.bindPopup(popupContent);
+                    
+                    circleMarker.addTo(map);
+                    markersCluster.push(circleMarker);
+                }
+            });
+
+            // Adjust view to fit markers if any
+            if (markersCluster.length > 0) {
+                const group = new L.featureGroup(markersCluster);
+                map.fitBounds(group.getBounds());
+            }
+        }
+
+        function createPopupContent(data) {
+            const mainInfoKeys = ['Nama Site', 'Nama', 'Name', 'Daerah', 'District', 'Dun', 'Parlimen', 'Parliament', 'Status'];
+            
+            let mainInfoHtml = `<div class="bg-gray-800 text-white p-2 font-bold text-sm">Maklumat Utama</div><div class="p-3 grid gap-1">`;
+            
+            // Build Main Info (generic fallback)
+            mainInfoKeys.forEach(k => {
+                // Find key regardless of case
+                const actualKey = Object.keys(data).find(key => key.toLowerCase() === k.toLowerCase());
+                if (actualKey && data[actualKey]) {
+                    mainInfoHtml += `<div class="text-xs text-gray-500 uppercase">${k}</div><div class="text-sm font-semibold mb-1 text-gray-800">${data[actualKey]}</div>`;
+                }
+            });
+            // Coords
+            const lat = data.Lat || data.Latitude || '-';
+            const long = data.Long || data.Longitude || '-';
+            mainInfoHtml += `<div class="text-xs text-gray-500 uppercase">Koordinat</div><div class="text-sm font-mono text-gray-600">${lat}, ${long}</div>`;
+            mainInfoHtml += `</div>`;
+
+            // Additional Info (First 15 cols)
+            let addInfoHtml = `<div class="bg-gray-100 p-2 font-bold text-xs border-t border-gray-300">Maklumat Tambahan</div><div class="p-3 grid grid-cols-2 gap-x-4 gap-y-1 bg-gray-50 max-h-40 overflow-y-auto">`;
+            const keys = Object.keys(data).slice(0, 15);
+            keys.forEach(k => {
+                addInfoHtml += `<div><span class="text-[10px] text-gray-400 block">${k}</span><span class="text-xs text-gray-700 block truncate" title="${data[k]}">${data[k]}</span></div>`;
+            });
+            addInfoHtml += `</div>`;
+
+            return `<div>${mainInfoHtml}${addInfoHtml}</div>`;
+        }
+
+        // --- 7. STATUS BAR LOGIC ---
+        function showStatusBar(data, title, color) {
+            const container = document.getElementById('status-bar-container');
+            const titleEl = document.getElementById('status-title');
+            const bar = document.getElementById('progress-bar');
+            const percentEl = document.getElementById('status-percent');
+            const list = document.getElementById('status-list');
+
+            container.classList.remove('hidden');
+            titleEl.innerText = title;
+            titleEl.style.color = color;
+
+            // Calculate Status (Generic logic: looks for "Status" column)
+            const statusCounts = {};
+            let totalStatus = 0;
+            data.forEach(d => {
+                const statusKey = Object.keys(d).find(k => k.toLowerCase() === 'status') || 'Status';
+                const statusVal = d[statusKey] || 'Tidak Diketahui';
+                statusCounts[statusVal] = (statusCounts[statusVal] || 0) + 1;
+                totalStatus++;
+            });
+
+            // Fake progress calculation: Assume "Completed", "Siap", "On Air" = 100%
+            let completedCount = 0;
+            Object.keys(statusCounts).forEach(s => {
+                const sLower = s.toLowerCase();
+                if (sLower.includes('siap') || sLower.includes('completed') || sLower.includes('on air') || sLower.includes('operasi')) {
+                    completedCount += statusCounts[s];
+                }
+            });
+
+            const percent = totalStatus > 0 ? Math.round((completedCount / totalStatus) * 100) : 0;
+            
+            bar.style.width = `${percent}%`;
+            bar.style.backgroundColor = color;
+            percentEl.innerText = `${percent}%`;
+
+            // Populate Dropdown Details
+            list.innerHTML = '';
+            Object.entries(statusCounts).forEach(([status, count]) => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between";
+                li.innerHTML = `<span>${status}</span> <span class="font-bold">${count}</span>`;
+                list.appendChild(li);
+            });
+        }
+
+        function toggleStatusDetails() {
+            document.getElementById('status-details').classList.toggle('hidden');
+        }
+
+        function tutupStatus() {
+            document.getElementById('status-bar-container').classList.add('hidden');
+        }
+
+        // --- 8. SEARCH LOGIC ---
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            if (term.length < 3) return;
+
+            // Simple search across all data
+            const found = allProjects.find(p => {
+                return Object.values(p).some(val => String(val).toLowerCase().includes(term));
+            });
+
+            if (found) {
+                let lat = parseFloat(found.Lat || found.Latitude);
+                let lng = parseFloat(found.Long || found.Longitude);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    map.setView([lat, lng], 15);
+                    L.popup()
+                        .setLatLng([lat, lng])
+                        .setContent(`<b>Jumpa:</b><br>${found['Nama Site'] || found['Name'] || 'Lokasi'}`)
+                        .openOn(map);
+                }
+            }
+        });
+
+        // --- 9. REPORT CARD LOGIC ---
+        function bukaReportCard() {
+            document.getElementById('report-modal').classList.remove('hidden');
+            janaAnalisis();
+        }
+
+        function tutupReportCard() {
+            document.getElementById('report-modal').classList.add('hidden');
+        }
+
+        function janaAnalisis() {
+            // Stats logic
+            const total = allProjects.length;
+            let siap = 0, jalan = 0, masalah = 0;
+            
+            const catCounts = {};
+            const statusOverall = {};
+
+            allProjects.forEach(p => {
+                // Count Category
+                catCounts[p.category] = (catCounts[p.category] || 0) + 1;
+
+                // Analyze Status
+                const statusKey = Object.keys(p).find(k => k.toLowerCase() === 'status') || 'Status';
+                const s = (p[statusKey] || '').toLowerCase();
+                
+                statusOverall[s] = (statusOverall[s] || 0) + 1;
+
+                if (s.includes('siap') || s.includes('on air')) siap++;
+                else if (s.includes('masalah') || s.includes('tangguh')) masalah++;
+                else jalan++;
+            });
+
+            // Update Text Stats
+            document.getElementById('rpt-total').innerText = total;
+            document.getElementById('rpt-completed').innerText = siap;
+            document.getElementById('rpt-ongoing').innerText = jalan;
+            document.getElementById('rpt-issues').innerText = masalah;
+
+            // Render Charts (Destroy old instances first)
+            renderChart('chart-pie-cat', 'doughnut', Object.keys(catCounts).map(k=>CATEGORY_NAMES[k]), Object.values(catCounts), Object.keys(catCounts).map(k=>CATEGORY_COLORS[k]));
+            renderChart('chart-pie-status', 'pie', Object.keys(statusOverall), Object.values(statusOverall), ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#6B7280']);
+            
+            // Bar chart status by category (simplified)
+            renderChart('chart-bar-status', 'bar', ['Siap', 'Jalan', 'Masalah'], [siap, jalan, masalah], ['#10B981', '#F59E0B', '#EF4444']);
+            
+            // Column chart random (Layer distribution placeholder)
+            renderChart('chart-col-layer', 'bar', ['Daerah', 'DUN', 'Parlimen'], [12, 30, 15], ['#8B5CF6', '#8B5CF6', '#8B5CF6']);
+        }
+
+        function renderChart(id, type, labels, data, colors) {
+            const ctx = document.getElementById(id).getContext('2d');
+            if (chartInstances[id]) chartInstances[id].destroy();
+            
+            chartInstances[id] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Data',
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function muatTurunPDF() {
+            const element = document.getElementById('report-content');
+            const opt = {
+                margin: 0.5,
+                filename: 'Laporan_Kad_Projek.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            
+            // Temporarily show full content if hidden/scroll logic interferes
+            html2pdf().set(opt).from(element).save();
+        }
+
+    </script>
+</body>
+</html>
