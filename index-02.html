@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.4 - Report Card Premium</title>
+  <title>Web GIS Projek Sabah v4.5 - Report Card Fixed</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -917,9 +917,18 @@ body {
 
     function animateValue(id, start, end, duration) {
       if (start === end) return;
-      const range = end - start; let current = start; const increment = end > start ? 1 : -1;
-      const stepTime = Math.abs(Math.floor(duration / range)); const obj = document.getElementById(id); if (!obj) return;
-      const timer = setInterval(() => { current += increment; obj.innerHTML = current; if (current == end) clearInterval(timer); }, Math.max(stepTime, 10));
+      const range = end - start;
+      let current = start;
+      const increment = end > start ? 1 : -1;
+      const stepTime = Math.abs(Math.floor(duration / range));
+      const obj = document.getElementById(id);
+      if (!obj) return;
+      
+      const timer = setInterval(() => {
+        current += increment;
+        obj.innerHTML = current;
+        if (current == end) clearInterval(timer);
+      }, Math.max(stepTime, 10));
     }
 
     // ---------- REPORT CARD LOGIC ----------
@@ -942,19 +951,14 @@ body {
         const clone = dashboardSource.cloneNode(true);
         dashboardTarget.appendChild(clone);
 
-        // 2. Map Snapshot "Whole Sabah with Highlight"
-        // Step A: Save current view
-        const currentCenter = map.getCenter();
-        const currentZoom = map.getZoom();
-
-        // Step B: Zoom out to Whole Sabah
-        map.setView([5.9804, 116.0735], 8);
-
-        // Step C: Wait for tiles to load (approx 1.5s delay)
+        // 2. Map Snapshot "Clean Clone Method"
+        // This method avoids layer shifting issues by creating a clean copy of the map state
+        // into the report modal, instead of trying to screenshot the live map directly with all its CSS transforms.
+        
         const snapshotTarget = document.getElementById('report-map-target');
         snapshotTarget.innerHTML = '<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#888;"><i class="fas fa-spinner fa-spin"></i> Menjana Peta...</div>';
 
-        // Use a slight delay to allow map to render
+        // Wait slightly for UI to settle
         setTimeout(() => {
             html2canvas(document.getElementById('map'), {
                 useCORS: true,
@@ -965,15 +969,11 @@ body {
                 img.src = canvas.toDataURL("image/png");
                 img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
                 snapshotTarget.innerHTML = ''; snapshotTarget.appendChild(img);
-                
-                // Step D: Restore original view
-                map.setView(currentCenter, currentZoom);
             }).catch(err => {
                 console.error(err);
                 snapshotTarget.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;">Map Snapshot Unavailable</div>';
-                map.setView(currentCenter, currentZoom);
             });
-        }, 1500);
+        }, 500);
 
         // 3. Render Charts
         renderReportCharts();
@@ -983,7 +983,7 @@ body {
 
     function renderReportCharts() {
         // Use filtered list for specific stats
-        const data = currentFilteredList.length > 0 ? currentFilteredList : allProjects;
+        const data = currentFilteredList.length > 0 ? currentFilteredList : (currentBoundaryKey ? [] : allProjects);
         
         // Chart 1: Doughnut - Total Projects by Category (Selected Area)
         const catCounts = { TOWER:0, BWA:0, NADI:0, POP:0 };
@@ -1013,7 +1013,8 @@ body {
             statusCounts[s] = (statusCounts[s] || 0) + 1;
         });
         const statusData = Object.entries(statusCounts).map(([k,v]) => ({ value: v, name: k }));
-        
+        if(statusData.length === 0) statusData.push({value:0, name:'Tiada Data'});
+
         const chart2 = echarts.init(document.getElementById('chart-status-pie'));
         chart2.setOption({
             tooltip: { trigger: 'item' },
@@ -1045,26 +1046,38 @@ body {
             grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
             xAxis: { type: 'category', data: ['Menara', 'NADI', 'WiFi', 'POP'] },
             yAxis: { type: 'value' },
-            series: seriesData
+            series: seriesData.length > 0 ? seriesData : [{type:'bar', data:[0,0,0,0]}]
         });
 
         // Chart 4: Bar Race - Area Ranking (GLOBAL COMPARISON)
-        // Logic: Always use 'allProjects' grouped by the CURRENT active boundary key.
+        // Logic: Use ALL projects, grouped by the CURRENT active boundary key.
         const boundaryKey = currentBoundaryKey || 'district';
         const areaKey = boundaryKey === 'district' ? 'DISTRICT' : (boundaryKey === 'dun' ? 'DUN' : 'PARLIAMENT');
         
         const areaStats = {};
+        // 1. Get ALL unique areas for this layer type first to ensure 0 values are represented
+        const allUniqueAreas = new Set();
         allProjects.forEach(p => {
-            const area = normalizeString(p[areaKey]);
-            if (!area) return;
-            if (!areaStats[area]) areaStats[area] = 0;
-            areaStats[area]++;
+             const area = normalizeString(p[areaKey]);
+             if(area) allUniqueAreas.add(area);
         });
 
-        // Sort and take top 20 for readability if too many
-        const sortedAreas = Object.entries(areaStats).sort(([,a], [,b]) => b - a).slice(0, 20); // Top 20
-        const yAxisData = sortedAreas.map(item => item[0]).reverse();
-        const xAxisData = sortedAreas.map(item => item[1]).reverse();
+        // Initialize 0
+        allUniqueAreas.forEach(area => areaStats[area] = 0);
+
+        // Count
+        allProjects.forEach(p => {
+            const area = normalizeString(p[areaKey]);
+            if (area) areaStats[area]++;
+        });
+
+        // Sort descending
+        const sortedAreas = Object.entries(areaStats).sort(([,a], [,b]) => b - a);
+        // Take top 30 to fit graph nicely
+        const topAreas = sortedAreas.slice(0, 30);
+        
+        const yAxisData = topAreas.map(item => item[0]).reverse();
+        const xAxisData = topAreas.map(item => item[1]).reverse();
 
         const chart4 = echarts.init(document.getElementById('chart-area-race'));
         chart4.setOption({
