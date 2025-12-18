@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7 (Markers Fixed)</title>
+  <title>Web GIS Projek Sabah v8 (Color Update)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -442,6 +442,19 @@ function generateStableId(row, type) { return `${type}_${normalizeString(row.SIT
 function extractFeatureName(f) { const props = ["NAME","name","DISTRICT","DAERAH","DUN","PARLIAMENT"]; for(const k of props){ const v=f.getProperty(k); if(v) return String(v).trim(); } return "Sabah"; }
 function getRandomColor() { const l='0123456789ABCDEF'; let c='#'; for(let i=0;i<6;i++) c+=l[Math.floor(Math.random()*16)]; return c; }
 
+// --- COLOR HELPER (UPDATED) ---
+function getStatusColor(status) {
+    const u = String(status || "").toUpperCase();
+    // Siap = Hijau
+    if (u.includes("SIAP") || u.includes("OPERASI")) return { start: "#81c784", end: "#4CAF50" };
+    // Dalam pembinaan = Biru
+    if (u.includes("BINA") || u.includes("PELAKSANAAN") || u.includes("PROGRESS")) return { start: "#64b5f6", end: "#2196F3" };
+    // Perancangan = Oren
+    if (u.includes("RANCANG") || u.includes("BARU")) return { start: "#ffb74d", end: "#FF9800" };
+    // Lain-lain = Kelabu
+    return { start: "#BDBDBD", end: "#9E9E9E" };
+}
+
 function resetAllLayerStyles() {
   Object.keys(dataLayers).forEach(k => { if(dataLayers[k]) dataLayers[k].revertStyle(); });
   activeFeature = null; activeLayer = null;
@@ -495,6 +508,8 @@ function buildAreaIndex() {
 function createOrUpdateMarker(p) {
   if (!p._validCoord) return null;
   const cfg = TYPE_CFG[p._type] || { color: "#333", icon: "📍" };
+  const statusColor = getStatusColor(p.STATUS).end; // Use status color for marker info window
+  
   if (markersBySite.has(p._id)) {
     const m = markersBySite.get(p._id); m._meta = p;
     const pos = m.getPosition();
@@ -515,7 +530,7 @@ function createOrUpdateMarker(p) {
       <div class="info-row"><span class="info-label">Daerah</span><span class="info-val">${escapeHtml(p.DISTRICT)}</span></div>
       <div class="info-row"><span class="info-label">DUN</span><span class="info-val">${escapeHtml(p.DUN)}</span></div>
       <div class="info-row"><span class="info-label">Parlimen</span><span class="info-val">${escapeHtml(p.PARLIAMENT)}</span></div>
-      <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${cfg.color}">${escapeHtml(p.STATUS)}</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${statusColor}">${escapeHtml(p.STATUS)}</span></div>
       ${details}</div></div>`
   });
   marker.addListener("click", () => infowin.open(map, marker));
@@ -614,12 +629,11 @@ const updateDashboard = debounce(function (list) {
     container.innerHTML = "";
     Object.entries(statusStats).sort((a,b)=>b[1].total-a[1].total).forEach(([status, data]) => {
       const pct = total > 0 ? Math.round((data.total/total)*100) : 0;
-      let ec="#4F46E5", sc="#818cf8";
-      const u = status.toUpperCase();
-      if(u.match(/SIAP|OPERASI/)) { ec="#4CAF50"; sc="#81c784"; }
-      else if(u.match(/BINA|PROGRESS/)) { ec="#2196F3"; sc="#64b5f6"; }
-      else if(u.match(/TANGGUH|BATAL/)) { ec="#F44336"; sc="#e57373"; }
-      else if(u.match(/RANCANG/)) { ec="#FF9800"; sc="#ffb74d"; }
+      
+      // --- NEW COLOR LOGIC ---
+      const colors = getStatusColor(status);
+      const ec = colors.end;
+      const sc = colors.start;
       
       let det = "";
       Object.entries(data.types).sort((a,b)=>b[1]-a[1]).forEach(([t, c]) => {
@@ -656,8 +670,8 @@ function generateReport() {
     document.getElementById("report-date-text").textContent = now.toLocaleDateString('ms-MY', {day:'2-digit', month:'short', year:'numeric'}) + ", " + now.toLocaleTimeString('ms-MY', {hour:'2-digit', minute:'2-digit'});
 
     let counts = { TOWER:0, NADI:0, BWA:0, POP:0 };
-    let statusStats = {}; // Total aggregation for pie chart and list
-    let catStatusMap = {}; // TOWER -> { Siap: 10, Bina: 5 }
+    let statusStats = {}; 
+    let catStatusMap = {}; 
     let allUniqueStatuses = new Set();
 
     data.forEach(p => {
@@ -670,27 +684,25 @@ function generateReport() {
         if(!statusStats[s].types[p._type]) statusStats[s].types[p._type]=0;
         statusStats[s].types[p._type]++;
         
-        // Populate Cat-Status Map (Chart 4)
         if(!catStatusMap[p._type]) catStatusMap[p._type] = {};
         if(!catStatusMap[p._type][s]) catStatusMap[p._type][s] = 0;
         catStatusMap[p._type][s]++;
     });
     
-    // Update Header Stats
     document.getElementById("rpt-total").textContent = data.length;
     document.getElementById("rpt-menara").textContent = counts.TOWER;
     document.getElementById("rpt-nadi").textContent = counts.NADI;
     document.getElementById("rpt-bwa").textContent = counts.BWA;
     document.getElementById("rpt-pop").textContent = counts.POP;
 
-    // Report Status List
     const listEl = document.getElementById("report-status-full-list"); listEl.innerHTML = "";
     Object.entries(statusStats).sort((a,b)=>b[1].total-a[1].total).forEach(([status, d]) => {
         const pct = data.length > 0 ? Math.round((d.total/data.length)*100) : 0;
-        let ec="#4F46E5", sc="#818cf8"; const u = status.toUpperCase();
-        if(u.includes("SIAP") || u.includes("OPERASI")) { ec="#4CAF50"; sc="#81c784"; }
-        else if(u.includes("BINA") || u.includes("PELAKSANAAN")) { ec="#2196F3"; sc="#64b5f6"; }
-        else if(u.includes("RANCANG")) { ec="#FF9800"; sc="#ffb74d"; }
+        
+        // --- NEW COLOR LOGIC ---
+        const colors = getStatusColor(status);
+        const ec = colors.end;
+        const sc = colors.start;
         
         let det = "";
         Object.entries(d.types).sort((a,b)=>b[1]-a[1]).forEach(([t, c]) => {
@@ -702,9 +714,6 @@ function generateReport() {
         listEl.appendChild(div);
     });
 
-    // Prepare Area Analysis Data (Chart 5)
-    // Y-Axis: Areas (District/DUN). X-Axis: 4 Bars (Cats). Stacked by Status.
-    // Structure: Area -> Cat -> Status -> Count
     let groupKey = 'DISTRICT'; 
     if (currentBoundaryKey === 'district') groupKey = 'DUN';
     else if (currentBoundaryKey === 'parliament') groupKey = 'DUN';
@@ -712,28 +721,20 @@ function generateReport() {
     let areaMap = {};
     data.forEach(p => {
         const area = normalizeString(p[groupKey] || "Lain-lain");
-        if(!areaMap[area]) areaMap[area] = {}; // { TOWER: { Siap: 1 }, NADI: {} }
+        if(!areaMap[area]) areaMap[area] = {}; 
         if(!areaMap[area][p._type]) areaMap[area][p._type] = {};
         const s = String(p.STATUS || "N/A").trim();
         if(!areaMap[area][p._type][s]) areaMap[area][p._type][s] = 0;
         areaMap[area][p._type][s]++;
     });
 
-    // Sort areas by total projects using explicit totals
     let areaKeys = Object.keys(areaMap).sort((a,b) => {
-        // Calculate total A
         let totalA = 0;
-        if(areaMap[a]) Object.values(areaMap[a]).forEach(catObj => {
-             if(catObj) Object.values(catObj).forEach(val => totalA += val);
-        });
-        // Calculate total B
+        if(areaMap[a]) Object.values(areaMap[a]).forEach(catObj => { if(catObj) Object.values(catObj).forEach(val => totalA += val); });
         let totalB = 0;
-        if(areaMap[b]) Object.values(areaMap[b]).forEach(catObj => {
-             if(catObj) Object.values(catObj).forEach(val => totalB += val);
-        });
-        return totalA - totalB; // Ascending for Y-axis bottom-to-top
+        if(areaMap[b]) Object.values(areaMap[b]).forEach(catObj => { if(catObj) Object.values(catObj).forEach(val => totalB += val); });
+        return totalA - totalB; 
     });
-    // If too many, take top 30
     if(areaKeys.length > 30) areaKeys = areaKeys.slice(areaKeys.length - 30);
 
     setTimeout(() => renderECharts(counts, statusStats, catStatusMap, Array.from(allUniqueStatuses), areaMap, areaKeys), 100);
@@ -743,11 +744,9 @@ function generateReport() {
 
 function renderECharts(counts, statusStats, catStatusMap, uniqueStatuses, areaMap, areaKeys) {
     const init = (id) => { const d=document.getElementById(id); if(chartInstances[id]) chartInstances[id].dispose(); chartInstances[id]=echarts.init(d); return chartInstances[id]; };
-
-    // Common Label Settings
     const labelOption = { show: true, position: 'inside', formatter: (p)=>p.value>0?p.value:'', color:'#fff', fontWeight:'bold', textBorderColor:'#000', textBorderWidth:1 };
 
-    // 1. Kategori (Doughnut)
+    // 1. Kategori
     init('chart-cat-doughnut').setOption({
         tooltip: { trigger:'item', formatter:'{b}: {c} ({d}%)' },
         legend: { bottom:0 },
@@ -763,8 +762,13 @@ function renderECharts(counts, statusStats, catStatusMap, uniqueStatuses, areaMa
         }]
     });
 
-    // 2. Status Keseluruhan (Pie Standard)
-    const statData = Object.entries(statusStats).map(([k,v]) => ({value:v.total, name:k})).sort((a,b)=>b.value-a.value);
+    // 2. Status Keseluruhan (Pie) - Apply new colors
+    const statData = Object.entries(statusStats).map(([k,v]) => ({
+        value:v.total, 
+        name:k,
+        itemStyle: { color: getStatusColor(k).end }
+    })).sort((a,b)=>b.value-a.value);
+
     init('chart-status-pie').setOption({
         tooltip: { trigger:'item', formatter:'{b}: {c} ({d}%)' },
         series: [{
@@ -775,13 +779,15 @@ function renderECharts(counts, statusStats, catStatusMap, uniqueStatuses, areaMa
         }]
     });
 
-    // 3. Kategori vs Status (Actual Status Stacked Bar)
-    const cats = ['TOWER', 'NADI', 'BWA', 'POP'];
+    // 3. Kategori vs Status Bar - Apply new colors
     const displayCats = ['Menara', 'NADI', 'WiFi', 'POP'];
+    const cats = ['TOWER', 'NADI', 'BWA', 'POP'];
     const statusSeries4 = uniqueStatuses.map(s => ({
         name: s, type: 'bar', stack: 'total',
         data: cats.map(c => (catStatusMap[c] && catStatusMap[c][s]) ? catStatusMap[c][s] : 0),
-        label: labelOption, emphasis: { focus: 'series' }
+        label: labelOption, 
+        itemStyle: { color: getStatusColor(s).end }, // Apply specific color
+        emphasis: { focus: 'series' }
     }));
 
     init('chart-cat-status-bar').setOption({
@@ -793,42 +799,30 @@ function renderECharts(counts, statusStats, catStatusMap, uniqueStatuses, areaMa
         series: statusSeries4
     });
 
-    // 4. Analisis Mengikut Kawasan (Complex Grouped Stacked Bar)
-    // For each category (Tower/Nadi...), we create a stack group. 
-    // Inside that stack group, we have series for each status.
-    // Total series = 4 categories * N statuses.
+    // 4. Analisis Kawasan - Apply new colors
     const chartAreaSeries = [];
     const catKeys = ['TOWER', 'NADI', 'BWA', 'POP'];
-    const catColors = { TOWER:'#FF5722', NADI:'#2196F3', BWA:'#4CAF50', POP:'#FF9800' };
-    
-    // We need to shift bars so they appear side-by-side for each Y-category (Area).
-    // ECharts handles this if we give different `stack` names.
-    // stack: 'Tower', stack: 'Nadi' etc.
     
     catKeys.forEach(cat => {
         uniqueStatuses.forEach(stat => {
             const data = areaKeys.map(area => {
-                // areaMap[area][cat][stat]
                 if(areaMap[area] && areaMap[area][cat] && areaMap[area][cat][stat]) return areaMap[area][cat][stat];
                 return 0;
             });
             
-            // Only add series if there is data
             if(data.some(v => v > 0)) {
                 chartAreaSeries.push({
-                    name: `${cat} - ${stat}`, // Legend name
+                    name: `${cat} - ${stat}`,
                     type: 'bar',
-                    stack: cat, // Stacks belonging to same category
+                    stack: cat,
                     data: data,
                     label: { show: true, position: 'inside', formatter: (p)=>p.value>0?p.value:'', fontSize: 9 },
                     itemStyle: { 
-                        // Visual trick: Base color is category color, opacity varies by status index? 
-                        // Or just random colors? Better to stick to category themes.
-                        color: catColors[cat],
-                        opacity: 0.4 + (uniqueStatuses.indexOf(stat) % 5) * 0.15, // vary opacity for distinction
+                        color: getStatusColor(stat).end, // Use status color
+                        opacity: 0.85, 
                         borderColor: '#fff', borderWidth: 0.5
                     },
-                    barWidth: 12, // Thinner bars to fit 4 groups
+                    barWidth: 12,
                     barGap: '10%' 
                 });
             }
@@ -837,7 +831,7 @@ function renderECharts(counts, statusStats, catStatusMap, uniqueStatuses, areaMa
 
     init('chart-area-race').setOption({
         tooltip: { trigger:'axis', axisPointer:{type:'shadow'} },
-        legend: { top: 0, type: 'scroll' }, // Too many items, scroll is needed
+        legend: { top: 0, type: 'scroll' },
         grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
         xAxis: { type: 'value', position: 'top' },
         yAxis: { type: 'category', data: areaKeys, axisLabel: { fontSize: 11, fontWeight:'bold' } },
@@ -850,9 +844,6 @@ function renderECharts(counts, statusStats, catStatusMap, uniqueStatuses, areaMa
 function captureMapForReport() {
     const m=document.getElementById("map"), c=document.getElementById("map-capture-container");
     c.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999;">Memproses Peta...</div>';
-    
-    // Clone map logic not perfect for Google Maps (canvas taint). 
-    // Fallback: Just capture the current view directly using html2canvas options
     html2canvas(document.body, { 
         allowTaint: true, useCORS: true, 
         x: m.getBoundingClientRect().left, y: m.getBoundingClientRect().top, 
@@ -864,76 +855,51 @@ function captureMapForReport() {
     }).catch(() => c.innerHTML='<div style="padding:20px; text-align:center; color:red; font-size:12px">Gagal menangkap peta (Security limitation).</div>');
 }
 
-/* --- FULL PDF DOWNLOAD LOGIC --- */
 function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     const originalEl = document.getElementById('report-print-area');
-    
-    // 1. Create a clone container off-screen
     const clone = originalEl.cloneNode(true);
-    clone.style.width = '1200px'; // Fixed width for consistent layout
-    clone.style.height = 'auto';  // Full height
-    clone.style.maxHeight = 'none';
-    clone.style.position = 'absolute';
-    clone.style.top = '-9999px';
-    clone.style.left = '-9999px';
-    clone.style.overflow = 'visible'; // Ensure content flows
-    clone.style.zIndex = '9999';
+    clone.style.width = '1200px'; clone.style.height = 'auto'; clone.style.maxHeight = 'none';
+    clone.style.position = 'absolute'; clone.style.top = '-9999px'; clone.style.left = '-9999px';
+    clone.style.overflow = 'visible'; clone.style.zIndex = '9999';
     
-    // Fix scrollable sections in clone
     const scrollables = clone.querySelectorAll('.report-body, .report-section');
     scrollables.forEach(el => { el.style.overflow = 'visible'; el.style.maxHeight = 'none'; el.style.height = 'auto'; });
-
-    // Hide buttons in clone
     clone.querySelectorAll('button').forEach(b => b.style.display = 'none');
 
-    // 2. Handle ECharts Canvases (Canvas not copied by cloneNode)
-    // We must manually copy charts as images into the clone
     const origCanvases = originalEl.querySelectorAll('canvas');
     const cloneCanvases = clone.querySelectorAll('canvas');
-    
-    // Replace clone canvases with images
     origCanvases.forEach((origCanvas, index) => {
         const img = document.createElement('img');
         img.src = origCanvas.toDataURL('image/png');
-        img.style.width = '100%';
-        img.style.height = '100%';
-        // Replace the parent wrapper content in clone to hold just the img
-        const wrapper = cloneCanvases[index].parentNode; // .chart-wrapper usually
-        wrapper.innerHTML = ''; 
-        wrapper.appendChild(img);
+        img.style.width = '100%'; img.style.height = '100%';
+        const wrapper = cloneCanvases[index].parentNode; 
+        wrapper.innerHTML = ''; wrapper.appendChild(img);
     });
 
     document.body.appendChild(clone);
-
-    // 3. Capture the full clone
     html2canvas(clone, { scale: 1.5, useCORS: true }).then(canvas => {
         const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 210; // A4 width mm
-        const pageHeight = 295; // A4 height mm
+        const imgWidth = 210; const pageHeight = 295; 
         const imgHeight = canvas.height * imgWidth / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
+        let heightLeft = imgHeight; let position = 0;
 
         doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
-
         while (heightLeft >= 0) {
           position = heightLeft - imgHeight;
           doc.addPage();
           doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
           heightLeft -= pageHeight;
         }
-        
         doc.save('Laporan_Projek_Sabah.pdf');
-        document.body.removeChild(clone); // Cleanup
+        document.body.removeChild(clone);
     });
 }
 
 function closeReportCard() { document.getElementById("report-overlay").classList.remove("active"); }
 
-// Init
 async function initMap() {
     const d=document.getElementById("map"); if(!d) return;
     map = new google.maps.Map(d, { center: {lat:5.9804, lng:116.0735}, zoom:8, mapTypeId:"satellite", disableDefaultUI:false, mapTypeControl:true });
@@ -941,13 +907,10 @@ async function initMap() {
     try {
         const p = await Promise.all(Object.entries(SHEETS).map(([k,i])=>fetchSheetObjects(i).then(d=>normalizeRows(d.rows,k,d.cols)).catch(()=>[])));
         allProjects = p.flat(); buildAreaIndex();
-        
-        // --- FIX: Update markersList immediately after render ---
         renderMarkersInBatches(allProjects, () => {
             markersList = Array.from(markersBySite.values()); 
             filterAndDisplayMarkers();
         });
-
         const [ld, ldun, lpar] = await Promise.all([loadGeoJsonLayer("district",URLs.district), loadGeoJsonLayer("dun",URLs.dun), loadGeoJsonLayer("parliament",URLs.parliament)]);
         google.maps.event.addListenerOnce(map,"idle",()=>{ if(ld){dataLayers['district'].setMap(map); currentBoundaryKey='district';} setupToggles(); filterAndDisplayMarkers(); });
         setInterval(()=>autoRefreshLoop(), refreshIntervalMs);
@@ -980,7 +943,6 @@ async function autoRefreshLoop() {
     try {
         const p=(await Promise.all(Object.entries(SHEETS).map(([k,i])=>fetchSheetObjects(i).then(d=>normalizeRows(d.rows,k,d.cols))))).flat(); 
         allProjects=p; 
-        // --- FIX: Update markersList immediately after refresh ---
         renderMarkersInBatches(p, () => {
             markersList = Array.from(markersBySite.values());
             filterAndDisplayMarkers();
