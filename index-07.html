@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4 + Report Kad ECharts</title>
+  <title>Web GIS Projek Sabah v5 + Report Kad ECharts</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -276,11 +276,11 @@ body {
 .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: var(--text-sub); }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
-/* ----- REPORT CARD MODAL STYLES (UPDATED TAILWIND STYLE) ----- */
+/* ----- REPORT CARD MODAL STYLES (TAILWIND STYLE REFINED) ----- */
 .report-modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(5px);
+  background: rgba(15, 23, 42, 0.6); /* Slate-900 with opacity */
+  backdrop-filter: blur(8px);
   z-index: 2000;
   display: none;
   justify-content: center; align-items: center;
@@ -290,89 +290,93 @@ body {
 
 .report-container {
   background: #f8fafc; /* Slate-50 */
-  width: 100%; max-width: 1200px; /* Lebarkan sedikit untuk 4 carta */
+  width: 100%; max-width: 1280px;
   height: 95vh;
-  border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   display: flex; flex-direction: column;
   overflow: hidden;
   font-family: 'Plus Jakarta Sans', sans-serif;
+  border: 1px solid rgba(255,255,255,0.8);
 }
 
-/* Tailwind-ish Header */
+/* Header */
 .report-header {
   background: white;
-  color: var(--text-main);
-  padding: 20px 30px;
+  color: #1e293b; /* Slate-800 */
+  padding: 24px 32px;
   border-bottom: 1px solid #e2e8f0;
   display: flex; 
   flex-direction: column;
   position: relative;
 }
 
-.report-header-top {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
-}
-
 .report-meta {
-  position: absolute; top: 20px; right: 60px;
+  position: absolute; top: 24px; right: 80px;
   text-align: right;
 }
-.report-date { font-size: 14px; font-weight: 600; color: var(--text-sub); }
-.report-total-header { font-size: 18px; font-weight: 800; color: var(--primary); margin-top: 5px; }
+.report-date { font-size: 14px; font-weight: 500; color: #64748b; } /* Slate-500 */
 
 .report-title-container {
-  text-align: center; width: 100%; margin-top: 10px;
+  text-align: center; width: 100%; margin-top: 8px;
 }
 .report-title { 
-  font-size: 24px; font-weight: 800; color: var(--primary); 
-  display: inline-flex; align-items: center; gap: 10px; 
+  font-size: 26px; font-weight: 800; color: #0f172a; /* Slate-900 */
+  display: inline-flex; align-items: center; gap: 12px; 
   text-transform: uppercase; letter-spacing: -0.5px;
 }
+.report-title i { color: var(--primary); }
 
 .report-actions {
-    position: absolute; top: 20px; right: 20px;
+    position: absolute; top: 24px; right: 24px;
     display: flex; gap: 10px;
 }
 .btn-close { 
-    background: #fee2e2; color: #ef4444; border: none; width: 36px; height: 36px; 
-    border-radius: 50%; cursor: pointer; display:flex; align-items:center; justify-content:center;
-    transition: 0.2s;
+    background: #fee2e2; color: #ef4444; border: none; width: 40px; height: 40px; 
+    border-radius: 12px; cursor: pointer; display:flex; align-items:center; justify-content:center;
+    transition: 0.2s; font-size: 18px;
 }
-.btn-close:hover { background: #fecaca; }
+.btn-close:hover { background: #fecaca; transform: scale(1.05); }
 
 .btn-pdf {
-    background: #e0e7ff; color: var(--primary); border: none; 
-    padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px;
-    cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;
-    position: absolute; top: 20px; left: 30px; /* Left aligned PDF button */
+    background: #e0e7ff; color: var(--primary-dark); border: none; 
+    padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;
+    position: absolute; top: 24px; left: 32px; 
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
 }
-.btn-pdf:hover { background: #c7d2fe; }
+.btn-pdf:hover { background: #c7d2fe; transform: translateY(-1px); }
 
 /* Body Area */
 .report-body {
-  padding: 30px;
+  padding: 32px;
   overflow-y: auto;
   flex: 1;
   background: #f1f5f9; /* Slate-100 */
 }
 
-/* Cards (Tailwind Style) */
+/* Report Cards */
 .report-section { 
   background: white; 
-  border-radius: 12px; 
+  border-radius: 16px; 
   padding: 24px; 
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); 
   margin-bottom: 0; 
   border: 1px solid #f1f5f9;
+  transition: transform 0.2s;
 }
-.report-section h3 { 
-  margin: 0 0 20px 0; font-size: 16px; font-weight: 700; 
-  color: #334155; /* Slate-700 */
-  display: flex; align-items: center; gap: 8px;
-}
-.report-section h3 i { color: var(--primary); }
+.report-section:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
 
+.report-section h3 { 
+  margin: 0 0 24px 0; font-size: 15px; font-weight: 700; 
+  color: #475569; /* Slate-600 */
+  text-transform: uppercase; letter-spacing: 0.5px;
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;
+}
+.report-section h3 i { color: var(--primary); font-size: 18px; }
+
+/* Grid System */
 .report-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
 .col-span-12 { grid-column: span 12; }
 .col-span-8 { grid-column: span 8; }
@@ -382,48 +386,63 @@ body {
 /* Map Capture */
 .map-capture-box { 
     width: 100%; height: 350px; background: #e2e8f0; 
-    border-radius: 8px; overflow: hidden; position: relative; 
-    border: 2px solid white; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+    border-radius: 12px; overflow: hidden; position: relative; 
+    border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 .map-capture-img { width: 100%; height: 100%; object-fit: cover; }
 
 /* Summary Grid */
-.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 24px; }
+.summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 30px; }
 .summary-card { 
-    background: white; padding: 20px; border-radius: 12px; text-align: center; 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f8fafc;
+    background: white; padding: 24px; border-radius: 16px; text-align: center; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;
+    transition: transform 0.2s;
 }
-.summary-val { font-size: 32px; font-weight: 800; color: #1e293b; line-height: 1.1; }
-.summary-lbl { font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748b; margin-top: 5px; letter-spacing: 0.5px; }
+.summary-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+.summary-val { font-size: 36px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 8px; }
+.summary-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 1px; }
 
-/* Detailed Status List */
+/* Detailed Status List (No Scroll) */
 .status-list-container {
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 12px;
 }
-/* Override status styles for Report specifically */
+.report-section.no-scroll {
+    overflow: visible; max-height: none;
+}
 .report-section .status-item {
-    background: #f8fafc; border: 1px solid #e2e8f0;
-    box-shadow: none; cursor: default;
+    background: white; border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); 
+    border-radius: 12px 12px 0 0;
+    padding: 12px 16px;
+    cursor: default;
 }
-.report-section .status-item:hover { background: #f8fafc; }
+.report-section .status-header { margin-bottom: 8px; }
 .report-section .status-details {
-    display: block; /* Always show details in report */
-    background: white; border: 1px solid #e2e8f0; border-top: none;
-    padding: 10px;
+    display: block; 
+    background: #f8fafc; border: 1px solid #e2e8f0; border-top: none;
+    border-radius: 0 0 12px 12px;
+    padding: 16px;
 }
 .report-section .status-item.selected {
-    border-color: #e2e8f0; box-shadow: none; background: #f1f5f9;
+    border-color: #e2e8f0; background: white;
 }
+.sub-stat-row { font-size: 12px; margin-bottom: 8px; }
+.sub-stat-bar-bg { height: 6px; border-radius: 3px; background: #e2e8f0; }
+.sub-stat-bar-fill { border-radius: 3px; }
 
 /* Charts */
-.chart-wrapper { position: relative; height: 300px; width: 100%; display:block; }
+.chart-wrapper { position: relative; height: 320px; width: 100%; display:block; }
 
 /* Responsive */
-@media (max-width: 1024px) {
-  .col-span-8, .col-span-4, .col-span-6 { grid-column: span 12; }
+@media (max-width: 1200px) {
+  .summary-grid { grid-template-columns: repeat(3, 1fr); }
+  .col-span-8, .col-span-4 { grid-column: span 12; }
+}
+@media (max-width: 768px) {
+  .col-span-6 { grid-column: span 12; }
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
   .report-meta { position: static; text-align: center; margin-top: 10px; }
-  .btn-pdf { position: static; margin-bottom: 10px; justify-content: center; }
+  .btn-pdf { position: static; margin-bottom: 10px; justify-content: center; width: 100%; }
   .report-actions { position: absolute; top: 15px; right: 15px; }
 }
 
@@ -595,20 +614,23 @@ body {
             </button>
             <div class="report-meta">
                 <div class="report-date" id="report-date-text">17 Dis 2025, 3:35PM</div>
-                <div class="report-total-header" id="report-total-display">TOTAL: 0</div>
             </div>
             <div class="report-actions">
                 <button class="btn-close" onclick="closeReportCard()"><i class="fas fa-times"></i></button>
             </div>
             <div class="report-title-container">
-                <div class="report-title" id="report-title-text">Laporan Projek: SABAH</div>
+                <div class="report-title"><i class="fas fa-file-contract"></i> <span id="report-title-text">Laporan Projek: SABAH</span></div>
             </div>
         </div>
 
         <div class="report-body">
             
-            <!-- Summary Stats -->
+            <!-- Summary Stats (Added Total Project Card Here) -->
             <div class="summary-grid">
+                <div class="summary-card" style="border-color: var(--primary);">
+                    <div class="summary-val" id="rpt-total" style="color:var(--primary)">0</div>
+                    <div class="summary-lbl">Jumlah Projek</div>
+                </div>
                 <div class="summary-card">
                     <div class="summary-val" id="rpt-menara" style="color:#FF5722">0</div>
                     <div class="summary-lbl">Menara Komunikasi</div>
@@ -638,8 +660,8 @@ body {
                     </div>
                 </div>
 
-                <!-- Full Status Style (Same as Sidebar) -->
-                <div class="report-section col-span-4" style="overflow-y:auto; max-height:400px;">
+                <!-- Full Status Style (Expanded, No Scroll) -->
+                <div class="report-section col-span-4 no-scroll">
                     <h3><i class="fas fa-list-ul"></i> Status Kemajuan</h3>
                     <div class="status-list-container" id="report-status-full-list">
                         <!-- Injected via JS -->
@@ -664,9 +686,9 @@ body {
                     <div class="chart-wrapper" id="chart-status-nightingale"></div>
                 </div>
 
-                <!-- Chart 4: Kategori vs Status (Bar Dataset) -->
+                <!-- Chart 4: Status vs Kategori Projek (Stacked Bar) -->
                 <div class="report-section col-span-6">
-                    <h3><i class="fas fa-chart-bar"></i> Kategori Projek VS Status</h3>
+                    <h3><i class="fas fa-chart-bar"></i> Status VS Kategori Projek</h3>
                     <div class="chart-wrapper" id="chart-cat-status-bar"></div>
                 </div>
             </div>
@@ -1225,7 +1247,7 @@ function generateReport() {
     let statusBreakdown = {};
     let completedCount = 0;
     
-    // Structure for Bar Chart (Category vs Status)
+    // Structure for Bar Chart (Status vs Category)
     // Map: Status -> { TOWER: 0, NADI: 0 ... }
     let catStatusMap = {}; 
 
@@ -1252,14 +1274,16 @@ function generateReport() {
     const totalProjects = data.length;
 
     // 4. Update Header Stats
-    document.getElementById("report-total-display").textContent = "JUMLAH PROJEK: " + totalProjects;
+    // document.getElementById("report-total-display").textContent = "JUMLAH PROJEK: " + totalProjects; // Removed as requested
+    
+    // Update Grid Stats including Total
+    document.getElementById("rpt-total").textContent = totalProjects;
     document.getElementById("rpt-menara").textContent = counts.TOWER;
     document.getElementById("rpt-nadi").textContent = counts.NADI;
     document.getElementById("rpt-bwa").textContent = counts.BWA;
     document.getElementById("rpt-pop").textContent = counts.POP;
 
     // 5. Generate Full Status List in Report (Similar to Dashboard)
-    // Re-use logic: Since we have the data here, let's manually construct to ensure exact "Status Kemajuan" style
     const statusReportEl = document.getElementById("report-status-full-list");
     statusReportEl.innerHTML = "";
     
@@ -1343,9 +1367,9 @@ function renderECharts(counts, statusBreakdown, catStatusMap, total, completed) 
         series: [{
             name: 'Kategori',
             type: 'pie',
-            radius: ['40%', '70%'],
+            radius: ['45%', '75%'],
             itemStyle: {
-                borderRadius: 10,
+                borderRadius: 8,
                 borderColor: '#fff',
                 borderWidth: 2
             },
@@ -1363,7 +1387,7 @@ function renderECharts(counts, statusBreakdown, catStatusMap, total, completed) 
         }]
     });
 
-    // --- CHART 2: Status Keseluruhan (Half Doughnut / Gauge Style) ---
+    // --- CHART 2: Status Keseluruhan (Half Doughnut - Fixed Crop) ---
     const chartStatusHalf = initChart('chart-status-half');
     const notCompleted = total - completed;
     const completedPercent = total > 0 ? ((completed/total)*100).toFixed(1) : 0;
@@ -1373,8 +1397,8 @@ function renderECharts(counts, statusBreakdown, catStatusMap, total, completed) 
         legend: { bottom: '0', left: 'center' },
         series: [{
             type: 'pie',
-            radius: ['50%', '90%'],
-            center: ['50%', '70%'],
+            radius: ['60%', '100%'], // Slightly larger radius
+            center: ['50%', '75%'],  // Moved center down to avoid cropping top
             startAngle: 180,
             endAngle: 360,
             label: {
@@ -1389,10 +1413,10 @@ function renderECharts(counts, statusBreakdown, catStatusMap, total, completed) 
                 { value: notCompleted, name: 'Lain-lain', itemStyle: { color: '#E0E0E0', opacity: 0.5 } },
             ]
         },
-        { // Dummy graphic for percentage text in middle
+        { // Text in middle
             type: 'gauge',
-            radius: '90%',
-            center: ['50%', '70%'],
+            radius: '100%',
+            center: ['50%', '75%'],
             startAngle: 180,
             endAngle: 0,
             min: 0, max: 100,
@@ -1403,10 +1427,10 @@ function renderECharts(counts, statusBreakdown, catStatusMap, total, completed) 
             axisLabel: { show: false },
             pointer: { show: false },
             detail: { 
-                offsetCenter: [0, -20], 
+                offsetCenter: [0, -30], 
                 formatter: `{value}%\nSIAP`,
-                fontSize: 20,
-                fontWeight: 'bold',
+                fontSize: 22,
+                fontWeight: '800',
                 color: '#4CAF50'
             },
             data: [{ value: completedPercent }]
@@ -1426,24 +1450,25 @@ function renderECharts(counts, statusBreakdown, catStatusMap, total, completed) 
         series: [{
             name: 'Status',
             type: 'pie',
-            radius: [20, 100],
+            radius: [20, 110],
             center: ['50%', '50%'],
             roseType: 'area',
-            itemStyle: { borderRadius: 8 },
+            itemStyle: { borderRadius: 6 },
             label: {
                 show: true,
-                formatter: '{b}\n{c} ({d}%)'
+                formatter: '{b}\n{c}'
             },
             data: statusDataForPie
         }]
     });
 
 
-    // --- CHART 4: Kategori Projek VS Status (Bar Chart - Dataset) ---
+    // --- CHART 4: Status VS Kategori Projek (Stacked Bar) ---
     const chartCatStatus = initChart('chart-cat-status-bar');
     
-    // Prepare Dataset Source
-    // Format: [['Status', 'Menara', 'NADI', 'WiFi', 'POP'], ['Siap', 10, 2, 5, 1], ...]
+    // Axis X/Y: Status
+    // Series: Categories (Stacked)
+    // Structure: ['Status', 'Menara', 'NADI', 'WiFi', 'POP']
     const statusKeys = Object.keys(catStatusMap);
     const source = [['Status', 'Menara', 'NADI', 'WiFi', 'POP']];
     
@@ -1455,15 +1480,15 @@ function renderECharts(counts, statusBreakdown, catStatusMap, total, completed) 
     chartCatStatus.setOption({
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
         legend: { bottom: 0 },
-        grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
+        grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
         dataset: { source: source },
-        xAxis: { type: 'category', axisLabel: { interval: 0, rotate: 15, fontSize: 10 } },
+        xAxis: { type: 'category', axisLabel: { interval: 0, rotate: 15, fontSize: 11, fontWeight:'bold' } },
         yAxis: { type: 'value' },
         series: [
-            { type: 'bar', stack: 'total', itemStyle: { color: '#FF5722' }, label: {show: true, position: 'inside', formatter: (p) => p.value[1] > 0 ? p.value[1] : ''} },
-            { type: 'bar', stack: 'total', itemStyle: { color: '#2196F3' }, label: {show: true, position: 'inside', formatter: (p) => p.value[2] > 0 ? p.value[2] : ''} },
-            { type: 'bar', stack: 'total', itemStyle: { color: '#4CAF50' }, label: {show: true, position: 'inside', formatter: (p) => p.value[3] > 0 ? p.value[3] : ''} },
-            { type: 'bar', stack: 'total', itemStyle: { color: '#FF9800' }, label: {show: true, position: 'inside', formatter: (p) => p.value[4] > 0 ? p.value[4] : ''} }
+            { type: 'bar', stack: 'total', itemStyle: { color: '#FF5722' }, label: {show: false} },
+            { type: 'bar', stack: 'total', itemStyle: { color: '#2196F3' }, label: {show: false} },
+            { type: 'bar', stack: 'total', itemStyle: { color: '#4CAF50' }, label: {show: false} },
+            { type: 'bar', stack: 'total', itemStyle: { color: '#FF9800' }, label: {show: false} }
         ]
     });
     
@@ -1645,14 +1670,7 @@ function handleFeatureClick(key, feature) {
 
   filterAndDisplayMarkers();
   
-  // TRIGGER AUTOMATIK REPORT KAD
-  generateReport();
-  
-  const btn = document.getElementById("btn-open-report");
-  if(btn) {
-      btn.style.animation = "pulse 1s";
-      setTimeout(() => btn.style.animation = "", 1000);
-  }
+  // NOTE: generateReport() removed from here so report card doesn't open automatically
 }
 
 function toggleBoundaryLayerVisibility(key) {
