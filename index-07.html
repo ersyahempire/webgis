@@ -819,7 +819,7 @@ const updateDashboard = debounce(function (list) {
   const container = document.getElementById("status-list");
   if(container) {
     container.innerHTML = "";
-    Object.entries(statusStats).sort((a,b)=>b.1.total-a.1.total).forEach(([status, data]) => {
+    Object.entries(statusStats).sort((a,b)=>b[1].total-a[1].total).forEach(([status, data]) => {
       const pct = total > 0 ? Math.round((data.total/total)*100) : 0;
       let ec="#4F46E5", sc="#818cf8";
       const u = status.toUpperCase();
@@ -829,7 +829,7 @@ const updateDashboard = debounce(function (list) {
       else if(u.match(/RANCANG/)) { ec="#FF9800"; sc="#ffb74d"; }
       
       let det = "";
-      Object.entries(data.types).sort((a,b)=>b.1-a.1).forEach(([t, c]) => {
+      Object.entries(data.types).sort((a,b)=>b[1]-a[1]).forEach(([t, c]) => {
         const tp = Math.round((c/data.total)*100);
         const tc = TYPE_CFG[t]?.color || "#666";
         det += `<div class="sub-stat-row"><span class="sub-stat-label" style="color:${tc}">${TYPE_CFG[t]?.label||t}</span><span class="sub-stat-val">${c} (${tp}%)</span></div><div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tp}%; background:${tc}; opacity:0.7;"></div></div>`;
@@ -898,7 +898,7 @@ function generateReport() {
 
     // Report Status List (Expanded)
     const listEl = document.getElementById("report-status-full-list"); listEl.innerHTML = "";
-    Object.entries(statusStats).sort((a,b)=>b.1.total-a.1.total).forEach(([status, d]) => {
+    Object.entries(statusStats).sort((a,b)=>b[1].total-a[1].total).forEach(([status, d]) => {
         const pct = data.length > 0 ? Math.round((d.total/data.length)*100) : 0;
         let ec="#4F46E5", sc="#818cf8"; const u = status.toUpperCase();
         if(u.match(/SIAP|OPERASI/)) { ec="#4CAF50"; sc="#81c784"; }
@@ -906,7 +906,7 @@ function generateReport() {
         else if(u.match(/RANCANG/)) { ec="#FF9800"; sc="#ffb74d"; }
         
         let det = "";
-        Object.entries(d.types).sort((a,b)=>b.1-a.1).forEach(([t, c]) => {
+        Object.entries(d.types).sort((a,b)=>b[1]-a[1]).forEach(([t, c]) => {
             const tp = Math.round((c/d.total)*100); const tc = TYPE_CFG[t]?.color || "#666";
             det += `<div class="sub-stat-row"><span style="color:${tc}">${TYPE_CFG[t]?.label}</span><span>${c} (${tp}%)</span></div><div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tp}%; background:${tc}; opacity:0.7;"></div></div>`;
         });
