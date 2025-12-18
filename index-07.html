@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7 + Full PDF Report (Debugged)</title>
+  <title>Web GIS Projek Sabah v7 (Markers Fixed)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -941,7 +941,13 @@ async function initMap() {
     try {
         const p = await Promise.all(Object.entries(SHEETS).map(([k,i])=>fetchSheetObjects(i).then(d=>normalizeRows(d.rows,k,d.cols)).catch(()=>[])));
         allProjects = p.flat(); buildAreaIndex();
-        renderMarkersInBatches(allProjects, ()=>filterAndDisplayMarkers());
+        
+        // --- FIX: Update markersList immediately after render ---
+        renderMarkersInBatches(allProjects, () => {
+            markersList = Array.from(markersBySite.values()); 
+            filterAndDisplayMarkers();
+        });
+
         const [ld, ldun, lpar] = await Promise.all([loadGeoJsonLayer("district",URLs.district), loadGeoJsonLayer("dun",URLs.dun), loadGeoJsonLayer("parliament",URLs.parliament)]);
         google.maps.event.addListenerOnce(map,"idle",()=>{ if(ld){dataLayers['district'].setMap(map); currentBoundaryKey='district';} setupToggles(); filterAndDisplayMarkers(); });
         setInterval(()=>autoRefreshLoop(), refreshIntervalMs);
@@ -969,7 +975,19 @@ function setupToggles() {
   document.getElementById("btn-open-report")?.addEventListener("click",generateReport);
 }
 function updateToggleButtonsUI(k){ const m={district:"toggle-daerah",dun:"toggle-dun",parliament:"toggle-parliament"}; Object.keys(m).forEach(ky=>{const b=document.getElementById(m[ky]); if(b) ky===k?b.classList.add("active"):b.classList.remove("active");}); }
-async function autoRefreshLoop() { try{const p=(await Promise.all(Object.entries(SHEETS).map(([k,i])=>fetchSheetObjects(i).then(d=>normalizeRows(d.rows,k,d.cols))))).flat(); allProjects=p; renderMarkersInBatches(p,()=>filterAndDisplayMarkers());}catch(e){} }
+
+async function autoRefreshLoop() { 
+    try {
+        const p=(await Promise.all(Object.entries(SHEETS).map(([k,i])=>fetchSheetObjects(i).then(d=>normalizeRows(d.rows,k,d.cols))))).flat(); 
+        allProjects=p; 
+        // --- FIX: Update markersList immediately after refresh ---
+        renderMarkersInBatches(p, () => {
+            markersList = Array.from(markersBySite.values());
+            filterAndDisplayMarkers();
+        });
+    } catch(e){} 
+}
+
 window.initMap = initMap;
 </script>  
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
