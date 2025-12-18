@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6 + Advanced Analytics</title>
+  <title>Web GIS Projek Sabah v7 + Full PDF Report</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -25,8 +25,6 @@
   --blur: 12px;
   --text-main: #1f2937;
   --text-sub: #6b7280;
-  --bg-color: #f1f5f9;
-  --card-bg: #ffffff;
 }
 
 * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
@@ -46,158 +44,79 @@ body {
   z-index: 0;
 }
 
-/* ----- SEARCH BAR (TOP CENTER) ----- */
+/* ----- SEARCH BAR ----- */
 .search-container {
-  position: absolute;
-  top: 20px; left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  width: 90%; max-width: 400px;
-  display: flex;
-  gap: 10px;
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 10; width: 90%; max-width: 400px; display: flex; gap: 10px;
 }
-
 .search-box {
-  flex: 1;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--blur));
-  -webkit-backdrop-filter: blur(var(--blur));
-  padding: 12px 20px;
-  border-radius: 50px;
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  display: flex;
-  align-items: center;
+  flex: 1; background: var(--glass-bg); backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur)); padding: 12px 20px;
+  border-radius: 50px; border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow); display: flex; align-items: center;
   transition: all 0.3s;
 }
-
 .search-box:focus-within { transform: scale(1.02); box-shadow: 0 10px 40px rgba(79, 70, 229, 0.15); border-color: var(--primary); }
 .search-box i { color: var(--text-sub); margin-right: 10px; }
-.search-box input {
-  border: none; background: transparent; width: 100%;
-  font-family: inherit; font-size: 15px; color: var(--text-main);
-}
+.search-box input { border: none; background: transparent; width: 100%; font-family: inherit; font-size: 15px; color: var(--text-main); }
 
-/* ----- FLOATING DASHBOARD (LEFT) ----- */
+/* ----- FLOATING DASHBOARD ----- */
 .panel-toggle {
   position: absolute; top: 20px; left: 20px; z-index: 20;
-  background: var(--primary); color: white;
-  width: 45px; height: 45px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
-  border: none;
+  background: var(--primary); color: white; width: 45px; height: 45px;
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3); border: none;
   transition: all 0.3s;
 }
 .panel-toggle:hover { transform: translateY(-2px); background: var(--primary-dark); }
 
 .dashboard-panel {
-  position: absolute; top: 75px; left: 20px; bottom: 20px;
-  width: 320px;
-  z-index: 10;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--blur));
-  -webkit-backdrop-filter: blur(var(--blur));
-  border-radius: 16px;
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  display: flex; flex-direction: column;
-  transform: translateX(0);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  position: absolute; top: 75px; left: 20px; bottom: 20px; width: 320px;
+  z-index: 10; background: var(--glass-bg); backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur)); border-radius: 16px;
+  border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow);
+  display: flex; flex-direction: column; transform: translateX(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden;
 }
-
 .dashboard-panel.closed { transform: translateX(-120%); opacity: 0; pointer-events: none; }
 
-.panel-header {
-  padding: 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
-}
+.panel-header { padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.05); background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1)); }
 .panel-header h2 { margin: 0; font-size: 18px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+.panel-content { padding: 20px; overflow-y: auto; scrollbar-width: thin; }
 
-.panel-content {
-  padding: 20px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-/* Stats Cards */
-.main-stat {
-  text-align: center; margin-bottom: 20px;
-  padding: 15px; border-radius: 12px;
-  background: rgba(255,255,255,0.5);
-  border: 1px solid rgba(255,255,255,0.6);
-}
+/* Dashboard Stats */
+.main-stat { text-align: center; margin-bottom: 20px; padding: 15px; border-radius: 12px; background: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.6); }
 .main-stat-value { font-size: 36px; font-weight: 800; color: var(--text-main); line-height: 1; }
 .main-stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-sub); margin-top: 5px; }
-.area-badge {
-  background: #e0e7ff; color: var(--primary);
-  padding: 6px 12px; border-radius: 20px;
-  font-size: 13px; font-weight: 600;
-  display: inline-block; margin-top: 10px;
-}
+.area-badge { background: #e0e7ff; color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; display: inline-block; margin-top: 10px; }
 
 .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-.mini-stat {
-  background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px;
-  text-align: center; border: 1px solid rgba(255,255,255,0.4);
-  transition: all 0.2s; cursor: pointer; user-select: none;
-}
+.mini-stat { background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.4); transition: all 0.2s; cursor: pointer; user-select: none; }
 .mini-stat:hover { background: rgba(255,255,255,0.7); transform: translateY(-2px); }
 .mini-stat.selected { background: #fff; border: 2px solid var(--primary); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
 .mini-stat-val { font-size: 20px; font-weight: 700; color: var(--text-main); }
 .mini-stat-lbl { font-size: 11px; color: var(--text-sub); }
 
-/* Status List Styles */
+/* Dashboard Status List */
 .status-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; }
 .status-wrapper { margin-bottom: 12px; }
-.status-item { 
-  margin-bottom: 0; background: rgba(255,255,255,0.3); 
-  padding: 8px 10px; border-radius: 8px; cursor: pointer;
-  transition: all 0.3s; border: 1px solid transparent;
-} 
+.status-item { margin-bottom: 0; background: rgba(255,255,255,0.3); padding: 8px 10px; border-radius: 8px; cursor: pointer; transition: all 0.3s; border: 1px solid transparent; }
 .status-item:hover { background: rgba(255,255,255,0.6); }
-.status-item.selected {
-  background: #fff; border: 1px solid var(--primary); border-bottom: 1px solid rgba(0,0,0,0.05);
-  border-radius: 8px 8px 0 0; box-shadow: 0 -2px 10px rgba(79, 70, 229, 0.05);
-}
-.status-details {
-  background: rgba(255,255,255,0.5); padding: 12px;
-  border-radius: 0 0 8px 8px; border: 1px solid rgba(255,255,255,0.6);
-  border-top: none; display: none;
-}
+.status-item.selected { background: #fff; border: 1px solid var(--primary); border-radius: 8px 8px 0 0; box-shadow: 0 -2px 10px rgba(79, 70, 229, 0.05); }
+.status-details { background: rgba(255,255,255,0.5); padding: 12px; border-radius: 0 0 8px 8px; border: 1px solid rgba(255,255,255,0.6); border-top: none; display: none; }
 .status-details.show { display: block; animation: slideDown 0.3s; }
-.sub-stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 11px; }
-.sub-stat-bar-bg { width: 100%; height: 4px; background: rgba(0,0,0,0.05); border-radius: 2px; margin-bottom: 8px; }
-.sub-stat-bar-fill { height: 100%; border-radius: 2px; }
-.status-header { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-bottom: 6px; font-weight: 600; } 
+.status-header { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-bottom: 6px; font-weight: 600; }
 .progress-bg { width: 100%; height: 10px; background: rgba(0,0,0,0.1); border-radius: 5px; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--primary); border-radius: 5px; width: 0%; transition: width 1s; }
-
 @keyframes slideDown { from { opacity: 0; transform: scaleY(0.9); max-height: 0; } to { opacity: 1; transform: scaleY(1); max-height: 300px; } }
 
-/* ----- CONTROLS (RIGHT) ----- */
-.controls-container {
-  position: absolute; top: 80px; right: 20px;
-  display: flex; flex-direction: column; gap: 10px; z-index: 10;
-}
-.control-card {
-  background: var(--glass-bg); backdrop-filter: blur(var(--blur));
-  -webkit-backdrop-filter: blur(var(--blur)); padding: 5px;
-  border-radius: 12px; box-shadow: var(--glass-shadow);
-  width: 50px; overflow: hidden; transition: width 0.3s ease, background 0.3s;
-  border: 1px solid var(--glass-border); white-space: nowrap;
-}
+/* ----- CONTROLS ----- */
+.controls-container { position: absolute; top: 80px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
+.control-card { background: var(--glass-bg); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); padding: 5px; border-radius: 12px; box-shadow: var(--glass-shadow); width: 50px; overflow: hidden; transition: width 0.3s ease, background 0.3s; border: 1px solid var(--glass-border); white-space: nowrap; }
 .control-card:hover, .control-card.expanded { width: 180px; background: rgba(255, 255, 255, 0.55); }
 .control-group-title { padding: 10px 15px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-sub); display: none; }
 .control-card.expanded .control-group-title { display: block; }
-.toggle-btn {
-  display: flex; align-items: center; width: 100%; padding: 10px;
-  background: transparent; border: none; cursor: pointer;
-  border-radius: 8px; color: var(--text-sub); transition: all 0.2s;
-}
+.toggle-btn { display: flex; align-items: center; width: 100%; padding: 10px; background: transparent; border: none; cursor: pointer; border-radius: 8px; color: var(--text-sub); transition: all 0.2s; }
 .toggle-btn i { width: 30px; text-align: center; font-size: 16px; flex-shrink: 0; }
 .toggle-btn span { opacity: 0; transition: opacity 0.2s; font-size: 13px; font-weight: 500; }
 .control-card:hover .toggle-btn span, .control-card.expanded .toggle-btn span { opacity: 1; }
@@ -209,97 +128,30 @@ body {
 .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: var(--text-sub); }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
-/* ----- REPORT CARD MODAL (TAILWIND STYLED) ----- */
-.report-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(15, 23, 42, 0.65); /* Slate-900 with opacity */
-  backdrop-filter: blur(8px);
-  z-index: 2000;
-  display: none;
-  justify-content: center; align-items: center;
-  padding: 20px;
-}
+/* ----- REPORT CARD (TAILWIND STYLE) ----- */
+.report-modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px); z-index: 2000; display: none; justify-content: center; align-items: center; padding: 20px; }
 .report-modal-overlay.active { display: flex; }
 
-.report-container {
-  background: #f8fafc; /* Slate-50 */
-  width: 100%; max-width: 1400px;
-  height: 95vh;
-  border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  display: flex; flex-direction: column;
-  overflow: hidden;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  border: 1px solid rgba(255,255,255,0.8);
-}
+.report-container { background: #f8fafc; width: 100%; max-width: 1400px; height: 95vh; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; overflow: hidden; font-family: 'Plus Jakarta Sans', sans-serif; border: 1px solid rgba(255,255,255,0.8); }
 
-/* Header */
-.report-header {
-  background: white;
-  color: #1e293b; /* Slate-800 */
-  padding: 20px 32px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex; flex-direction: column;
-  position: relative;
-}
-
+.report-header { background: white; color: #1e293b; padding: 20px 32px; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; position: relative; }
 .report-meta { position: absolute; top: 20px; right: 80px; text-align: right; }
 .report-date { font-size: 13px; font-weight: 500; color: #64748b; }
-
 .report-title-container { text-align: center; width: 100%; margin-top: 8px; }
-.report-title { 
-  font-size: 24px; font-weight: 800; color: #0f172a; 
-  display: inline-flex; align-items: center; gap: 12px; 
-  text-transform: uppercase; letter-spacing: -0.5px;
-}
+.report-title { font-size: 24px; font-weight: 800; color: #0f172a; display: inline-flex; align-items: center; gap: 12px; text-transform: uppercase; letter-spacing: -0.5px; }
 .report-title i { color: var(--primary); }
-
 .report-actions { position: absolute; top: 20px; right: 24px; display: flex; gap: 10px; }
-.btn-close { 
-  background: #fee2e2; color: #ef4444; border: none; width: 40px; height: 40px; 
-  border-radius: 10px; cursor: pointer; display:flex; align-items:center; justify-content:center;
-  transition: 0.2s; font-size: 18px;
-}
+.btn-close { background: #fee2e2; color: #ef4444; border: none; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: 0.2s; font-size: 18px; }
 .btn-close:hover { background: #fecaca; transform: scale(1.05); }
-
-.btn-pdf {
-  background: #e0e7ff; color: var(--primary-dark); border: none; 
-  padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 13px;
-  cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;
-  position: absolute; top: 20px; left: 32px; 
-  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
-}
+.btn-pdf { background: #e0e7ff; color: var(--primary-dark); border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; position: absolute; top: 20px; left: 32px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1); }
 .btn-pdf:hover { background: #c7d2fe; transform: translateY(-1px); }
 
-/* Body */
-.report-body {
-  padding: 32px;
-  overflow-y: auto;
-  flex: 1;
-  background: #f1f5f9; /* Slate-100 */
-}
+.report-body { padding: 32px; overflow-y: auto; flex: 1; background: #f1f5f9; }
 
-/* Cards (Tailwind-like) */
-.report-section { 
-  background: white; 
-  border-radius: 16px; 
-  padding: 24px; 
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); 
-  border: 1px solid #e2e8f0;
-  margin-bottom: 0;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.report-section:hover { 
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); 
-    border-color: #cbd5e1;
-}
-
-.report-section h3 { 
-  margin: 0 0 20px 0; font-size: 14px; font-weight: 700; 
-  color: #475569; text-transform: uppercase; letter-spacing: 0.5px;
-  display: flex; align-items: center; gap: 10px;
-  padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;
-}
+/* Report Cards */
+.report-section { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; margin-bottom: 0; transition: transform 0.2s; }
+.report-section:hover { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-color: #cbd5e1; }
+.report-section h3 { margin: 0 0 20px 0; font-size: 14px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
 .report-section h3 i { color: var(--primary); font-size: 16px; }
 
 /* Grid */
@@ -310,69 +162,36 @@ body {
 .col-span-4 { grid-column: span 4; }
 
 /* Map Capture */
-.map-capture-box { 
-  width: 100%; height: 350px; background: #e2e8f0; 
-  border-radius: 12px; overflow: hidden; position: relative; 
-  border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
+.map-capture-box { width: 100%; height: 350px; background: #e2e8f0; border-radius: 12px; overflow: hidden; position: relative; border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
 .map-capture-img { width: 100%; height: 100%; object-fit: cover; }
 
 /* Summary Grid */
 .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 30px; }
-.summary-card { 
-  background: white; padding: 20px; border-radius: 16px; text-align: center; 
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;
-  transition: transform 0.2s;
-}
-.summary-card:hover { transform: translateY(-3px); }
+.summary-card { background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
 .summary-val { font-size: 32px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 5px; }
 .summary-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
 
-/* Status List in Report (No Scroll) */
+/* Status List (No Scroll) */
 .report-section.no-scroll { overflow: visible; height: auto; }
 .status-list-container { display: flex; flex-direction: column; gap: 12px; }
-.report-section .status-item {
-  background: #fff; border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
-  border-radius: 12px 12px 0 0; padding: 12px 16px; cursor: default;
-}
-.report-section .status-details {
-  display: block; background: #f8fafc;
-  border: 1px solid #e2e8f0; border-top: none;
-  border-radius: 0 0 12px 12px; padding: 16px;
-}
-.report-section .status-item.selected { border-color: #e2e8f0; background: white; }
+.report-section .status-item { background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); border-radius: 12px 12px 0 0; padding: 12px 16px; cursor: default; }
+.report-section .status-details { display: block; background: #f8fafc; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px; padding: 16px; }
+.sub-stat-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: #334155; font-weight: 500; }
+.sub-stat-bar-bg { height: 6px; background: #e2e8f0; border-radius: 3px; }
+.sub-stat-bar-fill { height: 100%; border-radius: 3px; }
 
-/* Chart Containers */
-.chart-wrapper { position: relative; height: 320px; width: 100%; }
-.chart-wrapper.tall { height: 500px; }
+/* Charts */
+.chart-wrapper { position: relative; height: 350px; width: 100%; }
+.chart-wrapper.tall { height: 600px; }
 
 /* Responsive */
-@media (max-width: 1200px) {
-  .summary-grid { grid-template-columns: repeat(3, 1fr); }
-  .col-span-8, .col-span-4 { grid-column: span 12; }
-}
-@media (max-width: 768px) {
-  .col-span-6 { grid-column: span 12; }
-  .summary-grid { grid-template-columns: repeat(2, 1fr); }
-  .report-meta { position: static; text-align: center; margin-top: 10px; }
-  .btn-pdf { position: static; margin-bottom: 10px; justify-content: center; width: 100%; }
-  .report-actions { position: absolute; top: 15px; right: 15px; }
-}
+@media (max-width: 1200px) { .summary-grid { grid-template-columns: repeat(3, 1fr); } .col-span-8, .col-span-4 { grid-column: span 12; } }
+@media (max-width: 768px) { .col-span-6 { grid-column: span 12; } .summary-grid { grid-template-columns: repeat(2, 1fr); } .report-meta { position: static; text-align: center; margin-top: 10px; } .btn-pdf { position: static; margin-bottom: 10px; justify-content: center; width: 100%; } }
 
-/* ----- LOADING & INFO ----- */
-.loading-overlay {
-  position: absolute; inset: 0; background: rgba(255,255,255,0.8);
-  backdrop-filter: blur(5px); z-index: 999;
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  transition: opacity 0.5s;
-}
+/* Loading & Info */
+.loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s; }
 .loading-overlay.hide { opacity: 0; pointer-events: none; }
-.spinner {
-  width: 40px; height: 40px; border: 4px solid #e0e7ff;
-  border-top-color: var(--primary); border-radius: 50%;
-  animation: spin 1s linear infinite; margin-bottom: 10px;
-}
+.spinner { width: 40px; height: 40px; border: 4px solid #e0e7ff; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* InfoWindow */
@@ -385,12 +204,7 @@ body {
 .info-val { color: #111; font-weight: 600; text-align: right; overflow-wrap: break-word; max-width: 180px; }
 .section-header { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; margin: 12px 0 8px 0; border-bottom: 2px solid #eee; padding-bottom: 4px; }
 
-@media (max-width: 600px) {
-  .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; }
-  .controls-container { top: auto; bottom: 80px; right: 20px; }
-  .control-card { width: 45px; } .control-card:hover, .control-card.expanded { width: 160px; }
-  .search-container { width: 75%; }
-}
+@media (max-width: 600px) { .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; } .controls-container { top: auto; bottom: 80px; right: 20px; } .control-card { width: 45px; } .control-card:hover, .control-card.expanded { width: 160px; } .search-container { width: 75%; } }
 </style>
 </head>
 <body>
@@ -422,14 +236,12 @@ body {
     <div class="panel-header">
       <h2><i class="fas fa-layer-group"></i> Statistik Projek</h2>
     </div>
-    
     <div class="panel-content">
       <div class="main-stat">
         <div class="main-stat-value" id="total-projects">0</div>
         <div class="main-stat-label">Jumlah Projek</div>
         <div id="selected-area" class="area-badge">SELURUH SABAH</div>
       </div>
-
       <div class="grid-stats">
         <div class="mini-stat" id="stat-card-menara" onclick="handleCategoryClick('TOWER', 'stat-card-menara')">
           <div class="mini-stat-val" id="menara-count" style="color: #FF5722;">0</div>
@@ -448,10 +260,8 @@ body {
           <div class="mini-stat-lbl">POP</div>
         </div>
       </div>
-
       <div class="status-section-title">Status Kemajuan</div>
       <div id="status-list"></div>
-
       <div class="legend-mini">
         <div class="legend-row"><span class="dot" style="background: #FF5722;"></span> Menara Komunikasi</div>
         <div class="legend-row"><span class="dot" style="background: #2196F3;"></span> Pusat NADI</div>
@@ -497,16 +307,15 @@ body {
     </div>
   </div>
 
-  <!-- Report Card Modal (ECHARTS VERSION) -->
+  <!-- Report Card Modal -->
   <div class="report-modal-overlay" id="report-overlay">
     <div class="report-container" id="report-print-area">
-        
         <div class="report-header">
             <button class="btn-pdf" onclick="downloadPDF()">
-                <i class="fas fa-file-pdf"></i> Muat Turun PDF
+                <i class="fas fa-file-pdf"></i> Muat Turun PDF LENGKAP
             </button>
             <div class="report-meta">
-                <div class="report-date" id="report-date-text">17 Dis 2025, 3:35PM</div>
+                <div class="report-date" id="report-date-text"></div>
             </div>
             <div class="report-actions">
                 <button class="btn-close" onclick="closeReportCard()"><i class="fas fa-times"></i></button>
@@ -517,7 +326,6 @@ body {
         </div>
 
         <div class="report-body">
-            
             <!-- Summary Stats -->
             <div class="summary-grid">
                 <div class="summary-card" style="border: 2px solid var(--primary);">
@@ -547,47 +355,33 @@ body {
                 <div class="report-section col-span-8">
                     <h3><i class="fas fa-map"></i> Peta Lokasi</h3>
                     <div class="map-capture-box" id="map-capture-container">
-                        <div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999;">
-                             Memproses Peta...
-                        </div>
+                        <div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999;">Memproses Peta...</div>
                     </div>
                 </div>
 
-                <!-- Status Progress (No Scroll) -->
+                <!-- Status Progress -->
                 <div class="report-section col-span-4 no-scroll">
                     <h3><i class="fas fa-list-ul"></i> Status Kemajuan</h3>
-                    <div class="status-list-container" id="report-status-full-list">
-                        <!-- Injected via JS -->
-                    </div>
+                    <div class="status-list-container" id="report-status-full-list"></div>
                 </div>
 
-                <!-- Chart 1: Komposisi Kategori -->
+                <!-- Charts -->
                 <div class="report-section col-span-4">
                     <h3><i class="fas fa-chart-pie"></i> Komposisi Kategori</h3>
                     <div class="chart-wrapper" id="chart-cat-doughnut"></div>
                 </div>
-
-                <!-- Chart 2: Status Keseluruhan (Pie Standard) -->
                 <div class="report-section col-span-4">
-                    <h3><i class="fas fa-tachometer-alt"></i> Status Keseluruhan</h3>
+                    <h3><i class="fas fa-chart-pie"></i> Status Keseluruhan</h3>
                     <div class="chart-wrapper" id="chart-status-pie"></div>
                 </div>
-
-                <!-- Chart 3: Carta Status (Nightingale) -->
                 <div class="report-section col-span-4">
-                    <h3><i class="fas fa-chart-pie"></i> Pecahan Status</h3>
-                    <div class="chart-wrapper" id="chart-status-nightingale"></div>
-                </div>
-
-                <!-- Chart 4: Kategori vs Status (Cluster Bar) -->
-                <div class="report-section col-span-12">
                     <h3><i class="fas fa-chart-bar"></i> Kategori Projek VS Status</h3>
                     <div class="chart-wrapper" id="chart-cat-status-bar"></div>
                 </div>
                 
-                <!-- Chart 5: Analisis Kawasan (Bar Race Style) -->
+                <!-- Advanced Analysis Area -->
                 <div class="report-section col-span-12">
-                    <h3><i class="fas fa-chart-line"></i> Analisis Mengikut Kawasan</h3>
+                    <h3><i class="fas fa-chart-line"></i> Analisis Mengikut Kawasan (Status Sebenar)</h3>
                     <div class="chart-wrapper tall" id="chart-area-race"></div>
                 </div>
             </div>
@@ -627,14 +421,13 @@ let markersList = [];
 let allProjects = [];
 let areaIndex = new Map();
 let dataLayers = { district: null, dun: null, parliament: null };
-let currentBoundaryKey = null; // 'district', 'dun', 'parliament'
+let currentBoundaryKey = null;
 let hoverInfoWindow = null;
 let refreshIntervalMs = 60_000;
 let batchSize = 300;
 let activeFeature = null;
 let activeLayer = null;
 let searchTerm = "";
-
 let activeDashboardCategory = null; 
 let activeStatusFilter = null;      
 let currentFilteredData = [];
@@ -853,7 +646,7 @@ function animateValue(id, start, end, duration) {
   const t = setInterval(() => { current += inc; obj.innerHTML = current; if (current == end) clearInterval(t); }, Math.max(step, 10));
 }
 
-// ---------- REPORT GENERATION ----------
+// ---------- REPORT GENERATION & DATA PREP ----------
 function generateReport() {
     const data = currentFilteredData || allProjects;
     const title = document.getElementById("selected-area").textContent;
@@ -863,47 +656,41 @@ function generateReport() {
     document.getElementById("report-date-text").textContent = now.toLocaleDateString('ms-MY', {day:'2-digit', month:'short', year:'numeric'}) + ", " + now.toLocaleTimeString('ms-MY', {hour:'2-digit', minute:'2-digit'});
 
     let counts = { TOWER:0, NADI:0, BWA:0, POP:0 };
-    let statusStats = {};
-    let catStatusMap = {}; // Key: Category -> { Siap: 0, Bina: 0, Rancang: 0 } - Wait, user asked for X=Cat, Series=Status
-
-    // Simplified Status grouping helper
-    const getSimpleStatus = (s) => {
-        const u = s.toUpperCase();
-        if(u.includes("SIAP") || u.includes("OPERASI")) return "SIAP / OPERASI";
-        if(u.includes("BINA") || u.includes("PELAKSANAAN")) return "DALAM PEMBINAAN";
-        return "PERANCANGAN / LAIN";
-    };
+    let statusStats = {}; // Total aggregation for pie chart and list
+    let catStatusMap = {}; // TOWER -> { Siap: 10, Bina: 5 }
+    let allUniqueStatuses = new Set();
 
     data.forEach(p => {
         if(counts[p._type]!==undefined) counts[p._type]++;
         const s = String(p.STATUS || "N/A").trim();
-        const simpleS = getSimpleStatus(s);
+        allUniqueStatuses.add(s);
 
         if(!statusStats[s]) statusStats[s] = { total:0, types:{} };
         statusStats[s].total++;
         if(!statusStats[s].types[p._type]) statusStats[s].types[p._type]=0;
         statusStats[s].types[p._type]++;
         
-        // Populate Cat-Status Map
-        if(!catStatusMap[p._type]) catStatusMap[p._type] = { "SIAP / OPERASI":0, "DALAM PEMBINAAN":0, "PERANCANGAN / LAIN":0 };
-        catStatusMap[p._type][simpleS]++;
+        // Populate Cat-Status Map (Chart 4)
+        if(!catStatusMap[p._type]) catStatusMap[p._type] = {};
+        if(!catStatusMap[p._type][s]) catStatusMap[p._type][s] = 0;
+        catStatusMap[p._type][s]++;
     });
     
-    // Update Stats
+    // Update Header Stats
     document.getElementById("rpt-total").textContent = data.length;
     document.getElementById("rpt-menara").textContent = counts.TOWER;
     document.getElementById("rpt-nadi").textContent = counts.NADI;
     document.getElementById("rpt-bwa").textContent = counts.BWA;
     document.getElementById("rpt-pop").textContent = counts.POP;
 
-    // Report Status List (Expanded)
+    // Report Status List
     const listEl = document.getElementById("report-status-full-list"); listEl.innerHTML = "";
     Object.entries(statusStats).sort((a,b)=>b[1].total-a[1].total).forEach(([status, d]) => {
         const pct = data.length > 0 ? Math.round((d.total/data.length)*100) : 0;
         let ec="#4F46E5", sc="#818cf8"; const u = status.toUpperCase();
-        if(u.match(/SIAP|OPERASI/)) { ec="#4CAF50"; sc="#81c784"; }
-        else if(u.match(/BINA/)) { ec="#2196F3"; sc="#64b5f6"; }
-        else if(u.match(/RANCANG/)) { ec="#FF9800"; sc="#ffb74d"; }
+        if(u.includes("SIAP") || u.includes("OPERASI")) { ec="#4CAF50"; sc="#81c784"; }
+        else if(u.includes("BINA") || u.includes("PELAKSANAAN")) { ec="#2196F3"; sc="#64b5f6"; }
+        else if(u.includes("RANCANG")) { ec="#FF9800"; sc="#ffb74d"; }
         
         let det = "";
         Object.entries(d.types).sort((a,b)=>b[1]-a[1]).forEach(([t, c]) => {
@@ -915,39 +702,43 @@ function generateReport() {
         listEl.appendChild(div);
     });
 
-    // Prepare Area Analysis Data (Bar Race)
-    // Logic: Identify current level -> Group by next level
-    let areaData = [];
+    // Prepare Area Analysis Data (Chart 5)
+    // Y-Axis: Areas (District/DUN). X-Axis: 4 Bars (Cats). Stacked by Status.
+    // Structure: Area -> Cat -> Status -> Count
     let groupKey = 'DISTRICT'; 
-    // Usually if current boundary is 'district', user sees DUNs. If 'Sabah', user sees Districts.
-    // If currentFilteredData is subset (e.g. 1 district), we list its DUNs.
     if (currentBoundaryKey === 'district') groupKey = 'DUN';
     else if (currentBoundaryKey === 'parliament') groupKey = 'DUN';
     
     let areaMap = {};
     data.forEach(p => {
         const area = normalizeString(p[groupKey] || "Lain-lain");
-        if(!areaMap[area]) areaMap[area] = { total:0, cat:{TOWER:0, NADI:0, BWA:0, POP:0}, stat:{"SIAP":0, "BINA":0, "LAIN":0} };
-        areaMap[area].total++;
-        if(areaMap[area].cat[p._type] !== undefined) areaMap[area].cat[p._type]++;
-        
-        const ss = getSimpleStatus(p.STATUS || "");
-        if(ss.includes("SIAP")) areaMap[area].stat["SIAP"]++;
-        else if(ss.includes("BINA")) areaMap[area].stat["BINA"]++;
-        else areaMap[area].stat["LAIN"]++;
+        if(!areaMap[area]) areaMap[area] = {}; // { TOWER: { Siap: 1 }, NADI: {} }
+        if(!areaMap[area][p._type]) areaMap[area][p._type] = {};
+        const s = String(p.STATUS || "N/A").trim();
+        if(!areaMap[area][p._type][s]) areaMap[area][p._type][s] = 0;
+        areaMap[area][p._type][s]++;
     });
 
-    areaData = Object.keys(areaMap).map(k => ({ name: k, ...areaMap[k] })).sort((a,b) => b.total - a.total);
-    // Limit to top 20 to prevent clutter
-    if(areaData.length > 20) areaData = areaData.slice(0, 20);
+    // Sort areas by total projects
+    let areaKeys = Object.keys(areaMap).sort((a,b) => {
+        let totalA = 0, totalB = 0;
+        Object.values(areaMap[a]).forEach(c => Object.values(c).forEach(v => totalA += v));
+        Object.values(areaMap[b]).forEach(c => Object.values(c).forEach(v => totalB += v));
+        return totalA - totalB; // Ascending for Y-axis bottom-to-top
+    });
+    // If too many, take top 30
+    if(areaKeys.length > 30) areaKeys = areaKeys.slice(areaKeys.length - 30);
 
-    setTimeout(() => renderECharts(counts, statusStats, catStatusMap, areaData), 100);
+    setTimeout(() => renderECharts(counts, statusStats, catStatusMap, Array.from(allUniqueStatuses), areaMap, areaKeys), 100);
     captureMapForReport();
     document.getElementById("report-overlay").classList.add("active");
 }
 
-function renderECharts(counts, statusStats, catStatusMap, areaData) {
+function renderECharts(counts, statusStats, catStatusMap, uniqueStatuses, areaMap, areaKeys) {
     const init = (id) => { const d=document.getElementById(id); if(chartInstances[id]) chartInstances[id].dispose(); chartInstances[id]=echarts.init(d); return chartInstances[id]; };
+
+    // Common Label Settings
+    const labelOption = { show: true, position: 'inside', formatter: (p)=>p.value>0?p.value:'', color:'#fff', fontWeight:'bold', textBorderColor:'#000', textBorderWidth:1 };
 
     // 1. Kategori (Doughnut)
     init('chart-cat-doughnut').setOption({
@@ -955,7 +746,7 @@ function renderECharts(counts, statusStats, catStatusMap, areaData) {
         legend: { bottom:0 },
         series: [{
             type:'pie', radius:['45%','70%'], itemStyle:{borderRadius:8, borderColor:'#fff', borderWidth:2},
-            label:{show:true, formatter:'{b}\n{c}', fontWeight:'bold'},
+            label:{show:true, formatter:'{b}\n{c} ({d}%)', fontWeight:'bold'},
             data:[
                 {value:counts.TOWER, name:'Menara', itemStyle:{color:'#FF5722'}},
                 {value:counts.NADI, name:'NADI', itemStyle:{color:'#2196F3'}},
@@ -969,73 +760,81 @@ function renderECharts(counts, statusStats, catStatusMap, areaData) {
     const statData = Object.entries(statusStats).map(([k,v]) => ({value:v.total, name:k})).sort((a,b)=>b.value-a.value);
     init('chart-status-pie').setOption({
         tooltip: { trigger:'item', formatter:'{b}: {c} ({d}%)' },
-        legend: { show:false },
         series: [{
             type:'pie', radius:'70%', center:['50%','50%'],
             itemStyle:{borderRadius:5, borderColor:'#fff', borderWidth:1},
-            label:{show:true, formatter:'{b}:\n{c} ({d}%)', fontSize:10},
+            label:{show:true, formatter:'{b}:\n{c} ({d}%)', fontSize:11, fontWeight:'bold'},
             data: statData
         }]
     });
 
-    // 3. Pecahan Status (Nightingale)
-    init('chart-status-nightingale').setOption({
-        tooltip: { trigger:'item' },
-        series: [{ type:'pie', radius:[15, 100], roseType:'area', itemStyle:{borderRadius:6}, label:{show:true}, data: statData }]
-    });
-
-    // 4. Cat vs Status (Clustered Bar)
-    // X = Categories, Bars = Status Groups
+    // 3. Kategori vs Status (Actual Status Stacked Bar)
     const cats = ['TOWER', 'NADI', 'BWA', 'POP'];
     const displayCats = ['Menara', 'NADI', 'WiFi', 'POP'];
-    const stats = ['SIAP / OPERASI', 'DALAM PEMBINAAN', 'PERANCANGAN / LAIN'];
-    const colors = ['#4CAF50', '#2196F3', '#FF9800'];
-    
-    const seriesList = stats.map((s, idx) => {
-        return {
-            name: s, type: 'bar', stack: null, 
-            data: cats.map(c => catStatusMap[c] ? catStatusMap[c][s] : 0),
-            itemStyle: { color: colors[idx] },
-            label: { show: true, position: 'top', formatter: (p)=>p.value>0?p.value:'' }
-        };
-    });
+    const statusSeries4 = uniqueStatuses.map(s => ({
+        name: s, type: 'bar', stack: 'total',
+        data: cats.map(c => (catStatusMap[c] && catStatusMap[c][s]) ? catStatusMap[c][s] : 0),
+        label: labelOption, emphasis: { focus: 'series' }
+    }));
 
     init('chart-cat-status-bar').setOption({
         tooltip: { trigger:'axis', axisPointer:{type:'shadow'} },
-        legend: { bottom: 0 },
+        legend: { bottom: 0, type: 'scroll' },
         grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
         xAxis: { type: 'category', data: displayCats, axisLabel:{fontWeight:'bold'} },
         yAxis: { type: 'value' },
-        series: seriesList
+        series: statusSeries4
     });
 
-    // 5. Analisis Kawasan (Bar Race Style - 2 Stacked Bars per Y-category)
-    // We simulate "2 bars" using multiple series on same Y-axis but distinct stack groups?
-    // Actually simpler: Stacked Bar for Cat, Stacked Bar for Status. 
-    // Problem: ECharts places them on top of each other if category implies same axis slot.
-    // Solution: Use multiple x-axes or just simpler stacked bar of just categories?
-    // The prompt asked for "Bar 1 total projects by category, Bar 2 status".
-    // We can use 'barGap' to separate them.
+    // 4. Analisis Mengikut Kawasan (Complex Grouped Stacked Bar)
+    // For each category (Tower/Nadi...), we create a stack group. 
+    // Inside that stack group, we have series for each status.
+    // Total series = 4 categories * N statuses.
+    const chartAreaSeries = [];
+    const catKeys = ['TOWER', 'NADI', 'BWA', 'POP'];
+    const catColors = { TOWER:'#FF5722', NADI:'#2196F3', BWA:'#4CAF50', POP:'#FF9800' };
     
-    const yLabels = areaData.map(d => d.name).reverse();
-    // Series A (Cats)
-    const sMenara = { name:'Menara', type:'bar', stack:'cat', data:areaData.map(d=>d.cat.TOWER).reverse(), itemStyle:{color:'#FF5722'} };
-    const sNadi = { name:'NADI', type:'bar', stack:'cat', data:areaData.map(d=>d.cat.NADI).reverse(), itemStyle:{color:'#2196F3'} };
-    const sWifi = { name:'WiFi', type:'bar', stack:'cat', data:areaData.map(d=>d.cat.BWA).reverse(), itemStyle:{color:'#4CAF50'} };
-    const sPop = { name:'POP', type:'bar', stack:'cat', data:areaData.map(d=>d.cat.POP).reverse(), itemStyle:{color:'#FF9800'} };
+    // We need to shift bars so they appear side-by-side for each Y-category (Area).
+    // ECharts handles this if we give different `stack` names.
+    // stack: 'Tower', stack: 'Nadi' etc.
     
-    // Series B (Status) - use separate stack, label inside
-    const stSiap = { name:'Siap', type:'bar', stack:'stat', data:areaData.map(d=>d.stat.SIAP).reverse(), itemStyle:{color:'#4CAF50', opacity:0.6}, barGap: '5%' };
-    const stBina = { name:'Bina', type:'bar', stack:'stat', data:areaData.map(d=>d.stat.BINA).reverse(), itemStyle:{color:'#2196F3', opacity:0.6} };
-    const stLain = { name:'Lain', type:'bar', stack:'stat', data:areaData.map(d=>d.stat.LAIN).reverse(), itemStyle:{color:'#FF9800', opacity:0.6} };
+    catKeys.forEach(cat => {
+        uniqueStatuses.forEach(stat => {
+            const data = areaKeys.map(area => {
+                // areaMap[area][cat][stat]
+                if(areaMap[area] && areaMap[area][cat] && areaMap[area][cat][stat]) return areaMap[area][cat][stat];
+                return 0;
+            });
+            
+            // Only add series if there is data
+            if(data.some(v => v > 0)) {
+                chartAreaSeries.push({
+                    name: `${cat} - ${stat}`, // Legend name
+                    type: 'bar',
+                    stack: cat, // Stacks belonging to same category
+                    data: data,
+                    label: { show: true, position: 'inside', formatter: (p)=>p.value>0?p.value:'', fontSize: 9 },
+                    itemStyle: { 
+                        // Visual trick: Base color is category color, opacity varies by status index? 
+                        // Or just random colors? Better to stick to category themes.
+                        color: catColors[cat],
+                        opacity: 0.4 + (uniqueStatuses.indexOf(stat) % 5) * 0.15, // vary opacity for distinction
+                        borderColor: '#fff', borderWidth: 0.5
+                    },
+                    barWidth: 12, // Thinner bars to fit 4 groups
+                    barGap: '10%' 
+                });
+            }
+        });
+    });
 
     init('chart-area-race').setOption({
         tooltip: { trigger:'axis', axisPointer:{type:'shadow'} },
-        legend: { top:0 },
-        grid: { left:'3%', right:'4%', bottom:'3%', containLabel:true },
-        xAxis: { type:'value', boundaryGap:[0, 0.01] },
-        yAxis: { type:'category', data:yLabels, axisLabel:{interval:0, fontSize:10} },
-        series: [sMenara, sNadi, sWifi, sPop, stSiap, stBina, stLain]
+        legend: { top: 0, type: 'scroll' }, // Too many items, scroll is needed
+        grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
+        xAxis: { type: 'value', position: 'top' },
+        yAxis: { type: 'category', data: areaKeys, axisLabel: { fontSize: 11, fontWeight:'bold' } },
+        series: chartAreaSeries
     });
 
     new ResizeObserver(() => { Object.values(chartInstances).forEach(c=>c.resize()); }).observe(document.querySelector('.report-grid'));
@@ -1044,20 +843,87 @@ function renderECharts(counts, statusStats, catStatusMap, areaData) {
 function captureMapForReport() {
     const m=document.getElementById("map"), c=document.getElementById("map-capture-container");
     c.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999;">Memproses Peta...</div>';
-    html2canvas(document.body, { allowTaint:true, useCORS:true, x:m.getBoundingClientRect().left, y:m.getBoundingClientRect().top, width:m.offsetWidth, height:m.offsetHeight, ignoreElements:(el)=>el.classList.contains('dashboard-panel')||el.classList.contains('controls-container')||el.classList.contains('search-container')||el.classList.contains('report-modal-overlay') })
-    .then(can => { c.innerHTML=""; const i=document.createElement("img"); i.src=can.toDataURL("image/png"); i.className="map-capture-img"; c.appendChild(i); })
-    .catch(() => c.innerHTML='<div style="padding:20px; text-align:center; color:red;">Gagal menangkap peta.</div>');
+    
+    // Clone map logic not perfect for Google Maps (canvas taint). 
+    // Fallback: Just capture the current view directly using html2canvas options
+    html2canvas(document.body, { 
+        allowTaint: true, useCORS: true, 
+        x: m.getBoundingClientRect().left, y: m.getBoundingClientRect().top, 
+        width: m.offsetWidth, height: m.offsetHeight, 
+        ignoreElements:(el)=>el.classList.contains('dashboard-panel')||el.classList.contains('controls-container')||el.classList.contains('report-modal-overlay') 
+    }).then(can => { 
+        c.innerHTML=""; const i=document.createElement("img"); i.src=can.toDataURL("image/png"); 
+        i.className="map-capture-img"; c.appendChild(i); 
+    }).catch(() => c.innerHTML='<div style="padding:20px; text-align:center; color:red; font-size:12px">Gagal menangkap peta (Security limitation).</div>');
 }
+
+/* --- FULL PDF DOWNLOAD LOGIC --- */
 function downloadPDF() {
-    const { jsPDF } = window.jspdf; const doc = new jsPDF('p','mm','a4'); const el = document.getElementById('report-print-area');
-    el.querySelectorAll('button').forEach(b=>b.style.display='none');
-    html2canvas(el, { scale:1.5 }).then(c => {
-        const d = c.toDataURL('image/png'), w=210, h=c.height*w/c.width;
-        let hl=h, p=0; doc.addImage(d,'PNG',0,p,w,h); hl-=295;
-        while(hl>=0) { p=hl-h; doc.addPage(); doc.addImage(d,'PNG',0,p,w,h); hl-=295; }
-        doc.save('Laporan_Projek_Sabah.pdf'); el.querySelectorAll('button').forEach(b=>b.style.display='');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const originalEl = document.getElementById('report-print-area');
+    
+    // 1. Create a clone container off-screen
+    const clone = originalEl.cloneNode(true);
+    clone.style.width = '1200px'; // Fixed width for consistent layout
+    clone.style.height = 'auto';  // Full height
+    clone.style.maxHeight = 'none';
+    clone.style.position = 'absolute';
+    clone.style.top = '-9999px';
+    clone.style.left = '-9999px';
+    clone.style.overflow = 'visible'; // Ensure content flows
+    clone.style.zIndex = '9999';
+    
+    // Fix scrollable sections in clone
+    const scrollables = clone.querySelectorAll('.report-body, .report-section');
+    scrollables.forEach(el => { el.style.overflow = 'visible'; el.style.maxHeight = 'none'; el.style.height = 'auto'; });
+
+    // Hide buttons in clone
+    clone.querySelectorAll('button').forEach(b => b.style.display = 'none');
+
+    // 2. Handle ECharts Canvases (Canvas not copied by cloneNode)
+    // We must manually copy charts as images into the clone
+    const origCanvases = originalEl.querySelectorAll('canvas');
+    const cloneCanvases = clone.querySelectorAll('canvas');
+    
+    // Replace clone canvases with images
+    origCanvases.forEach((origCanvas, index) => {
+        const img = document.createElement('img');
+        img.src = origCanvas.toDataURL('image/png');
+        img.style.width = '100%';
+        img.style.height = '100%';
+        // Replace the parent wrapper content in clone to hold just the img
+        const wrapper = cloneCanvases[index].parentNode; // .chart-wrapper usually
+        wrapper.innerHTML = ''; 
+        wrapper.appendChild(img);
+    });
+
+    document.body.appendChild(clone);
+
+    // 3. Capture the full clone
+    html2canvas(clone, { scale: 1.5, useCORS: true }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; // A4 width mm
+        const pageHeight = 295; // A4 height mm
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          doc.addPage();
+          doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        
+        doc.save('Laporan_Penuh_Sabah.pdf');
+        document.body.removeChild(clone); // Cleanup
     });
 }
+
 function closeReportCard() { document.getElementById("report-overlay").classList.remove("active"); }
 
 // Init
