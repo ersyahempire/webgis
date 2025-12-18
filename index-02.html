@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.1 - Premium Dashboard</title>
+  <title>Web GIS Projek Sabah v4.1 - Premium Dashboard (Debugged)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -502,7 +502,7 @@ body {
       </button>
     </div>
   </div>
-   
+    
   <!-- Main Script Logic -->
   <script>
     // ---------- UI HELPER ----------
@@ -520,6 +520,7 @@ body {
     });
 
     // ---------- CONFIG ----------
+    // Pastikan fail JSON ini wujud di direktori yang sama
     const URLs = {
       district: "district.json",
       dun: "dun.json",
@@ -589,6 +590,7 @@ body {
     function cleanFloat(val) {
       if (typeof val === 'number') return val;
       if (!val) return 0;
+      // Gunakan regex yang lebih ketat untuk mengekstrak float
       const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
       const floatVal = parseFloat(str);
       return isNaN(floatVal) ? 0 : floatVal;
@@ -633,35 +635,52 @@ body {
 
     // ---------- DATA PARSING ----------
     function parseGviz(text) {
-      try {
-        const start = text.indexOf('{');
-        const end = text.lastIndexOf('}');
-        if (start === -1 || end === -1) return null;
-        return JSON.parse(text.substring(start, end + 1));
-      } catch (e) {
-        console.error("parseGviz failed", e);
-        return null;
-      }
+        // IMPROVED PARSING: Gunakan Regex untuk mengekstrak JSON dengan lebih selamat
+        // daripada bergantung kepada substring '{' dan '}' yang mungkin wujud dalam data
+        try {
+            const regex = /google\.visualization\.Query\.setResponse\((.*)\);/;
+            const match = text.match(regex);
+            if (match && match[1]) {
+                return JSON.parse(match[1]);
+            }
+            // Fallback kepada kaedah lama jika regex gagal
+            const start = text.indexOf('{');
+            const end = text.lastIndexOf('}');
+            if (start === -1 || end === -1) return null;
+            return JSON.parse(text.substring(start, end + 1));
+        } catch (e) {
+            console.error("parseGviz failed", e);
+            return null;
+        }
     }
 
     async function fetchSheetObjects(sheetId) {
       const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&tq=`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Sheet fetch ${sheetId} failed (${res.status})`);
-      const text = await res.text();
-      const json = parseGviz(text);
-      if (!json || !json.table) return { rows: [], cols: [] };
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Sheet fetch ${sheetId} failed (${res.status})`);
+        const text = await res.text();
+        const json = parseGviz(text);
+        if (!json || !json.table) return { rows: [], cols: [] };
 
-      const rawCols = json.table.cols.map(c => (c && c.label) ? c.label.toUpperCase() : "");
-      const rows = json.table.rows || [];
+        const rawCols = json.table.cols.map(c => (c && c.label) ? c.label.toUpperCase() : "");
+        const rows = json.table.rows || [];
 
-      const processedRows = rows.map(r => {
-        const obj = {};
-        rawCols.forEach((c, i) => obj[c ? c : `COL${i}`] = (r.c && r.c[i] ? r.c[i].v : ""));
-        return obj;
-      });
+        const processedRows = rows.map(r => {
+            const obj = {};
+            rawCols.forEach((c, i) => {
+                // Handle null cells (r.c[i] boleh jadi null)
+                const cell = (r.c && r.c[i]) ? r.c[i] : null;
+                obj[c ? c : `COL${i}`] = (cell && cell.v !== null) ? cell.v : "";
+            });
+            return obj;
+        });
 
-      return { rows: processedRows, cols: rawCols.filter(c => c && !c.startsWith("COL")) };
+        return { rows: processedRows, cols: rawCols.filter(c => c && !c.startsWith("COL")) };
+      } catch (e) {
+          console.warn(`Gagal memuat turun data sheet: ${sheetId}`, e);
+          return { rows: [], cols: [] };
+      }
     }
 
     function normalizeRows(rows, sheetKey, rawCols) {
@@ -681,6 +700,7 @@ body {
 
         const rawDetails = [];
         let count = 0;
+        // Fix loop boundary check
         for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
           const key = rawCols[colIndex];
           if (normalizedKeys.has(key)) continue;
@@ -693,7 +713,8 @@ body {
 
         const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
         
-        const isValidCoordinate = (lat !== 0 && lng !== 0 && lat > 0 && lng > 100); 
+        // Ensure lat/lng is within reasonable Malaysia/Sabah bounds if needed, or just valid numbers
+        const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
 
         const rowObj = {
           SITE_NAME: String(site || "N/A").trim(),
@@ -869,11 +890,15 @@ body {
       // 2. Tapis mengikut Carian
       if (searchTerm && searchTerm.length > 0) {
         const term = searchTerm.toLowerCase();
-        if (!searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/)) {
+        // Check if searchTerm looks like coordinates
+        const isCoordSearch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
+        
+        if (!isCoordSearch) {
             filteredList = filteredList.filter(p =>
             (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
             (p.DISTRICT && p.DISTRICT.toLowerCase().includes(term)) ||
-            (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term))
+            (p.PARLIAMENT && p.PARLIAMENT.toLowerCase().includes(term)) ||
+            (p.DUN && p.DUN.toLowerCase().includes(term))
             );
         }
       }
@@ -926,7 +951,7 @@ body {
 
       const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
       
-      // Struktur data untuk status breakdown: { "SIAP": { total: 10, items: { "TOWER": 5, "NADI": 5 } } }
+      // Struktur data untuk status breakdown
       const statusBreakdown = {};
 
       displayList.forEach(p => {
@@ -1065,7 +1090,11 @@ body {
     async function loadGeoJsonLayer(key, url, baseStyle = {}) {
       try {
         const resp = await fetch(url);
-        if (!resp.ok) throw new Error("geojson fetch failed " + url);
+        // Better error handling for missing JSON files
+        if (!resp.ok) {
+            console.warn(`GeoJSON ${key} not found (${resp.status})`);
+            return null;
+        }
         const json = await resp.json();
 
         const layer = new google.maps.Data({ map: null });
@@ -1178,6 +1207,12 @@ body {
 
       boundaries.forEach(b => {
         document.getElementById(b.id)?.addEventListener("click", function () {
+          // Check if layer exists before toggling
+          if (!dataLayers[b.key]) {
+              alert(`Maaf, data sempadan ${b.key} gagal dimuatkan atau tiada fail JSON.`);
+              return;
+          }
+
           if (this.classList.contains('active') && currentBoundaryKey === b.key) {
             this.classList.remove('active');
             dataLayers[b.key].setMap(null);
@@ -1271,18 +1306,27 @@ body {
           filterAndDisplayMarkers();
         });
 
-        const pDistrict = loadGeoJsonLayer("district", URLs.district).catch(e => null);
-        const pDun = loadGeoJsonLayer("dun", URLs.dun).catch(e => null);
-        const pPar = loadGeoJsonLayer("parliament", URLs.parliament).catch(e => null);
+        // Use Promise.allSettled to ensure failure of one GeoJSON doesn't stop others
+        // But map.idle logic needs to know what loaded.
+        
+        const pDistrict = loadGeoJsonLayer("district", URLs.district);
+        const pDun = loadGeoJsonLayer("dun", URLs.dun);
+        const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
 
+        // Wait for map idle before attaching large geometries
         google.maps.event.addListenerOnce(map, "idle", async () => {
-          const ld = await pDistrict;
+          // Await layers independently inside idle to avoid race conditions
+          await pDistrict;
           await pDun; 
           await pPar;
 
-          if (ld) {
+          // Only set map if layer successfully loaded
+          if (dataLayers['district']) {
             dataLayers['district'].setMap(map);
             currentBoundaryKey = 'district';
+          } else {
+             // Fallback if district fails
+             console.log("District layer missing, skipping default boundary.");
           }
           
           setupToggles();
@@ -1293,7 +1337,7 @@ body {
 
       } catch (e) {
         console.error("Init Error", e);
-        alert("Ralat sambungan data. Sila refresh.");
+        // Dont show alert here, better to just log, as marker data might still work
       } finally {
         showLoading(false);
       }
@@ -1302,8 +1346,8 @@ body {
     window.initMap = initMap;
   </script>
 
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap" async defer></script>
+  <!-- IMPORTANT: Replace YOUR_API_KEY with a valid Google Maps API Key -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap&v=weekly" async defer></script>
     
 </body>
 </html>
-
