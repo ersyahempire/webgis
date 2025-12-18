@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.5 - Report Card Fixed</title>
+  <title>Web GIS Projek Sabah v4.6 - Report Card Final</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -312,8 +312,10 @@ body {
 
 .report-sidebar { display: flex; flex-direction: column; gap: 20px; }
 .report-map-snapshot {
-    height: 250px; background: #ddd; border-radius: 16px; overflow: hidden;
+    height: 300px; background: #ddd; border-radius: 16px; overflow: hidden;
     border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative;
+    /* IMPORTANT: Ensure map container is valid */
+    display: block; width: 100%;
 }
 /* Clone dashboard styles for report */
 .report-sidebar .dashboard-panel {
@@ -507,9 +509,7 @@ body {
               <!-- Left Sidebar: Map & Stats -->
               <div class="report-sidebar">
                   <div class="report-map-snapshot" id="report-map-target">
-                      <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#888;">
-                          <i class="fas fa-spinner fa-spin"></i> Menjana Peta...
-                      </div>
+                      <!-- Map Container for Report -->
                   </div>
                   <!-- Duplicate Dashboard for PDF view -->
                   <div id="report-dashboard-clone"></div>
@@ -581,6 +581,7 @@ body {
 
     // ---------- STATE ----------
     let map;
+    let reportMap = null; // Separate instance for report
     let markersBySite = new Map();
     let markersLayerGroup;
     let allProjects = [];
@@ -593,7 +594,7 @@ body {
     let searchTerm = "";
     let activeDashboardCategory = null;
     let activeStatusFilter = null;
-    let currentFilteredList = []; // Track currently visible projects for reports
+    let currentFilteredList = []; 
 
     // ---------- UTIL HELPER ----------
     function showLoading(on) {
@@ -951,29 +952,79 @@ body {
         const clone = dashboardSource.cloneNode(true);
         dashboardTarget.appendChild(clone);
 
-        // 2. Map Snapshot "Clean Clone Method"
-        // This method avoids layer shifting issues by creating a clean copy of the map state
-        // into the report modal, instead of trying to screenshot the live map directly with all its CSS transforms.
-        
+        // 2. Map Snapshot "Clean Clone Method" with CANVAS Renderer Fix
         const snapshotTarget = document.getElementById('report-map-target');
-        snapshotTarget.innerHTML = '<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#888;"><i class="fas fa-spinner fa-spin"></i> Menjana Peta...</div>';
+        snapshotTarget.innerHTML = ''; 
+        
+        // Create a temporary map container inside the report
+        const tempMapDiv = document.createElement('div');
+        tempMapDiv.style.width = '100%';
+        tempMapDiv.style.height = '100%';
+        snapshotTarget.appendChild(tempMapDiv);
 
-        // Wait slightly for UI to settle
+        // Init new map instance
+        if(reportMap) { reportMap.remove(); reportMap = null; }
+        
+        reportMap = L.map(tempMapDiv, { 
+            zoomControl: false, 
+            attributionControl: false,
+            preferCanvas: true // GLOBAL CANVAS PREFERENCE
+        }).setView([5.9804, 116.0735], 8);
+
+        // Add Satellite Layer
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
+            attribution: '',
+            crossOrigin: 'anonymous' // Critical for html2canvas
+        }).addTo(reportMap);
+
+        // Add Current GeoJSON Layer with CANVAS RENDERER
+        if (currentBoundaryKey && dataLayers[currentBoundaryKey]) {
+             // We need the original GeoJSON data. Since we loaded it into dataLayers via L.geoJSON,
+             // we can grab the featureGroup's toGeoJSON() or re-fetch. 
+             // Re-fetching is safer or just use the cached data if we had it. 
+             // Simplest: re-fetch local json since we have URLs.
+             fetch(URLs[currentBoundaryKey]).then(r => r.json()).then(geoData => {
+                 const layer = L.geoJSON(geoData, {
+                     style: (feature) => ({ 
+                         color: "#4338ca", 
+                         weight: 2, 
+                         fillColor: (activeFeatureName === extractFeatureName(feature)) ? "#4338ca" : "#FFF", 
+                         fillOpacity: (activeFeatureName === extractFeatureName(feature)) ? 0.3 : 0.05 
+                     }),
+                     renderer: L.canvas() // FORCE CANVAS RENDERER TO FIX ALIGNMENT
+                 }).addTo(reportMap);
+                 
+                 // Fit bounds to selected area
+                 if(activeFeatureName) {
+                     layer.eachLayer(l => {
+                         if(extractFeatureName(l.feature) === activeFeatureName) {
+                             reportMap.fitBounds(l.getBounds());
+                         }
+                     });
+                 } else {
+                     reportMap.setView([5.9804, 116.0735], 8);
+                 }
+             });
+        } else {
+             // No boundary selected, just show Sabah
+             reportMap.setView([5.9804, 116.0735], 8);
+        }
+
+        // 2b. Convert to Static Image after delay (to freeze it)
         setTimeout(() => {
-            html2canvas(document.getElementById('map'), {
+            html2canvas(tempMapDiv, {
                 useCORS: true,
                 allowTaint: true,
-                ignoreElements: (element) => element.classList.contains('dashboard-panel') || element.classList.contains('controls-container') || element.classList.contains('search-container')
+                scale: 1 // Keep exact size
             }).then(canvas => {
                 const img = document.createElement('img');
                 img.src = canvas.toDataURL("image/png");
                 img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
-                snapshotTarget.innerHTML = ''; snapshotTarget.appendChild(img);
-            }).catch(err => {
-                console.error(err);
-                snapshotTarget.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;">Map Snapshot Unavailable</div>';
-            });
-        }, 500);
+                snapshotTarget.innerHTML = ''; 
+                snapshotTarget.appendChild(img);
+                reportMap = null; // Cleanup
+            }).catch(err => console.error("Map Snapshot Failed", err));
+        }, 1500); // Give time for tiles and canvas layer to render
 
         // 3. Render Charts
         renderReportCharts();
