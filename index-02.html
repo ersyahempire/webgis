@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.3 - Report Card</title>
+  <title>Web GIS Projek Sabah v4.4 - Report Card Premium</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -300,7 +300,7 @@ body {
     background: var(--primary); color: white; padding: 20px 30px;
     display: flex; justify-content: space-between; align-items: center;
 }
-.report-title h1 { margin: 0; font-size: 24px; font-weight: 800; display:flex; align-items:center; gap:10px; }
+.report-title h1 { margin: 0; font-size: 20px; font-weight: 800; display:flex; align-items:center; gap:10px; text-transform: uppercase;}
 .report-date { font-size: 12px; opacity: 0.8; margin-top: 5px; font-weight: 500;}
 .report-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; transition: 0.2s; font-size: 16px;}
 .report-close:hover { background: rgba(255,255,255,0.4); transform: rotate(90deg); }
@@ -507,7 +507,9 @@ body {
               <!-- Left Sidebar: Map & Stats -->
               <div class="report-sidebar">
                   <div class="report-map-snapshot" id="report-map-target">
-                      <!-- Map snapshot will be injected here -->
+                      <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#888;">
+                          <i class="fas fa-spinner fa-spin"></i> Menjana Peta...
+                      </div>
                   </div>
                   <!-- Duplicate Dashboard for PDF view -->
                   <div id="report-dashboard-clone"></div>
@@ -532,7 +534,7 @@ body {
                   </div>
 
                   <div class="chart-card" style="min-height: 400px;">
-                    <div class="chart-title">Senarai Projek Mengikut Kawasan (Bar Race)</div>
+                    <div class="chart-title">Analisis Keseluruhan Mengikut Kawasan (Race)</div>
                     <div id="chart-area-race" class="chart-container"></div>
                   </div>
               </div>
@@ -924,10 +926,14 @@ body {
     const btnOpenReport = document.getElementById('btn-open-report');
     if(btnOpenReport) btnOpenReport.addEventListener('click', openReport);
 
-    function openReport() {
+    async function openReport() {
         document.getElementById('report-overlay').classList.add('open');
         const now = new Date();
         document.getElementById('report-date-display').textContent = 'Generated on: ' + now.toLocaleString('ms-MY', { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'});
+
+        // UPDATE TITLE DINAMIK
+        const areaName = document.getElementById("selected-area").textContent;
+        document.querySelector('.report-title h1').innerHTML = `<i class="fas fa-chart-line"></i> REPORT KAD PROJEK ${areaName}`;
 
         // 1. Clone Dashboard (Stats)
         const dashboardSource = document.querySelector('.dashboard-panel .panel-content');
@@ -936,21 +942,38 @@ body {
         const clone = dashboardSource.cloneNode(true);
         dashboardTarget.appendChild(clone);
 
-        // 2. Map Snapshot (Workaround using simple html2canvas on map container)
-        // Note: Cross-origin tiles might cause issues, simplified capture
-        html2canvas(document.getElementById('map'), {
-            useCORS: true,
-            allowTaint: true,
-            ignoreElements: (element) => element.classList.contains('dashboard-panel') || element.classList.contains('controls-container') || element.classList.contains('search-container')
-        }).then(canvas => {
-            const img = document.createElement('img');
-            img.src = canvas.toDataURL("image/png");
-            img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
-            const target = document.getElementById('report-map-target');
-            target.innerHTML = ''; target.appendChild(img);
-        }).catch(err => {
-            document.getElementById('report-map-target').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;">Map Snapshot Unavailable</div>';
-        });
+        // 2. Map Snapshot "Whole Sabah with Highlight"
+        // Step A: Save current view
+        const currentCenter = map.getCenter();
+        const currentZoom = map.getZoom();
+
+        // Step B: Zoom out to Whole Sabah
+        map.setView([5.9804, 116.0735], 8);
+
+        // Step C: Wait for tiles to load (approx 1.5s delay)
+        const snapshotTarget = document.getElementById('report-map-target');
+        snapshotTarget.innerHTML = '<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#888;"><i class="fas fa-spinner fa-spin"></i> Menjana Peta...</div>';
+
+        // Use a slight delay to allow map to render
+        setTimeout(() => {
+            html2canvas(document.getElementById('map'), {
+                useCORS: true,
+                allowTaint: true,
+                ignoreElements: (element) => element.classList.contains('dashboard-panel') || element.classList.contains('controls-container') || element.classList.contains('search-container')
+            }).then(canvas => {
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL("image/png");
+                img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
+                snapshotTarget.innerHTML = ''; snapshotTarget.appendChild(img);
+                
+                // Step D: Restore original view
+                map.setView(currentCenter, currentZoom);
+            }).catch(err => {
+                console.error(err);
+                snapshotTarget.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;">Map Snapshot Unavailable</div>';
+                map.setView(currentCenter, currentZoom);
+            });
+        }, 1500);
 
         // 3. Render Charts
         renderReportCharts();
@@ -959,9 +982,10 @@ body {
     function closeReport() { document.getElementById('report-overlay').classList.remove('open'); }
 
     function renderReportCharts() {
+        // Use filtered list for specific stats
         const data = currentFilteredList.length > 0 ? currentFilteredList : allProjects;
         
-        // Chart 1: Doughnut - Total Projects by Category
+        // Chart 1: Doughnut - Total Projects by Category (Selected Area)
         const catCounts = { TOWER:0, BWA:0, NADI:0, POP:0 };
         data.forEach(d => { if(catCounts[d._type] !== undefined) catCounts[d._type]++; });
         
@@ -972,7 +996,7 @@ body {
             series: [{
                 name: 'Kategori', type: 'pie', radius: ['40%', '70%'], avoidLabelOverlap: false,
                 itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-                label: { show: true, formatter: '{b}: {c} ({d}%)' },
+                label: { show: true, formatter: '{b}: {c}' },
                 data: [
                     { value: catCounts.TOWER, name: 'Menara', itemStyle: { color: '#ff6b6b' } },
                     { value: catCounts.NADI, name: 'NADI', itemStyle: { color: '#4dabf7' } },
@@ -982,7 +1006,7 @@ body {
             }]
         });
 
-        // Chart 2: Pie - Status Breakdown
+        // Chart 2: Pie - Status Breakdown (Selected Area)
         const statusCounts = {};
         data.forEach(d => {
             const s = String(d.STATUS || "N/A").trim();
@@ -996,12 +1020,12 @@ body {
             series: [{
                 name: 'Status', type: 'pie', radius: '70%',
                 data: statusData,
-                label: { show: true, formatter: '{b}: {c} ({d}%)' },
+                label: { show: true, formatter: '{b}: {c}' },
                 emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
             }]
         });
 
-        // Chart 3: Bar - Category vs Status
+        // Chart 3: Bar - Category vs Status (Selected Area)
         const statuses = Object.keys(statusCounts);
         const categories = ['TOWER', 'NADI', 'BWA', 'POP'];
         const seriesData = statuses.map(status => {
@@ -1024,9 +1048,8 @@ body {
             series: seriesData
         });
 
-        // Chart 4: Bar Race - Area Ranking
-        // Logic: Group by current boundary Key (District/DUN/Parl). If none, default to District.
-        // It should analyze the *whole* Sabah set for that layer to show ranking.
+        // Chart 4: Bar Race - Area Ranking (GLOBAL COMPARISON)
+        // Logic: Always use 'allProjects' grouped by the CURRENT active boundary key.
         const boundaryKey = currentBoundaryKey || 'district';
         const areaKey = boundaryKey === 'district' ? 'DISTRICT' : (boundaryKey === 'dun' ? 'DUN' : 'PARLIAMENT');
         
@@ -1046,7 +1069,7 @@ body {
         const chart4 = echarts.init(document.getElementById('chart-area-race'));
         chart4.setOption({
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+            grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true },
             xAxis: { type: 'value' },
             yAxis: { type: 'category', data: yAxisData },
             series: [{
