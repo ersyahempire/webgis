@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.1 - Premium Dashboard (Debugged)</title>
+  <title>Web GIS Projek Sabah v4.2 - OSM Satellite</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
 <style>
 /* ----- GLOBAL VARIABLES & RESET ----- */
@@ -18,11 +21,11 @@
   --primary-light: #818cf8;  /* Indigo 400 */
   
   /* Glassmorphism Variables */
-  --glass-bg: rgba(255, 255, 255, 0.65);         /* Translucency */
-  --glass-bg-hover: rgba(255, 255, 255, 0.85);   /* Hover state */
-  --glass-border: rgba(255, 255, 255, 0.6);      /* Subtle border */
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); /* Soft deep shadow */
-  --glass-blur: 20px;                            /* Heavy blur for premium feel */
+  --glass-bg: rgba(255, 255, 255, 0.85);         /* Increased opacity for map readability */
+  --glass-bg-hover: rgba(255, 255, 255, 0.95);   
+  --glass-border: rgba(255, 255, 255, 0.6);      
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); 
+  --glass-blur: 20px;                            
   
   --text-main: #111827;      /* Gray 900 */
   --text-sub: #6b7280;       /* Gray 500 */
@@ -51,6 +54,7 @@ body {
   position: absolute; top: 0; left: 0;
   width: 100%; height: 100%;
   z-index: 0;
+  background: #ddd; /* Placeholder color while loading tiles */
 }
 
 /* ----- SEARCH BAR (TOP CENTER) ----- */
@@ -58,7 +62,7 @@ body {
   position: absolute;
   top: 24px; left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
+  z-index: 1000; /* Leaflet uses high z-index */
   width: 90%; max-width: 480px;
   display: flex; gap: 10px;
 }
@@ -78,7 +82,7 @@ body {
 
 .search-box:focus-within {
   transform: translateY(-2px) scale(1.01);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 15px 40px rgba(79, 70, 229, 0.15);
   border-color: var(--primary-light);
 }
@@ -94,7 +98,7 @@ body {
 
 /* ----- FLOATING DASHBOARD (LEFT) ----- */
 .panel-toggle {
-  position: absolute; top: 24px; left: 24px; z-index: 20;
+  position: absolute; top: 24px; left: 24px; z-index: 1001;
   background: var(--primary); 
   color: white;
   width: 50px; height: 50px;
@@ -115,7 +119,7 @@ body {
 .dashboard-panel {
   position: absolute; top: 85px; left: 24px; bottom: 24px;
   width: 360px;
-  z-index: 10;
+  z-index: 1000;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -247,6 +251,12 @@ body {
   border-radius: 12px 12px 0 0;
   box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
+/* Status item zero opacity handling */
+.status-item.is-zero {
+    opacity: 0.6;
+    background: rgba(255,255,255,0.2);
+    border: 1px dashed rgba(0,0,0,0.1);
+}
 
 .status-header { 
   display: flex; justify-content: space-between; align-items: center; 
@@ -288,8 +298,8 @@ body {
 .controls-container {
   position: absolute; top: 90px; right: 24px;
   display: flex; flex-direction: column; gap: 12px;
-  z-index: 10;
-  align-items: flex-end; /* Align right to expand leftwards visually */
+  z-index: 1000;
+  align-items: flex-end; 
 }
 
 .control-card {
@@ -343,12 +353,12 @@ body {
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-sub); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,0.5); }
 
-/* ----- LOADING & INFO WINDOW ----- */
+/* ----- LOADING & INFO WINDOW (Leaflet Overrides) ----- */
 .loading-overlay {
   position: absolute; inset: 0;
   background: rgba(255,255,255,0.6);
   backdrop-filter: blur(15px);
-  z-index: 999;
+  z-index: 2000;
   display: flex; flex-direction: column;
   justify-content: center; align-items: center;
   transition: opacity 0.5s;
@@ -361,17 +371,39 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* InfoWindow Customization (Google Maps) */
-.gm-style .gm-style-iw-c {
-  padding: 0 !important; border-radius: 16px !important;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
-  background: rgba(255,255,255,0.95) !important;
-  backdrop-filter: blur(10px) !important;
+/* Leaflet Popup Customization to match Glassmorphism */
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  padding: 0;
+  overflow: hidden;
 }
-.gm-style-iw-d { overflow: hidden !important; max-height: 400px !important; }
-.gm-style .gm-style-iw-t::after { background: rgba(255,255,255,0.95) !important; }
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: 300px !important;
+}
+.leaflet-popup-tip {
+  background: rgba(255, 255, 255, 0.95);
+}
+.leaflet-container a.leaflet-popup-close-button {
+  color: #fff;
+  top: 12px;
+  right: 12px;
+  font-size: 18px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.leaflet-control-layers {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+}
 
-.info-popup { padding: 0; min-width: 280px; max-width: 320px; font-family: 'Plus Jakarta Sans', sans-serif;}
+.info-popup { padding: 0; min-width: 280px; font-family: 'Plus Jakarta Sans', sans-serif;}
 .info-header { 
   background: var(--primary); color: white; 
   padding: 16px 20px; font-weight: 700; font-size: 15px; 
@@ -520,7 +552,6 @@ body {
     });
 
     // ---------- CONFIG ----------
-    // Pastikan fail JSON ini wujud di direktori yang sama
     const URLs = {
       district: "district.json",
       dun: "dun.json",
@@ -550,17 +581,15 @@ body {
 
     // ---------- STATE ----------
     let map;
-    let markersBySite = new Map();
-    let markersList = [];
+    let markersBySite = new Map(); // Store Leaflet Markers
+    let markersLayerGroup; // LayerGroup for markers
     let allProjects = [];
     let areaIndex = new Map();
     let dataLayers = { district: null, dun: null, parliament: null };
     let currentBoundaryKey = null;
-    let hoverInfoWindow = null;
+    let activeFeatureName = null; // Track selected area name
     let refreshIntervalMs = 60_000;
-    let batchSize = 300;
-    let activeFeature = null;
-    let activeLayer = null;
+    let batchSize = 500;
     let searchTerm = "";
 
     // INTERACTION STATE FOR DASHBOARD
@@ -590,7 +619,6 @@ body {
     function cleanFloat(val) {
       if (typeof val === 'number') return val;
       if (!val) return 0;
-      // Gunakan regex yang lebih ketat untuk mengekstrak float
       const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
       const floatVal = parseFloat(str);
       return isNaN(floatVal) ? 0 : floatVal;
@@ -603,27 +631,25 @@ body {
     }
 
     function extractFeatureName(feature) {
-      const props = ["NAME", "name", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMEN"];
+      // Leaflet GeoJSON uses feature.properties
+      const props = feature.properties || {};
+      const keys = ["NAME", "name", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMEN"];
       let name = "Sabah";
-      for (const k of props) {
-        try {
-          const v = feature.getProperty(k);
-          if (v) { name = v; break; }
-        } catch (_) { }
+      for (const k of keys) {
+         if (props[k]) { name = props[k]; break; }
       }
       return String(name).trim();
     }
 
     function resetAllLayerStyles() {
-      Object.keys(dataLayers).forEach(k => {
-        const dl = dataLayers[k];
-        if (dl) dl.revertStyle();
-      });
-      activeFeature = null;
-      activeLayer = null;
+       // Reset Leaflet GeoJSON Styles
+       Object.keys(dataLayers).forEach(k => {
+          const layer = dataLayers[k];
+          if(layer) layer.resetStyle();
+       });
+       activeFeatureName = null;
     }
 
-    // Helper untuk Random Warna Hex
     function getRandomColor() {
       const letters = '0123456789ABCDEF';
       let color = '#';
@@ -635,15 +661,12 @@ body {
 
     // ---------- DATA PARSING ----------
     function parseGviz(text) {
-        // IMPROVED PARSING: Gunakan Regex untuk mengekstrak JSON dengan lebih selamat
-        // daripada bergantung kepada substring '{' dan '}' yang mungkin wujud dalam data
         try {
             const regex = /google\.visualization\.Query\.setResponse\((.*)\);/;
             const match = text.match(regex);
             if (match && match[1]) {
                 return JSON.parse(match[1]);
             }
-            // Fallback kepada kaedah lama jika regex gagal
             const start = text.indexOf('{');
             const end = text.lastIndexOf('}');
             if (start === -1 || end === -1) return null;
@@ -669,7 +692,6 @@ body {
         const processedRows = rows.map(r => {
             const obj = {};
             rawCols.forEach((c, i) => {
-                // Handle null cells (r.c[i] boleh jadi null)
                 const cell = (r.c && r.c[i]) ? r.c[i] : null;
                 obj[c ? c : `COL${i}`] = (cell && cell.v !== null) ? cell.v : "";
             });
@@ -700,7 +722,6 @@ body {
 
         const rawDetails = [];
         let count = 0;
-        // Fix loop boundary check
         for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
           const key = rawCols[colIndex];
           if (normalizedKeys.has(key)) continue;
@@ -712,8 +733,6 @@ body {
         }
 
         const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
-        
-        // Ensure lat/lng is within reasonable Malaysia/Sabah bounds if needed, or just valid numbers
         const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
 
         const rowObj = {
@@ -750,7 +769,7 @@ body {
       });
     }
 
-    // ---------- MARKERS LOGIC ----------
+    // ---------- MARKERS LOGIC (LEAFLET) ----------
     function createOrUpdateMarker(project) {
       if (!project._validCoord) return null;
 
@@ -761,9 +780,10 @@ body {
         const m = markersBySite.get(uniqueKey);
         m._meta = project; 
         
-        const pos = m.getPosition();
-        if (!pos || Math.abs(pos.lat() - project.LATITUDE) > 0.0001 || Math.abs(pos.lng() - project.LONGITUDE) > 0.0001) {
-            m.setPosition({ lat: project.LATITUDE, lng: project.LONGITUDE });
+        // Leaflet setLatLng
+        const pos = m.getLatLng();
+        if (Math.abs(pos.lat - project.LATITUDE) > 0.0001 || Math.abs(pos.lng - project.LONGITUDE) > 0.0001) {
+            m.setLatLng([project.LATITUDE, project.LONGITUDE]);
         }
         return m;
       } else {
@@ -775,45 +795,39 @@ body {
           rawDetailsHtml = `<div class="section-header">Maklumat Tambahan</div>` + rawDetailsHtml;
         }
 
-        const marker = new google.maps.Marker({
-          position: { lat: project.LATITUDE, lng: project.LONGITUDE },
-          map: map,
-          title: project.SITE_NAME || "",
-          visible: false, // Default hidden
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 6,
-            fillColor: cfg.color,
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2
-          }
-        });
-
-        const infowin = new google.maps.InfoWindow({
-          content: `
-                <div class="info-popup">
-                  <div class="info-header">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
-                  <div class="info-body">
-                    <div class="section-header">Maklumat Utama</div>
-                    <div class="info-row"><span class="info-label">Kategori</span><span class="info-val">${cfg.label}</span></div>
-                    <div class="info-row"><span class="info-label">Daerah</span><span class="info-val">${escapeHtml(project.DISTRICT)}</span></div>
-                    <div class="info-row"><span class="info-label">DUN</span><span class="info-val">${escapeHtml(project.DUN)}</span></div>
-                    <div class="info-row"><span class="info-label">Parlimen</span><span class="info-val">${escapeHtml(project.PARLIAMENT)}</span></div>
-                    <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${cfg.color}">${escapeHtml(project.STATUS)}</span></div>
-                    <div class="info-row"><span class="info-label">Koordinat</span><span class="info-val">${project.LATITUDE.toFixed(4)}, ${project.LONGITUDE.toFixed(4)}</span></div>
-                    ${rawDetailsHtml} 
-                  </div>
+        const popupContent = `
+            <div class="info-popup">
+                <div class="info-header">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
+                <div class="info-body">
+                <div class="section-header">Maklumat Utama</div>
+                <div class="info-row"><span class="info-label">Kategori</span><span class="info-val">${cfg.label}</span></div>
+                <div class="info-row"><span class="info-label">Daerah</span><span class="info-val">${escapeHtml(project.DISTRICT)}</span></div>
+                <div class="info-row"><span class="info-label">DUN</span><span class="info-val">${escapeHtml(project.DUN)}</span></div>
+                <div class="info-row"><span class="info-label">Parlimen</span><span class="info-val">${escapeHtml(project.PARLIAMENT)}</span></div>
+                <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${cfg.color}">${escapeHtml(project.STATUS)}</span></div>
+                <div class="info-row"><span class="info-label">Koordinat</span><span class="info-val">${project.LATITUDE.toFixed(4)}, ${project.LONGITUDE.toFixed(4)}</span></div>
+                ${rawDetailsHtml} 
                 </div>
-              `
+            </div>
+        `;
+
+        // Create Leaflet Circle Marker
+        const marker = L.circleMarker([project.LATITUDE, project.LONGITUDE], {
+            radius: 6,
+            fillColor: cfg.color,
+            color: "#fff",
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 1
         });
 
-        marker.addListener("click", () => {
-          infowin.open(map, marker);
-        });
-
+        marker.bindPopup(popupContent);
         marker._meta = project;
+        
+        // Add to global map registry
         markersBySite.set(uniqueKey, marker);
+        
+        // Note: We don't add to map instantly here to manage layers better
         return marker;
       }
     }
@@ -842,7 +856,6 @@ body {
     }
 
     // ---------- DASHBOARD INTERACTION HANDLERS ----------
-
     function handleCategoryClick(type, elementId) {
       if (activeDashboardCategory === type) {
         activeDashboardCategory = null;
@@ -874,11 +887,9 @@ body {
 
       let filteredList = allProjects;
 
-      // 1. Tapis mengikut Sempadan (District/Dun/Parliament)
-      if (activeFeature && currentBoundaryKey) {
-        const areaNameRaw = extractFeatureName(activeFeature);
-        const areaName = normalizeString(areaNameRaw); 
-
+      // 1. Tapis mengikut Sempadan
+      if (currentBoundaryKey && activeFeatureName) {
+        const areaName = normalizeString(activeFeatureName); 
         filteredList = allProjects.filter(p => {
           if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
           if (currentBoundaryKey === 'dun') return normalizeString(p.DUN) === areaName;
@@ -890,7 +901,6 @@ body {
       // 2. Tapis mengikut Carian
       if (searchTerm && searchTerm.length > 0) {
         const term = searchTerm.toLowerCase();
-        // Check if searchTerm looks like coordinates
         const isCoordSearch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
         
         if (!isCoordSearch) {
@@ -903,31 +913,31 @@ body {
         }
       }
 
-      // 3. Tapis mengikut Dashboard Category Click
+      // 3. Tapis mengikut Dashboard Category
       if (activeDashboardCategory) {
           filteredList = filteredList.filter(p => p._type === activeDashboardCategory);
       }
 
-      // Update Dashboard dengan data yang telah ditapis mengikut lokasi/kategori
+      // Update Dashboard 
       updateDashboard(filteredList); 
 
-      // 4. Tapis mengikut Status (Untuk Marker di Peta sahaja)
+      // 4. Tapis mengikut Status (Untuk Marker di Peta)
       let mapDisplayList = filteredList;
-      
       if (activeStatusFilter) {
         mapDisplayList = filteredList.filter(p => String(p.STATUS || "").trim() === activeStatusFilter);
       }
 
       const visibleLocationIds = new Set(mapDisplayList.map(p => p._id));
 
-      // Update Markers Visibility
-      markersList.forEach(m => {
-        if(!m) return;
+      // LEAFLET: Manage marker visibility via LayerGroup
+      // Clear existing markers from group
+      markersLayerGroup.clearLayers();
+
+      Array.from(markersBySite.values()).forEach(m => {
         const meta = m._meta;
         const type = meta._type;
 
         let isCategoryAllowed = false;
-
         if (activeDashboardCategory) {
           isCategoryAllowed = (type === activeDashboardCategory);
         } else {
@@ -939,7 +949,9 @@ body {
 
         const shouldShow = visibleLocationIds.has(meta._id) && isCategoryAllowed && meta._validCoord;
         
-        m.setVisible(shouldShow);
+        if(shouldShow) {
+            markersLayerGroup.addLayer(m);
+        }
       });
     }
 
@@ -951,11 +963,22 @@ body {
 
       const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
       
-      // Struktur data untuk status breakdown
-      const statusBreakdown = {};
+      // ----------- UPDATED STATUS LOGIC -----------
+      // 1. Get ALL unique statuses from the GLOBAL dataset first
+      const allUniqueStatuses = new Set();
+      allProjects.forEach(p => {
+          const s = String(p.STATUS || "Tidak Dinyatakan").trim();
+          allUniqueStatuses.add(s);
+      });
 
+      // 2. Initialize breakdown object for ALL statuses with zero
+      const statusBreakdown = {};
+      allUniqueStatuses.forEach(s => {
+          statusBreakdown[s] = { total: 0, types: {} };
+      });
+
+      // 3. Iterate filtered list and increment
       displayList.forEach(p => {
-        // Kiraan umum atas dashboard
         if (p._type === "TOWER") counts.menara++;
         if (p._type === "BWA") counts.wifi++;
         if (p._type === "NADI") counts.nadi++;
@@ -963,20 +986,17 @@ body {
 
         const s = String(p.STATUS || "Tidak Dinyatakan").trim();
         
-        // Inisialisasi struktur jika belum wujud
-        if (!statusBreakdown[s]) {
-          statusBreakdown[s] = { total: 0, types: {} };
-        }
+        // Safety check just in case filtered list has something not in global (unlikely)
+        if (!statusBreakdown[s]) statusBreakdown[s] = { total: 0, types: {} };
         
-        // Tambah kiraan status total
         statusBreakdown[s].total++;
 
-        // Tambah kiraan spesifik jenis dalam status ini
         if (!statusBreakdown[s].types[p._type]) {
           statusBreakdown[s].types[p._type] = 0;
         }
         statusBreakdown[s].types[p._type]++;
       });
+      // --------------------------------------------
 
       const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
       setTxt("menara-count", counts.menara);
@@ -989,25 +1009,29 @@ body {
       
       statusEl.innerHTML = "";
       
-      // Sort status by count descending
+      // Sort status by count descending, but keep 0s at bottom
       const sortedStatuses = Object.entries(statusBreakdown).sort(([, a], [, b]) => b.total - a.total);
+      
+      // Calculate percentages based on filtered total
       const totalProjects = displayList.length;
 
       sortedStatuses.forEach(([statusName, data]) => {
         const count = data.total;
+        // If total is 0, percent is 0
         const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
         
         let endColor = "#4F46E5"; 
         let startColor = "#818cf8";
         const statusUpper = statusName.toUpperCase();
         
-        if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#51cf66"; startColor = "#8ce99a"; } // Green
-        else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#4dabf7"; startColor = "#a5d8ff"; } // Blue
-        else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#ff6b6b"; startColor = "#ffc9c9"; } // Red
-        else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#fcc419"; startColor = "#ffe066"; } // Yellow
+        if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#51cf66"; startColor = "#8ce99a"; } 
+        else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#4dabf7"; startColor = "#a5d8ff"; } 
+        else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#ff6b6b"; startColor = "#ffc9c9"; } 
+        else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#fcc419"; startColor = "#ffe066"; } 
 
         const isSelected = (activeStatusFilter === statusName);
         const selectedClass = isSelected ? "selected" : "";
+        const zeroClass = count === 0 ? "is-zero" : ""; // Add opacity for zero items
         
         // Generate sub-items HTML
         let detailsHtml = '';
@@ -1027,13 +1051,14 @@ body {
             </div>
           `;
         });
+        
+        if (count === 0) detailsHtml = `<div style="font-size:11px; color:#999; text-align:center; padding:5px;">Tiada projek dalam kategori ini.</div>`;
 
-        // Main Item Container
         const itemContainer = document.createElement("div");
         itemContainer.className = "status-wrapper"; 
         
         itemContainer.innerHTML = `
-              <div class="status-item ${selectedClass}" onclick="handleStatusClick('${escapeHtml(statusName)}')">
+              <div class="status-item ${selectedClass} ${zeroClass}" onclick="handleStatusClick('${escapeHtml(statusName)}')">
                 <div class="status-header">
                   <span class="status-name">${escapeHtml(statusName)}</span>
                   <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
@@ -1087,54 +1112,64 @@ body {
       }
     }
 
+    // LEAFLET GEOJSON LOADER
     async function loadGeoJsonLayer(key, url, baseStyle = {}) {
       try {
         const resp = await fetch(url);
-        // Better error handling for missing JSON files
         if (!resp.ok) {
             console.warn(`GeoJSON ${key} not found (${resp.status})`);
             return null;
         }
         const json = await resp.json();
 
-        const layer = new google.maps.Data({ map: null });
-        layer.addGeoJson(json);
-
-        layer._baseStyle = {
-          strokeWeight: baseStyle.strokeWeight || 1,
-          strokeColor: baseStyle.strokeColor || "#666",
-          fillOpacity: 0.05,
-          fillColor: (baseStyle.fillColor || "#FFF")
+        // Standard style
+        const styleFn = (feature) => {
+            return {
+                color: baseStyle.strokeColor || "#666",
+                weight: baseStyle.strokeWeight || 1,
+                fillColor: baseStyle.fillColor || "#FFF",
+                fillOpacity: 0.05
+            };
         };
-        layer.setStyle(feature => layer._baseStyle);
 
-        layer.addListener("mouseover", e => {
-          if (!layer.getMap()) return;
-          if (activeFeature === e.feature) return;
-          
-          const randomColor = getRandomColor();
-          e.feature.setProperty('_themeColor', randomColor); 
-          
-          layer.overrideStyle(e.feature, { 
-              strokeWeight: 2, 
-              strokeColor: randomColor, 
-              fillOpacity: 0.3, 
-              fillColor: randomColor 
-          });
-          
-          if (!hoverInfoWindow) hoverInfoWindow = new google.maps.InfoWindow();
-          hoverInfoWindow.setContent(`<div style="padding:4px 8px; font-weight:700; color:${randomColor}; font-family: 'Plus Jakarta Sans', sans-serif;">${escapeHtml(extractFeatureName(e.feature))}</div>`);
-          hoverInfoWindow.setPosition(e.latLng);
-          hoverInfoWindow.open(map);
-        });
+        const layer = L.geoJSON(json, {
+            style: styleFn,
+            onEachFeature: (feature, layer) => {
+                // Hover effect
+                layer.on('mouseover', (e) => {
+                    const l = e.target;
+                    // Don't override if selected
+                    if (activeFeatureName !== extractFeatureName(feature)) {
+                        l.setStyle({
+                            weight: 2,
+                            color: '#4338ca',
+                            fillOpacity: 0.3,
+                            fillColor: '#4338ca'
+                        });
+                        l.bringToFront();
+                    }
+                    
+                    // Show Tooltip as pseudo-infowindow
+                    l.bindTooltip(extractFeatureName(feature), {
+                        permanent: false,
+                        direction: 'top',
+                        className: 'leaflet-tooltip-glass' // Custom class if needed
+                    }).openTooltip();
+                });
 
-        layer.addListener("mouseout", e => {
-          if (activeFeature !== e.feature) layer.revertStyle(e.feature);
-          if (hoverInfoWindow) hoverInfoWindow.close();
-        });
+                layer.on('mouseout', (e) => {
+                    const l = e.target;
+                    // Reset style only if not selected
+                    if (activeFeatureName !== extractFeatureName(feature)) {
+                        layer.resetStyle(l);
+                    }
+                    l.closeTooltip();
+                });
 
-        layer.addListener("click", e => {
-          handleFeatureClick(key, e.feature);
+                layer.on('click', (e) => {
+                    handleFeatureClick(key, feature, e.target);
+                });
+            }
         });
 
         dataLayers[key] = layer;
@@ -1145,36 +1180,48 @@ body {
       }
     }
 
-    function handleFeatureClick(key, feature) {
-      const layerObj = dataLayers[key];
-      if (!layerObj) return;
+    function handleFeatureClick(key, feature, leafletLayer) {
+      const layerGroup = dataLayers[key];
+      if (!layerGroup) return;
 
       const featureName = extractFeatureName(feature);
       document.getElementById("selected-area").textContent = featureName;
 
       toggleBoundaryLayerVisibility(key);
-      resetAllLayerStyles();
       
-      const themeColor = feature.getProperty('_themeColor') || "#4338ca";
+      // Reset all other polygons
+      layerGroup.eachLayer(l => layerGroup.resetStyle(l));
       
-      layerObj.overrideStyle(feature, { 
-          strokeWeight: 2, 
-          strokeColor: themeColor, 
-          fillOpacity: 0.5,
-          fillColor: themeColor 
+      const themeColor = getRandomColor();
+      
+      // Highlight selected
+      leafletLayer.setStyle({
+          weight: 3,
+          color: themeColor,
+          fillOpacity: 0.4,
+          fillColor: themeColor
       });
+      leafletLayer.bringToFront();
 
-      activeFeature = feature;
-      activeLayer = layerObj;
+      activeFeatureName = featureName;
       currentBoundaryKey = key;
 
       filterAndDisplayMarkers();
+      
+      // Zoom to bounds
+      map.fitBounds(leafletLayer.getBounds(), { padding: [20, 20] });
     }
 
     function toggleBoundaryLayerVisibility(key) {
       Object.keys(dataLayers).forEach(k => {
         const dl = dataLayers[k];
-        if (dl) dl.setMap(k === key ? map : null);
+        if (dl) {
+            if (k === key) {
+                if(!map.hasLayer(dl)) map.addLayer(dl);
+            } else {
+                if(map.hasLayer(dl)) map.removeLayer(dl);
+            }
+        }
       });
       updateToggleButtonsUI(key);
     }
@@ -1191,10 +1238,8 @@ body {
       ["menara", "nadi", "pop", "wifi"].forEach(cat => {
         document.getElementById(`toggle-${cat}`)?.addEventListener("click", function () {
           this.classList.toggle("active");
-          
           activeDashboardCategory = null;
           document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
-          
           filterAndDisplayMarkers();
         });
       });
@@ -1207,7 +1252,6 @@ body {
 
       boundaries.forEach(b => {
         document.getElementById(b.id)?.addEventListener("click", function () {
-          // Check if layer exists before toggling
           if (!dataLayers[b.key]) {
               alert(`Maaf, data sempadan ${b.key} gagal dimuatkan atau tiada fail JSON.`);
               return;
@@ -1215,10 +1259,12 @@ body {
 
           if (this.classList.contains('active') && currentBoundaryKey === b.key) {
             this.classList.remove('active');
-            dataLayers[b.key].setMap(null);
+            map.removeLayer(dataLayers[b.key]);
             currentBoundaryKey = null;
-            activeFeature = null;
+            activeFeatureName = null;
             document.getElementById("selected-area").textContent = "SELURUH SABAH";
+            // Reset view to Sabah
+            map.setView([5.9804, 116.0735], 8);
           } else {
             toggleBoundaryLayerVisibility(b.key);
             document.getElementById("selected-area").textContent = "SABAH (" + b.key.toUpperCase() + ")";
@@ -1230,14 +1276,12 @@ body {
 
       document.getElementById("search-input")?.addEventListener("input", (e) => {
         searchTerm = e.target.value;
-        
         const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
         if (coordMatch) {
             const lat = parseFloat(coordMatch[1]);
             const lng = parseFloat(coordMatch[2]);
             if (!isNaN(lat) && !isNaN(lng)) {
-                map.panTo({lat, lng});
-                map.setZoom(14);
+                map.setView([lat, lng], 14);
             }
         } else {
             filterAndDisplayMarkers();
@@ -1249,10 +1293,8 @@ body {
       try {
         const newProjects = await loadAllSheetsAndNormalize();
         newProjects.forEach(np => createOrUpdateMarker(np));
-        
         markersList = Array.from(markersBySite.values());
         allProjects = newProjects;
-        
         filterAndDisplayMarkers();
       } catch (e) {
         console.warn("autoRefreshLoop failed", e);
@@ -1264,41 +1306,43 @@ body {
       const mapDiv = document.getElementById("map");
       if (!mapDiv) return;
 
-      const silverStyle = [
-        { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-        { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
-        { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }
-      ];
+      // 1. Initialize Leaflet Map
+      map = L.map('map', {
+          zoomControl: false // We reposition it later
+      }).setView([5.9804, 116.0735], 8);
 
-      map = new google.maps.Map(mapDiv, {
-        center: { lat: 5.9804, lng: 116.0735 },
-        zoom: 8,
-        mapTypeId: "satellite",
-        styles: silverStyle,
-        disableDefaultUI: false,
-        
-        mapTypeControl: true,
-        mapTypeControlOptions: {
-            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-            position: google.maps.ControlPosition.TOP_RIGHT
-        },
-        
-        zoomControl: true,
-        zoomControlOptions: {
-            position: google.maps.ControlPosition.RIGHT_BOTTOM
-        },
-        
-        streetViewControl: false,
-        fullscreenControl: false
+      L.control.zoom({
+          position: 'bottomright'
+      }).addTo(map);
+
+      // 2. Tile Layers
+      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
       });
+
+      // Esri Satellite (World Imagery)
+      const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      });
+
+      // Set Default View to Satellite
+      satellite.addTo(map);
+
+      const baseMaps = {
+          "Satelit (Esri)": satellite,
+          "Peta (OSM)": osm
+      };
+
+      L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+      // Initialize Marker Cluster Group (Using FeatureGroup/LayerGroup for now to keep it simple without plugins)
+      markersLayerGroup = L.layerGroup().addTo(map);
 
       showLoading(true);
 
       try {
+        // Load Data
         const projects = await loadAllSheetsAndNormalize();
         
         renderMarkersInBatches(projects, () => {
@@ -1306,48 +1350,36 @@ body {
           filterAndDisplayMarkers();
         });
 
-        // Use Promise.allSettled to ensure failure of one GeoJSON doesn't stop others
-        // But map.idle logic needs to know what loaded.
-        
         const pDistrict = loadGeoJsonLayer("district", URLs.district);
         const pDun = loadGeoJsonLayer("dun", URLs.dun);
         const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
 
-        // Wait for map idle before attaching large geometries
-        google.maps.event.addListenerOnce(map, "idle", async () => {
-          // Await layers independently inside idle to avoid race conditions
-          await pDistrict;
-          await pDun; 
-          await pPar;
+        await Promise.all([pDistrict, pDun, pPar]);
 
-          // Only set map if layer successfully loaded
-          if (dataLayers['district']) {
-            dataLayers['district'].setMap(map);
-            currentBoundaryKey = 'district';
-          } else {
-             // Fallback if district fails
-             console.log("District layer missing, skipping default boundary.");
-          }
-          
-          setupToggles();
-          filterAndDisplayMarkers(); 
-        });
+        // Default: Show District
+        if (dataLayers['district']) {
+             dataLayers['district'].addTo(map);
+             currentBoundaryKey = 'district';
+        }
 
+        setupToggles();
+        filterAndDisplayMarkers();
+        
         setInterval(() => autoRefreshLoop(), refreshIntervalMs);
 
       } catch (e) {
         console.error("Init Error", e);
-        // Dont show alert here, better to just log, as marker data might still work
       } finally {
         showLoading(false);
       }
     }
 
-    window.initMap = initMap;
+    // Start
+    window.onload = initMap;
   </script>
 
-  <!-- IMPORTANT: Replace YOUR_API_KEY with a valid Google Maps API Key -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDRKvwm2qw29P6nRe6AFk0UMlSv356qMI0&callback=initMap&v=weekly" async defer></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
 </body>
 </html>
