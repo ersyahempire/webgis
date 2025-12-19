@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.4 - Final Update</title>
+  <title>Web GIS Projek Sabah v5.0 (Fixed)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -25,10 +25,10 @@
   --primary: #4F46E5;        /* Indigo 600 */
   --primary-dark: #4338ca;   /* Indigo 700 */
   --primary-light: #818cf8;  /* Indigo 400 */
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-bg-hover: rgba(255, 255, 255, 0.95);    
-  --glass-border: rgba(255, 255, 255, 0.6);       
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); 
+  --glass-bg: rgba(255, 255, 255, 0.90); /* Sedikit lebih legap untuk kejelasan */
+  --glass-bg-hover: rgba(255, 255, 255, 0.98);    
+  --glass-border: rgba(255, 255, 255, 0.8);       
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
   --glass-blur: 20px;                            
   --text-main: #111827;      /* Gray 900 */
   --text-sub: #6b7280;       /* Gray 500 */
@@ -54,9 +54,19 @@ body {
   background: #ddd; 
 }
 
-/* FIX: Tooltip pointer events so they don't block clicks */
+/* FIX: Tooltip pointer events so they don't block clicks on polygons */
 .leaflet-tooltip {
     pointer-events: none !important;
+    background: rgba(255,255,255,0.8);
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--primary-dark);
+}
+/* Ensure SVG paths (polygons) are interactive */
+.leaflet-interactive {
+    cursor: pointer;
 }
 
 /* ----- SEARCH BAR ----- */
@@ -249,22 +259,31 @@ body {
   position: relative;
 }
 .control-card:hover, .control-card.expanded { width: 190px; background: var(--glass-bg-hover); }
+
+/* Tajuk kumpulan hanya muncul bila expand */
 .control-group-title {
   padding: 12px 14px 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--text-sub); letter-spacing: 0.5px; display: none;
 }
 .control-card.expanded .control-group-title { display: block; animation: fadeIn 0.3s; }
+
 .toggle-btn {
   display: flex; align-items: center; width: 100%; padding: 10px; background: transparent; border: none; cursor: pointer;
   border-radius: 10px; color: var(--text-sub); transition: all 0.2s; text-align: left; margin-bottom: 2px;
 }
-.toggle-btn i { width: 30px; text-align: center; font-size: 16px; flex-shrink: 0; transition: transform 0.2s; }
-.toggle-btn span { opacity: 0; transition: opacity 0.2s; font-size: 13px; font-weight: 600; padding-left: 5px;}
-.control-card:hover .toggle-btn span, .control-card.expanded .toggle-btn span { opacity: 1; }
+.toggle-btn i, .toggle-btn span.icon-slot { 
+    width: 30px; text-align: center; font-size: 16px; flex-shrink: 0; transition: transform 0.2s; 
+    display: inline-block; /* Ensure icon is always visible */
+}
+.toggle-btn span.text-slot { opacity: 0; transition: opacity 0.2s; font-size: 13px; font-weight: 600; padding-left: 5px;}
+
+/* Show text on hover/expand */
+.control-card:hover .toggle-btn span.text-slot, .control-card.expanded .toggle-btn span.text-slot { opacity: 1; }
 .control-card:hover .toggle-btn, .control-card.expanded .toggle-btn { padding: 10px 14px; }
+
 .toggle-btn:hover { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
-.toggle-btn:hover i { transform: scale(1.1); }
+.toggle-btn:hover i, .toggle-btn:hover span.icon-slot { transform: scale(1.1); }
 .toggle-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
-.toggle-btn.active i { color: white !important; }
+.toggle-btn.active i, .toggle-btn.active span.icon-slot { color: white !important; }
 
 /* Legend Mini */
 .legend-mini { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.05); }
@@ -431,7 +450,8 @@ body {
     <!-- Report Button -->
     <div class="control-card" id="report-btn-card">
         <button class="toggle-btn" id="btn-open-report" title="Report Kad">
-            <i class="fas fa-file-invoice-dollar" style="color: #F59E0B;"></i> <span>Report Kad</span>
+            <span class="icon-slot"><i class="fas fa-file-invoice-dollar" style="color: #F59E0B;"></i></span> 
+            <span class="text-slot">Report Kad</span>
         </button>
     </div>
 
@@ -439,13 +459,13 @@ body {
     <div class="control-card" id="layer-card">
       <div class="control-group-title">Sempadan</div>
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
-        <i class="fas fa-map-marked-alt"></i> <span>Daerah</span>
+        <span class="icon-slot"><i class="fas fa-map-marked-alt"></i></span> <span class="text-slot">Daerah</span>
       </button>
       <button class="toggle-btn" id="toggle-dun" title="DUN">
-        <i class="fas fa-landmark"></i> <span>DUN</span>
+        <span class="icon-slot"><i class="fas fa-landmark"></i></span> <span class="text-slot">DUN</span>
       </button>
       <button class="toggle-btn" id="toggle-parliament" title="Parlimen">
-        <i class="fas fa-building"></i> <span>Parlimen</span>
+        <span class="icon-slot"><i class="fas fa-building"></i></span> <span class="text-slot">Parlimen</span>
       </button>
     </div>
 
@@ -634,16 +654,18 @@ body {
             legItem.innerHTML = `<span class="dot" style="background: ${config.color};"></span> ${config.label}`;
             legendContainer.appendChild(legItem);
 
-            // 3. Generate Filter Toggle Button (Updated for Requirement 3: Clean UI)
+            // 3. Generate Filter Toggle Button (Updated Requirement 3)
             const btn = document.createElement("button");
-            // Requirement 2: Default load OFF (remove 'active')
-            btn.className = "toggle-btn"; 
+            btn.className = "toggle-btn"; // Default inactive (per request 2/3)
             btn.id = `toggle-${typeKey}`;
             btn.title = config.label;
             
-            // Requirement 3: Clean Icon Display (No Checklist)
-            // Just use the icon from TYPE_CFG directly
-            btn.innerHTML = `<span style="font-size: 1.2em; margin-right: 8px;">${config.icon}</span> <span>${config.label}</span>`;
+            // Requirement 3: Clean Icon Display (No Checklist text/symbol)
+            // Use span.icon-slot so CSS keeps it visible when menu collapsed
+            btn.innerHTML = `
+                <span class="icon-slot" style="font-size: 1.2em; font-style:normal;">${config.icon}</span> 
+                <span class="text-slot">${config.label}</span>
+            `;
             
             btn.onclick = function() {
                 this.classList.toggle("active");
@@ -895,29 +917,36 @@ body {
         filterAndDisplayMarkers();
     });
 
+    // Requirement 2: Function that handles filtering including the Area Selection
     function filterAndDisplayMarkers() {
       // Dynamic Filter Check
       let activeTypes = new Set();
-      // Iterate over register to find which buttons are active
       PROJECT_REGISTER.forEach(p => {
           const typeKey = p.type.toUpperCase();
           const btn = document.getElementById(`toggle-${typeKey}`);
           
-          // Requirement 2: Logic checks for 'active' class. Since default is NO active class, this will default to empty set.
           if (btn && btn.classList.contains("active")) {
               activeTypes.add(typeKey);
           } 
-          // Removed fallback "else add" to ensure they are hidden by default
       });
 
       let filteredList = allProjects;
 
+      // Requirement 2 & 1 Fix: Filter by Selected Area Polygon
       if (currentBoundaryKey && activeFeatureName) {
         const areaName = normalizeString(activeFeatureName); 
+        
         filteredList = allProjects.filter(p => {
-          if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
-          if (currentBoundaryKey === 'dun') return normalizeString(p.DUN) === areaName;
-          if (currentBoundaryKey === 'parliament') return normalizeString(p.PARLIAMENT) === areaName;
+          // Normalize Data from Sheet to match GeoJSON Name
+          if (currentBoundaryKey === 'district') {
+             return normalizeString(p.DISTRICT) === areaName;
+          }
+          if (currentBoundaryKey === 'dun') {
+             return normalizeString(p.DUN) === areaName;
+          }
+          if (currentBoundaryKey === 'parliament') {
+             return normalizeString(p.PARLIAMENT) === areaName;
+          }
           return false;
         });
       }
@@ -1060,7 +1089,7 @@ body {
       const timer = setInterval(() => { current += increment; obj.innerHTML = current; if (current == end) clearInterval(timer); }, Math.max(stepTime, 10));
     }
 
-    // ---------- LOAD GEOJSON LAYER (UPDATED FOR REQUIREMENT 1) ----------
+    // ---------- LOAD GEOJSON LAYER (FIXED REQUIREMENT 1) ----------
     async function loadGeoJsonLayer(key, url) {
         try {
             const res = await fetch(url);
@@ -1068,55 +1097,50 @@ body {
             const data = await res.json();
             
             const layer = L.geoJSON(data, {
-                // FIXED: Solid Fill Color but very transparent to catch clicks
-                style: { color: '#666', weight: 1, fillOpacity: 0.01, fillColor: '#ffffff' }, 
+                // FIXED: fillOpacity must be > 0 to be clickable. Set to 0.05 (nearly invisible but clickable)
+                style: { color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' }, 
                 onEachFeature: (feature, layer) => {
                     const name = extractFeatureName(feature);
-                    // FIXED: interactive false for tooltip to prevent clicking issues
-                    layer.bindTooltip(name, { sticky: true, interactive: false });
+                    // FIXED: Tooltip non-interactive to prevent click blocking
+                    layer.bindTooltip(name, { sticky: true, interactive: false, direction: 'center', className: 'area-tooltip' });
                     
                     // Requirement 1: Random Color on Hover
                     layer.on('mouseover', function(e) {
-                        // Only change style if not currently active/selected
                         if (activeFeatureName !== name) {
-                            // Store the random color in a temporary property
                             const randomColor = getRandomColor();
                             feature.properties._tempColor = randomColor;
-                            
-                            // FIXED: Reduced hover opacity to 0.3 ("sedikit tipis")
                             this.setStyle({ weight: 2, color: '#333', fillOpacity: 0.3, fillColor: randomColor });
                         }
                     });
 
                     layer.on('mouseout', function(e) {
-                         // Reset to default if not selected
                          if (activeFeatureName !== name) {
-                             this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.01, fillColor: '#ffffff' });
+                             this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' });
                          }
                     });
 
-                    layer.on('click', () => {
-                        // Reset previous selections (all other layers)
+                    // FIXED: Robust click handler
+                    layer.on('click', (e) => {
+                        // Crucial: Stop click from propagating to map (which might zoom/pan)
+                        L.DomEvent.stopPropagation(e);
+
+                        // Reset previous selections
                         dataLayers[key].eachLayer(l => {
-                            l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.01, fillColor: '#ffffff' });
+                            l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.05, fillColor: '#ffffff' });
                         });
                         
-                        // Requirement 1: Highlight current
-                        // Retrieve the color set during mouseover (or default if direct click/mobile)
-                        let selectedColor = feature.properties._tempColor;
-                        if(!selectedColor) selectedColor = getRandomColor(); // Fallback if no hover prior to click
+                        // Highlight Selected
+                        let selectedColor = feature.properties._tempColor || getRandomColor();
+                        e.target.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: selectedColor });
                         
-                        // FIXED: Reduced selected opacity to 0.4
-                        this.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: selectedColor });
-                        
-                        // Update app state
+                        // Update App State
                         activeFeatureName = name;
                         document.getElementById('selected-area').textContent = name;
                         
                         // Zoom to feature
-                        map.fitBounds(layer.getBounds());
+                        map.fitBounds(e.target.getBounds());
                         
-                        // Requirement 2: Dashboard automatic update
+                        // Requirement 2: Trigger Dashboard Update
                         filterAndDisplayMarkers();
                     });
                 }
@@ -1138,17 +1162,19 @@ body {
             // Add selected layer
             if (dataLayers[layerKey]) map.addLayer(dataLayers[layerKey]);
             currentBoundaryKey = layerKey;
-            activeFeatureName = null; // Reset selection
+            
+            // Reset selection when switching layer type
+            activeFeatureName = null; 
             document.getElementById('selected-area').textContent = "SELURUH SABAH";
             
-            // Reset markers filter
+            // Reset markers filter to show all
             filterAndDisplayMarkers();
             
             // UI Update
             document.querySelectorAll('#layer-card .toggle-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(btnId).classList.add('active');
             
-            // Zoom out
+            // Reset Zoom
             if (map) map.setView([5.9804, 116.0735], 8);
         }
 
@@ -1186,7 +1212,7 @@ body {
       try {
         const projects = await loadAllSheetsAndNormalize();
         renderMarkersInBatches(projects, () => {
-          // Fix: markersList removed as it wasn't used/needed globally
+          // Initial filter to update dashboard
           filterAndDisplayMarkers();
         });
         
