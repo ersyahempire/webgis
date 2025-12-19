@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.8 - Dynamic Config</title>
+  <title>Web GIS Projek Sabah v4.9 - Final Fix</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Leaflet CSS -->
+  <!-- Leaflet CSS & JS (Loaded in Head for Stability) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <!-- ECharts (Grafik) -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
@@ -692,6 +693,20 @@ body {
         } catch (e) { console.error("parseGviz failed", e); return null; }
     }
 
+    // ---------- NEW LOADING FUNCTION -----------
+    async function loadAllSheetsAndNormalize() {
+      // ITERATE OVER NEW PROJECT REGISTER
+      const promises = PROJECT_REGISTER.map(projConfig => fetchSheetObjectsSafe(projConfig));
+      const results = await Promise.all(promises);
+      
+      // FLATTEN RESULTS
+      const combined = results.flat();
+      allProjects = combined;
+      buildAreaIndex();
+      return combined;
+    }
+    // -------------------------------------------
+
     async function fetchSheetObjectsSafe(projectConfig) {
       const url = `https://docs.google.com/spreadsheets/d/${projectConfig.sheetId}/gviz/tq?tqx=out:json&tq=`;
       try {
@@ -790,138 +805,66 @@ body {
       return normalized;
     }
 
-    // LEAFLET GEOJSON LOADER
-    async function loadGeoJsonLayer(key, url, baseStyle = {}) {
-      try {
-        const resp = await fetch(url);
-        if (!resp.ok) { console.warn(`GeoJSON ${key} not found`); return null; }
-        const json = await resp.json();
-        const styleFn = (feature) => ({ color: baseStyle.strokeColor || "#666", weight: baseStyle.strokeWeight || 1, fillColor: baseStyle.fillColor || "#FFF", fillOpacity: 0.05 });
-        const layer = L.geoJSON(json, {
-            style: styleFn,
-            onEachFeature: (feature, layer) => {
-                layer.on('mouseover', (e) => {
-                    const l = e.target;
-                    if (activeFeatureName !== extractFeatureName(feature)) {
-                        l.setStyle({ weight: 2, color: '#4338ca', fillOpacity: 0.3, fillColor: '#4338ca' });
-                        l.bringToFront();
-                    }
-                    l.bindTooltip(extractFeatureName(feature), { permanent: false, direction: 'top', className: 'leaflet-tooltip-glass' }).openTooltip();
-                });
-                layer.on('mouseout', (e) => {
-                    if (activeFeatureName !== extractFeatureName(feature)) dataLayers[key].resetStyle(e.target);
-                    e.target.closeTooltip();
-                });
-                layer.on('click', (e) => handleFeatureClick(key, feature, e.target));
-            }
-        });
-        dataLayers[key] = layer; return layer;
-      } catch (e) { console.warn("loadGeoJsonLayer error", key, e); return null; }
-    }
-
-    function handleFeatureClick(key, feature, leafletLayer) {
-      const layerGroup = dataLayers[key]; if (!layerGroup) return;
-      const featureName = extractFeatureName(feature);
-      document.getElementById("selected-area").textContent = featureName;
-      toggleBoundaryLayerVisibility(key);
-      layerGroup.eachLayer(l => layerGroup.resetStyle(l));
-      const themeColor = getRandomColor();
-      leafletLayer.setStyle({ weight: 3, color: themeColor, fillOpacity: 0.4, fillColor: themeColor });
-      leafletLayer.bringToFront();
-      activeFeatureName = featureName; currentBoundaryKey = key;
-      filterAndDisplayMarkers();
-      map.fitBounds(leafletLayer.getBounds(), { padding: [20, 20] });
-    }
-
-    function toggleBoundaryLayerVisibility(key) {
-      Object.keys(dataLayers).forEach(k => {
-        const dl = dataLayers[k];
-        if (dl) {
-            if (k === key) { if(!map.hasLayer(dl)) map.addLayer(dl); } 
-            else { if(map.hasLayer(dl)) map.removeLayer(dl); }
-        }
-      });
-      updateToggleButtonsUI(key);
-    }
-
-    function updateToggleButtonsUI(activeKey) {
-      const mapping = { district: "toggle-daerah", dun: "toggle-dun", parliament: "toggle-parliament" };
-      Object.keys(mapping).forEach(k => {
-        const btn = document.getElementById(mapping[k]);
-        if (btn) activeKey === k ? btn.classList.add("active") : btn.classList.remove("active");
-      });
-    }
-
-    function setupToggles() {
-      // Setup Boundary Toggles
-      const boundaries = [ { id: "toggle-daerah", key: "district" }, { id: "toggle-dun", key: "dun" }, { id: "toggle-parliament", key: "parliament" } ];
-      boundaries.forEach(b => {
-        document.getElementById(b.id)?.addEventListener("click", function () {
-          if (!dataLayers[b.key]) { alert(`Maaf, data sempadan ${b.key} gagal dimuatkan.`); return; }
-          if (this.classList.contains('active') && currentBoundaryKey === b.key) {
-            this.classList.remove('active'); map.removeLayer(dataLayers[b.key]);
-            currentBoundaryKey = null; activeFeatureName = null;
-            document.getElementById("selected-area").textContent = "SELURUH SABAH"; map.setView([5.9804, 116.0735], 8);
-          } else {
-            toggleBoundaryLayerVisibility(b.key);
-            document.getElementById("selected-area").textContent = "SABAH (" + b.key.toUpperCase() + ")";
-            currentBoundaryKey = b.key; 
-          }
-          filterAndDisplayMarkers();
+    function buildAreaIndex() {
+      areaIndex.clear();
+      allProjects.forEach(p => {
+        [p.DISTRICT, p.DUN, p.PARLIAMENT].forEach(k => {
+          if (!k) return;
+          const key = normalizeString(k);
+          if (!areaIndex.has(key)) areaIndex.set(key, new Set());
+          areaIndex.get(key).add(p.SITE_NAME);
         });
       });
-      document.getElementById("search-input")?.addEventListener("input", (e) => {
-        searchTerm = e.target.value;
-        const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
-        if (coordMatch) {
-            const lat = parseFloat(coordMatch[1]); const lng = parseFloat(coordMatch[2]);
-            if (!isNaN(lat) && !isNaN(lng)) map.setView([lat, lng], 14);
-        } else filterAndDisplayMarkers();
-      });
     }
 
-    async function autoRefreshLoop() {
-      try {
-        const newProjects = await loadAllSheetsAndNormalize();
-        newProjects.forEach(np => createOrUpdateMarker(np));
-        markersList = Array.from(markersBySite.values());
-        allProjects = newProjects;
-        filterAndDisplayMarkers();
-      } catch (e) { console.warn("autoRefreshLoop failed", e); }
+    // ---------- MARKERS LOGIC ----------
+    function createOrUpdateMarker(project) {
+      if (!project._validCoord) return null;
+      const uniqueKey = project._id;
+      const cfg = TYPE_CFG[project._type] || { color: "#333", icon: "📍" };
+      if (markersBySite.has(uniqueKey)) {
+        const m = markersBySite.get(uniqueKey);
+        m._meta = project; 
+        const pos = m.getLatLng();
+        if (Math.abs(pos.lat - project.LATITUDE) > 0.0001 || Math.abs(pos.lng - project.LONGITUDE) > 0.0001) m.setLatLng([project.LATITUDE, project.LONGITUDE]);
+        return m;
+      } else {
+        let rawDetailsHtml = project._raw_details.map(detail =>
+          `<div class="info-row"><span class="info-label">${escapeHtml(detail.label)}</span><span class="info-val">${escapeHtml(detail.value)}</span></div>`
+        ).join('');
+        if (rawDetailsHtml) rawDetailsHtml = `<div class="section-header">Maklumat Tambahan</div>` + rawDetailsHtml;
+        const popupContent = `
+            <div class="info-popup">
+                <div class="info-header">${cfg.icon} ${escapeHtml(project.SITE_NAME)}</div>
+                <div class="info-body">
+                <div class="section-header">Maklumat Utama</div>
+                <div class="info-row"><span class="info-label">Kategori</span><span class="info-val">${cfg.label}</span></div>
+                <div class="info-row"><span class="info-label">Daerah</span><span class="info-val">${escapeHtml(project.DISTRICT)}</span></div>
+                <div class="info-row"><span class="info-label">DUN</span><span class="info-val">${escapeHtml(project.DUN)}</span></div>
+                <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${cfg.color}">${escapeHtml(project.STATUS)}</span></div>
+                ${rawDetailsHtml} 
+                </div>
+            </div>`;
+        const marker = L.circleMarker([project.LATITUDE, project.LONGITUDE], { radius: 6, fillColor: cfg.color, color: "#fff", weight: 2, opacity: 1, fillOpacity: 1 });
+        marker.bindPopup(popupContent);
+        marker._meta = project;
+        markersBySite.set(uniqueKey, marker);
+        return marker;
+      }
     }
 
-    // ---------- MAIN INIT ----------
-    async function initMap() {
-      // 1. Generate UI based on Config
-      generateDynamicUI();
-
-      const mapDiv = document.getElementById("map"); if (!mapDiv) return;
-      map = L.map('map', { zoomControl: false }).setView([5.9804, 116.0735], 8);
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
-      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
-      const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
-      satellite.addTo(map);
-      L.control.layers({ "Satelit (Esri)": satellite, "Peta (OSM)": osm }, null, { position: 'topright' }).addTo(map);
-      markersLayerGroup = L.layerGroup().addTo(map);
-
-      showLoading(true);
-      try {
-        const projects = await loadAllSheetsAndNormalize();
-        renderMarkersInBatches(projects, () => {
-          markersList = Array.from(markersBySite.values());
-          filterAndDisplayMarkers();
-        });
-        const pDistrict = loadGeoJsonLayer("district", URLs.district);
-        const pDun = loadGeoJsonLayer("dun", URLs.dun);
-        const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
-        await Promise.all([pDistrict, pDun, pPar]);
-        if (dataLayers['district']) { dataLayers['district'].addTo(map); currentBoundaryKey = 'district'; }
-        setupToggles(); filterAndDisplayMarkers();
-        setInterval(() => autoRefreshLoop(), refreshIntervalMs);
-      } catch (e) { console.error("Init Error", e); } finally { showLoading(false); }
+    function renderMarkersInBatches(projects, onComplete) {
+      const total = projects.length; let i = 0;
+      if (total === 0) { if (onComplete) onComplete(); return; }
+      const runChunk = () => {
+        const end = Math.min(i + batchSize, total);
+        for (; i < end; i++) createOrUpdateMarker(projects[i]);
+        if (i < total) setTimeout(runChunk, 50); else if (onComplete) onComplete();
+      };
+      runChunk();
     }
 
-    // ---------- DASHBOARD LOGIC (UPDATED FOR DYNAMIC TYPES) ----------
+    // ---------- DASHBOARD INTERACTION ----------
     function handleCategoryClick(type, elementId) {
       if (activeDashboardCategory === type) {
         activeDashboardCategory = null;
@@ -933,7 +876,6 @@ body {
       }
       filterAndDisplayMarkers();
     }
-
     function handleStatusClick(statusStr) {
       activeStatusFilter = (activeStatusFilter === statusStr) ? null : statusStr;
       filterAndDisplayMarkers();
@@ -1256,9 +1198,38 @@ body {
         });
     }
 
+    // ---------- MAIN INIT ----------
+    async function initMap() {
+      // 1. Generate UI based on Config
+      generateDynamicUI();
+
+      const mapDiv = document.getElementById("map"); if (!mapDiv) return;
+      map = L.map('map', { zoomControl: false }).setView([5.9804, 116.0735], 8);
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+      const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+      satellite.addTo(map);
+      L.control.layers({ "Satelit (Esri)": satellite, "Peta (OSM)": osm }, null, { position: 'topright' }).addTo(map);
+      markersLayerGroup = L.layerGroup().addTo(map);
+
+      showLoading(true);
+      try {
+        const projects = await loadAllSheetsAndNormalize();
+        renderMarkersInBatches(projects, () => {
+          markersList = Array.from(markersBySite.values());
+          filterAndDisplayMarkers();
+        });
+        const pDistrict = loadGeoJsonLayer("district", URLs.district);
+        const pDun = loadGeoJsonLayer("dun", URLs.dun);
+        const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
+        await Promise.all([pDistrict, pDun, pPar]);
+        if (dataLayers['district']) { dataLayers['district'].addTo(map); currentBoundaryKey = 'district'; }
+        setupToggles(); filterAndDisplayMarkers();
+        setInterval(() => autoRefreshLoop(), refreshIntervalMs);
+      } catch (e) { console.error("Init Error", e); } finally { showLoading(false); }
+    }
+
     window.onload = initMap;
   </script>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </body>
 </html>
