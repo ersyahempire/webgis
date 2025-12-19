@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.9 - Fixed & Debugged</title>
+  <title>Web GIS Projek Sabah v5.0 - Updated UI</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -628,12 +628,16 @@ body {
             legItem.innerHTML = `<span class="dot" style="background: ${config.color};"></span> ${config.label}`;
             legendContainer.appendChild(legItem);
 
-            // 3. Generate Filter Toggle Button
+            // 3. Generate Filter Toggle Button (Updated for Requirement 3: Clean UI)
             const btn = document.createElement("button");
-            btn.className = "toggle-btn active"; 
+            // Requirement 2: Default load OFF (remove 'active')
+            btn.className = "toggle-btn"; 
             btn.id = `toggle-${typeKey}`;
             btn.title = config.label;
-            btn.innerHTML = `<i class="${config.icon.length > 2 ? 'fas' : ''} fa-circle" style="color: ${config.color}; font-style: normal;">${config.icon.length < 3 ? config.icon : ''}</i> <span>${config.label}</span>`;
+            
+            // Requirement 3: Clean Icon Display (No Checklist)
+            // Just use the icon from TYPE_CFG directly
+            btn.innerHTML = `<span style="font-size: 1.2em; margin-right: 8px;">${config.icon}</span> <span>${config.label}</span>`;
             
             btn.onclick = function() {
                 this.classList.toggle("active");
@@ -879,7 +883,7 @@ body {
       filterAndDisplayMarkers();
     }
 
-    // SEARCH LISTENER (ADDED FIX)
+    // SEARCH LISTENER
     document.getElementById('search-input').addEventListener('input', function(e) {
         searchTerm = e.target.value;
         filterAndDisplayMarkers();
@@ -892,12 +896,12 @@ body {
       PROJECT_REGISTER.forEach(p => {
           const typeKey = p.type.toUpperCase();
           const btn = document.getElementById(`toggle-${typeKey}`);
-          // If button exists and is active OR button doesn't exist (default show), add to set
+          
+          // Requirement 2: Logic checks for 'active' class. Since default is NO active class, this will default to empty set.
           if (btn && btn.classList.contains("active")) {
               activeTypes.add(typeKey);
-          } else if (!btn) {
-              activeTypes.add(typeKey); // Default active if no button found (failsafe)
-          }
+          } 
+          // Removed fallback "else add" to ensure they are hidden by default
       });
 
       let filteredList = allProjects;
@@ -1092,7 +1096,7 @@ body {
 
     function closeReport() { document.getElementById('report-overlay').classList.remove('open'); }
 
-    // GENERATE PDF FUNCTION (ADDED FIX)
+    // GENERATE PDF FUNCTION
     window.generatePDF = function() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('l', 'mm', 'a4'); // Landscape, mm, A4
@@ -1240,7 +1244,7 @@ body {
         });
     }
 
-    // ---------- LOAD GEOJSON LAYER (ADDED FIX) ----------
+    // ---------- LOAD GEOJSON LAYER (UPDATED FOR REQUIREMENT 1) ----------
     async function loadGeoJsonLayer(key, url) {
         try {
             const res = await fetch(url);
@@ -1248,16 +1252,40 @@ body {
             const data = await res.json();
             
             const layer = L.geoJSON(data, {
-                style: { color: '#666', weight: 1, fillOpacity: 0.1 },
+                style: { color: '#666', weight: 1, fillOpacity: 0.1, fillColor: 'transparent' }, // Default style
                 onEachFeature: (feature, layer) => {
                     const name = extractFeatureName(feature);
                     layer.bindTooltip(name, { sticky: true });
+                    
+                    // Requirement 1: Random Color on Hover
+                    layer.on('mouseover', function(e) {
+                        // Only change style if not currently active/selected
+                        if (activeFeatureName !== name) {
+                            // Generate random color
+                            const randomColor = getRandomColor();
+                            this.setStyle({ weight: 2, color: '#333', fillOpacity: 0.6, fillColor: randomColor });
+                        }
+                    });
+
+                    layer.on('mouseout', function(e) {
+                         // Reset to default if not selected
+                         if (activeFeatureName !== name) {
+                             // Using specific style reset instead of dataLayers[key].resetStyle(this) to handle fill
+                             this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.1, fillColor: 'transparent' });
+                         }
+                    });
+
                     layer.on('click', () => {
-                        // Reset previous selections
-                        dataLayers[key].eachLayer(l => l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.1 }));
+                        // Reset previous selections (all other layers)
+                        dataLayers[key].eachLayer(l => {
+                            l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.1, fillColor: 'transparent' });
+                        });
                         
-                        // Highlight current
-                        layer.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.3 });
+                        // Requirement 1: Highlight current with the color it had during hover
+                        // Since mouseover happens before click, current fill color is the random one
+                        const currentColor = this.options.fillColor;
+                        
+                        this.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: currentColor });
                         
                         // Update app state
                         activeFeatureName = name;
@@ -1273,7 +1301,6 @@ body {
             dataLayers[key] = layer;
         } catch (e) {
             console.warn(`Could not load GeoJSON for ${key}. Map will work without boundaries.`, e);
-            // Fallback: Create empty layer group to prevent errors
             dataLayers[key] = L.layerGroup();
         }
     }
