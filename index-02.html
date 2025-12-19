@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.2 - Layer Fix</title>
+  <title>Web GIS Projek Sabah v5.3 - Final Fixes</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -54,7 +54,7 @@ body {
   background: #ddd; 
 }
 
-/* FIX: Ensure tooltip doesn't block click events on the polygon below it */
+/* FIX: Tooltip pointer events so they don't block clicks */
 .leaflet-tooltip {
     pointer-events: none !important;
 }
@@ -266,34 +266,6 @@ body {
 .toggle-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
 .toggle-btn.active i { color: white !important; }
 
-/* FIX for "Penapis Data" visibility */
-#filter-card .toggle-btn {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-}
-#filter-card:hover .toggle-btn,
-#filter-card.expanded .toggle-btn {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* Placeholder Icon for Filter Card */
-#filter-main-icon {
-    position: absolute;
-    top: 0; left: 0;
-    width: 52px; height: 52px;
-    display: flex; justify-content: center; align-items: center;
-    color: var(--text-sub);
-    font-size: 18px;
-    pointer-events: none;
-    transition: opacity 0.2s;
-}
-#filter-card:hover #filter-main-icon,
-#filter-card.expanded #filter-main-icon {
-    opacity: 0;
-}
-
 /* Legend Mini */
 .legend-mini { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.05); }
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-sub); }
@@ -479,8 +451,14 @@ body {
 
     <!-- Category Filter Group - Generated Dynamically via JS -->
     <div class="control-card" id="filter-card">
-      <div id="filter-main-icon"><i class="fas fa-filter"></i></div>
       <div class="control-group-title">Penapis Data</div>
+      
+      <!-- Static Header Icon (Visible when collapsed) -->
+      <div class="toggle-btn" style="cursor: default;">
+          <i class="fas fa-filter" style="color: var(--text-sub);"></i>
+          <span>Senarai</span>
+      </div>
+
       <div id="dynamic-filter-btns">
           <!-- Content will be injected by generateDynamicUI() -->
       </div>
@@ -1097,7 +1075,7 @@ body {
             const data = await res.json();
             
             const layer = L.geoJSON(data, {
-                // FIXED: Lighter opacity (0.05) and no fill color by default
+                // FIXED: Solid Fill Color but very transparent to catch clicks
                 style: { color: '#666', weight: 1, fillOpacity: 0.01, fillColor: '#ffffff' }, 
                 onEachFeature: (feature, layer) => {
                     const name = extractFeatureName(feature);
