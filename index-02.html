@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.9 - Final Fix</title>
+  <title>Web GIS Projek Sabah v5.0 - Debugged Layer</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Leaflet CSS & JS (Loaded in Head for Stability) -->
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
@@ -269,6 +269,16 @@ body {
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-sub); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,0.5); }
 
+/* ----- TOAST NOTIFICATION ----- */
+.toast-notification {
+  position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.8); color: white; padding: 12px 24px;
+  border-radius: 50px; font-size: 14px; font-weight: 500;
+  z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  text-align: center; width: max-content; max-width: 90%;
+}
+.toast-notification.show { opacity: 1; }
+
 /* ----- REPORT MODAL ----- */
 .report-overlay {
     position: fixed; inset: 0; z-index: 5000;
@@ -377,6 +387,9 @@ body {
     <div class="spinner"></div>
     <div style="font-weight: 700; font-size: 14px; color: var(--primary); letter-spacing: 0.5px;">MEMUATKAN DATA GIS...</div>
   </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast-notification"></div>
 
   <!-- Top Search Bar -->
   <div class="search-container">
@@ -524,6 +537,15 @@ body {
       card.addEventListener('mouseenter', () => card.classList.add('expanded'));
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
+
+    // ---------- TOAST HELPER ----------
+    function showToast(msg, duration = 4000) {
+        let toast = document.getElementById('toast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), duration);
+    }
 
     // ---------- CONFIG ----------
     const URLs = { district: "district.json", dun: "dun.json", parliament: "parliament.json" };
@@ -1198,6 +1220,293 @@ body {
         });
     }
 
+    // ---------- LOAD DATA ----------
+    async function loadAllSheetsAndNormalize() {
+      // ITERATE OVER NEW PROJECT REGISTER
+      const promises = PROJECT_REGISTER.map(projConfig => fetchSheetObjectsSafe(projConfig));
+      const results = await Promise.all(promises);
+      
+      // FLATTEN RESULTS
+      const combined = results.flat();
+      allProjects = combined;
+      buildAreaIndex();
+      return combined;
+    }
+
+    async function fetchSheetObjectsSafe(projectConfig) {
+      const url = `https://docs.google.com/spreadsheets/d/${projectConfig.sheetId}/gviz/tq?tqx=out:json&tq=`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Sheet fetch ${projectConfig.id} failed`);
+        const text = await res.text();
+        const json = parseGviz(text);
+        if (!json || !json.table) return { rows: [], cols: [] };
+        
+        const rawCols = json.table.cols.map(c => (c && c.label) ? c.label.toUpperCase() : "");
+        const rows = json.table.rows || [];
+        
+        // Convert to Key-Value Objects
+        const processedRows = rows.map(r => {
+            const obj = {};
+            rawCols.forEach((c, i) => {
+                const cell = (r.c && r.c[i]) ? r.c[i] : null;
+                obj[c ? c : `COL${i}`] = (cell && cell.v !== null) ? cell.v : "";
+            });
+            return obj;
+        });
+
+        // Normalize & Filter
+        return normalizeRows(processedRows, projectConfig, rawCols);
+
+      } catch (e) { 
+          console.warn("Sheet load fail", projectConfig.id, e); 
+          return []; 
+      }
+    }
+
+    function normalizeRows(rows, projectConfig, rawCols) {
+      const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
+      
+      const normalized = [];
+
+      for(let i=0; i<rows.length; i++) {
+          const r = rows[i];
+
+          // --- FILTER LOGIC ---
+          if (projectConfig.filter) {
+              const filterCol = projectConfig.filter.col.toUpperCase();
+              const filterVal = projectConfig.filter.val;
+              
+              // Check if row has column and matches value (case-insensitive check for safety)
+              const rowVal = String(r[filterCol] || "").trim();
+              if (rowVal.toUpperCase() !== filterVal.toUpperCase()) {
+                  continue; // Skip this row
+              }
+          }
+          // --------------------
+
+          const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
+          
+          const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
+          const district = get("DISTRICT") || get("DAERAH") || "";
+          const dun = get("DUN") || "";
+          const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
+          
+          const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
+          const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
+          
+          const rawStatus = get("STATUS") || get("STATUS_1") || "Tiada Status";
+          
+          const rawDetails = [];
+          let count = 0;
+          for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
+            const key = rawCols[colIndex];
+            if (normalizedKeys.has(key)) continue;
+            const value = r[key];
+            if (value !== null && value !== "" && value !== undefined) {
+              rawDetails.push({ label: key, value: String(value).trim() });
+              count++;
+            }
+          }
+
+          const type = projectConfig.type ? projectConfig.type.toUpperCase() : "UNKNOWN";
+          const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
+          
+          const rowObj = {
+            SITE_NAME: String(site || "N/A").trim(), 
+            DISTRICT: String(district || "").trim(), 
+            DUN: String(dun || "").trim(), 
+            PARLIAMENT: String(parliament || "").trim(),
+            LATITUDE: lat, 
+            LONGITUDE: lng, 
+            STATUS: String(rawStatus).trim(),
+            _sheet: projectConfig.id, 
+            _type: type, 
+            _raw_details: rawDetails, 
+            _validCoord: isValidCoordinate
+          };
+          
+          rowObj._id = generateStableId(rowObj, type);
+          
+          if (rowObj.SITE_NAME !== "N/A") {
+              normalized.push(rowObj);
+          }
+      }
+      return normalized;
+    }
+
+    // LEAFLET GEOJSON LOADER
+    async function loadGeoJsonLayer(key, url, baseStyle = {}) {
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) { console.warn(`GeoJSON ${key} not found`); return null; }
+        const json = await resp.json();
+        
+        const styleFn = (feature) => ({ 
+            color: "#fff", // White outline for better visibility on satellite
+            weight: 1.5,   // Thicker line
+            fillColor: "#fff", 
+            fillOpacity: 0.1 
+        });
+
+        const layer = L.geoJSON(json, {
+            style: styleFn,
+            onEachFeature: (feature, layer) => {
+                layer.on('mouseover', (e) => {
+                    const l = e.target;
+                    // Don't override if selected
+                    if (activeFeatureName !== extractFeatureName(feature)) {
+                        l.setStyle({
+                            weight: 2,
+                            color: '#4338ca',
+                            fillOpacity: 0.3,
+                            fillColor: '#4338ca'
+                        });
+                        l.bringToFront();
+                    }
+                    
+                    // Show Tooltip
+                    l.bindTooltip(extractFeatureName(feature), {
+                        permanent: false,
+                        direction: 'top',
+                        className: 'leaflet-tooltip-glass' 
+                    }).openTooltip();
+                });
+
+                layer.on('mouseout', (e) => {
+                    const l = e.target;
+                    // Reset style only if not selected
+                    if (activeFeatureName !== extractFeatureName(feature)) {
+                        dataLayers[key].resetStyle(l);
+                    }
+                    l.closeTooltip();
+                });
+
+                layer.on('click', (e) => {
+                    handleFeatureClick(key, feature, e.target);
+                });
+            }
+        });
+
+        dataLayers[key] = layer;
+        return layer;
+      } catch (e) { console.warn("loadGeoJsonLayer error", key, e); return null; }
+    }
+
+    function handleFeatureClick(key, feature, leafletLayer) {
+      const layerGroup = dataLayers[key]; if (!layerGroup) return;
+
+      const featureName = extractFeatureName(feature);
+      document.getElementById("selected-area").textContent = featureName;
+
+      toggleBoundaryLayerVisibility(key);
+      
+      // Reset all styles first
+      layerGroup.eachLayer(l => layerGroup.resetStyle(l));
+      
+      const themeColor = getRandomColor();
+      
+      // Highlight Selected
+      leafletLayer.setStyle({
+          weight: 3,
+          color: themeColor,
+          fillOpacity: 0.4,
+          fillColor: themeColor
+      });
+      leafletLayer.bringToFront();
+
+      activeFeatureName = featureName;
+      currentBoundaryKey = key;
+
+      filterAndDisplayMarkers();
+      
+      // Zoom
+      map.fitBounds(leafletLayer.getBounds(), { padding: [20, 20] });
+    }
+
+    function toggleBoundaryLayerVisibility(key) {
+      Object.keys(dataLayers).forEach(k => {
+        const dl = dataLayers[k];
+        if (dl) {
+            if (k === key) {
+                if(!map.hasLayer(dl)) map.addLayer(dl);
+            } else {
+                if(map.hasLayer(dl)) map.removeLayer(dl);
+            }
+        }
+      });
+      // Ensure markers stay on top
+      if(markersLayerGroup) markersLayerGroup.bringToFront();
+      
+      updateToggleButtonsUI(key);
+    }
+
+    function updateToggleButtonsUI(activeKey) {
+      const mapping = { district: "toggle-daerah", dun: "toggle-dun", parliament: "toggle-parliament" };
+      Object.keys(mapping).forEach(k => {
+        const btn = document.getElementById(mapping[k]);
+        if (btn) activeKey === k ? btn.classList.add("active") : btn.classList.remove("active");
+      });
+    }
+
+    function setupToggles() {
+      const boundaries = [
+        { id: "toggle-daerah", key: "district" },
+        { id: "toggle-dun", key: "dun" },
+        { id: "toggle-parliament", key: "parliament" }
+      ];
+
+      boundaries.forEach(b => {
+        document.getElementById(b.id)?.addEventListener("click", function () {
+          // Check if layer exists
+          if (!dataLayers[b.key]) {
+              showToast(`Maaf, data sempadan ${b.key} tidak dijumpai.`);
+              return;
+          }
+
+          if (this.classList.contains('active') && currentBoundaryKey === b.key) {
+            this.classList.remove('active');
+            map.removeLayer(dataLayers[b.key]);
+            currentBoundaryKey = null;
+            activeFeatureName = null;
+            document.getElementById("selected-area").textContent = "SELURUH SABAH";
+            
+            // Reset view
+            map.setView([5.9804, 116.0735], 8);
+          } else {
+            toggleBoundaryLayerVisibility(b.key);
+            document.getElementById("selected-area").textContent = "SABAH (" + b.key.toUpperCase() + ")";
+            currentBoundaryKey = b.key; 
+          }
+          filterAndDisplayMarkers();
+        });
+      });
+
+      document.getElementById("search-input")?.addEventListener("input", (e) => {
+        searchTerm = e.target.value;
+        const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
+        if (coordMatch) {
+            const lat = parseFloat(coordMatch[1]);
+            const lng = parseFloat(coordMatch[2]);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                map.setView([lat, lng], 14);
+            }
+        } else {
+            filterAndDisplayMarkers();
+        }
+      });
+    }
+
+    async function autoRefreshLoop() {
+      try {
+        const newProjects = await loadAllSheetsAndNormalize();
+        newProjects.forEach(np => createOrUpdateMarker(np));
+        markersList = Array.from(markersBySite.values());
+        allProjects = newProjects;
+        filterAndDisplayMarkers();
+      } catch (e) { console.warn("autoRefreshLoop failed", e); }
+    }
+
     // ---------- MAIN INIT ----------
     async function initMap() {
       // 1. Generate UI based on Config
@@ -1222,10 +1531,22 @@ body {
         const pDistrict = loadGeoJsonLayer("district", URLs.district);
         const pDun = loadGeoJsonLayer("dun", URLs.dun);
         const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
+        
         await Promise.all([pDistrict, pDun, pPar]);
-        if (dataLayers['district']) { dataLayers['district'].addTo(map); currentBoundaryKey = 'district'; }
-        setupToggles(); filterAndDisplayMarkers();
+
+        // Default: Show District IF loaded successfully
+        if (dataLayers['district']) {
+             dataLayers['district'].addTo(map);
+             currentBoundaryKey = 'district';
+        } else {
+             showToast("Peta dimuatkan. Data daerah tidak dijumpai.");
+        }
+
+        setupToggles();
+        filterAndDisplayMarkers();
+        
         setInterval(() => autoRefreshLoop(), refreshIntervalMs);
+
       } catch (e) { console.error("Init Error", e); } finally { showLoading(false); }
     }
 
