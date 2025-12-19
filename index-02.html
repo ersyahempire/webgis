@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.9 - Final Fix</title>
+  <title>Web GIS Projek Sabah v4.9 - Fixed & Debugged</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Leaflet CSS & JS (Loaded in Head for Stability) -->
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
@@ -22,21 +22,17 @@
 <style>
 /* ----- GLOBAL VARIABLES & RESET ----- */
 :root {
-  /* Premium Palette */
   --primary: #4F46E5;        /* Indigo 600 */
   --primary-dark: #4338ca;   /* Indigo 700 */
   --primary-light: #818cf8;  /* Indigo 400 */
-  
-  /* Glassmorphism Variables */
   --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-bg-hover: rgba(255, 255, 255, 0.95);   
-  --glass-border: rgba(255, 255, 255, 0.6);      
+  --glass-bg-hover: rgba(255, 255, 255, 0.95);    
+  --glass-border: rgba(255, 255, 255, 0.6);       
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); 
   --glass-blur: 20px;                            
-  
   --text-main: #111827;      /* Gray 900 */
   --text-sub: #6b7280;       /* Gray 500 */
-  --radius: 20px;            /* Curvier corners */
+  --radius: 20px;            
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -418,7 +414,7 @@ body {
 
       <!-- Mini Legend - Generated Dynamically via JS -->
       <div class="legend-mini" id="dynamic-legend">
-         <!-- Content will be injected by generateDynamicUI() -->
+          <!-- Content will be injected by generateDynamicUI() -->
       </div>
     </div>
   </div>
@@ -451,7 +447,7 @@ body {
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
       <div id="dynamic-filter-btns">
-         <!-- Content will be injected by generateDynamicUI() -->
+          <!-- Content will be injected by generateDynamicUI() -->
       </div>
     </div>
   </div>
@@ -529,9 +525,6 @@ body {
     const URLs = { district: "district.json", dun: "dun.json", parliament: "parliament.json" };
 
     // DAFTAR PROJEK & FILTER CONFIG
-    // UNTUK TAMBAH PROJEK BARU: 
-    // 1. Tambah entry baru dalam PROJECT_REGISTER
-    // 2. Tambah konfigurasi warna/icon dalam TYPE_CFG
     const PROJECT_REGISTER = [
       { 
         id: "db_bwa", 
@@ -637,11 +630,11 @@ body {
 
             // 3. Generate Filter Toggle Button
             const btn = document.createElement("button");
-            btn.className = "toggle-btn"; 
+            btn.className = "toggle-btn active"; 
             btn.id = `toggle-${typeKey}`;
             btn.title = config.label;
             btn.innerHTML = `<i class="${config.icon.length > 2 ? 'fas' : ''} fa-circle" style="color: ${config.color}; font-style: normal;">${config.icon.length < 3 ? config.icon : ''}</i> <span>${config.label}</span>`;
-            // Default inactive state logic handle later
+            
             btn.onclick = function() {
                 this.classList.toggle("active");
                 filterAndDisplayMarkers();
@@ -699,7 +692,7 @@ body {
         } catch (e) { console.error("parseGviz failed", e); return null; }
     }
 
-    // ---------- NEW LOADING FUNCTION -----------
+    // ---------- LOADING FUNCTION -----------
     async function loadAllSheetsAndNormalize() {
       // ITERATE OVER NEW PROJECT REGISTER
       const promises = PROJECT_REGISTER.map(projConfig => fetchSheetObjectsSafe(projConfig));
@@ -711,7 +704,6 @@ body {
       buildAreaIndex();
       return combined;
     }
-    // -------------------------------------------
 
     async function fetchSheetObjectsSafe(projectConfig) {
       const url = `https://docs.google.com/spreadsheets/d/${projectConfig.sheetId}/gviz/tq?tqx=out:json&tq=`;
@@ -887,6 +879,12 @@ body {
       filterAndDisplayMarkers();
     }
 
+    // SEARCH LISTENER (ADDED FIX)
+    document.getElementById('search-input').addEventListener('input', function(e) {
+        searchTerm = e.target.value;
+        filterAndDisplayMarkers();
+    });
+
     function filterAndDisplayMarkers() {
       // Dynamic Filter Check
       let activeTypes = new Set();
@@ -918,8 +916,8 @@ body {
         const term = searchTerm.toLowerCase();
         const isCoordSearch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
         if (!isCoordSearch) {
-            filteredList = filteredList.filter(p =>
-            (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) ||
+            filteredList = filteredList.filter(p => 
+            (p.SITE_NAME && p.SITE_NAME.toLowerCase().includes(term)) || 
             (p.DISTRICT && p.DISTRICT.toLowerCase().includes(term)) ||
             (p.DUN && p.DUN.toLowerCase().includes(term))
             );
@@ -1094,6 +1092,44 @@ body {
 
     function closeReport() { document.getElementById('report-overlay').classList.remove('open'); }
 
+    // GENERATE PDF FUNCTION (ADDED FIX)
+    window.generatePDF = function() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4'); // Landscape, mm, A4
+
+        const element = document.getElementById('report-content');
+        
+        // Temporarily scale down for capture
+        const originalTransform = element.style.transform;
+        element.style.transform = "scale(1)"; 
+        
+        html2canvas(element, {
+            scale: 2, // Higher quality
+            useCORS: true
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = 297; // A4 width mm
+            const pageHeight = 210; // A4 height mm
+            const imgHeight = canvas.height * imgWidth / canvas.width;
+            
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                doc.addPage();
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+            
+            doc.save('Sabah_Projek_Report.pdf');
+            element.style.transform = originalTransform; // Restore UI
+        });
+    }
+
     function renderReportCharts() {
         const data = currentFilteredList.length > 0 ? currentFilteredList : (currentBoundaryKey ? [] : allProjects);
         const uniqueTypes = [...new Set(PROJECT_REGISTER.map(p => p.type.toUpperCase()))];
@@ -1204,6 +1240,84 @@ body {
         });
     }
 
+    // ---------- LOAD GEOJSON LAYER (ADDED FIX) ----------
+    async function loadGeoJsonLayer(key, url) {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("File not found");
+            const data = await res.json();
+            
+            const layer = L.geoJSON(data, {
+                style: { color: '#666', weight: 1, fillOpacity: 0.1 },
+                onEachFeature: (feature, layer) => {
+                    const name = extractFeatureName(feature);
+                    layer.bindTooltip(name, { sticky: true });
+                    layer.on('click', () => {
+                        // Reset previous selections
+                        dataLayers[key].eachLayer(l => l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.1 }));
+                        
+                        // Highlight current
+                        layer.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.3 });
+                        
+                        // Update app state
+                        activeFeatureName = name;
+                        document.getElementById('selected-area').textContent = name;
+                        
+                        // Zoom to feature
+                        map.fitBounds(layer.getBounds());
+                        
+                        filterAndDisplayMarkers();
+                    });
+                }
+            });
+            dataLayers[key] = layer;
+        } catch (e) {
+            console.warn(`Could not load GeoJSON for ${key}. Map will work without boundaries.`, e);
+            // Fallback: Create empty layer group to prevent errors
+            dataLayers[key] = L.layerGroup();
+        }
+    }
+
+    // ---------- SETUP TOGGLES (ADDED FIX) ----------
+    function setupToggles() {
+        // Toggle Logic for Map Layers
+        function switchLayer(layerKey, btnId) {
+            // Remove all boundary layers
+            Object.values(dataLayers).forEach(l => { if(l) map.removeLayer(l); });
+            
+            // Add selected layer
+            if (dataLayers[layerKey]) map.addLayer(dataLayers[layerKey]);
+            currentBoundaryKey = layerKey;
+            activeFeatureName = null; // Reset selection
+            document.getElementById('selected-area').textContent = "SELURUH SABAH";
+            
+            // Reset markers filter
+            filterAndDisplayMarkers();
+            
+            // UI Update
+            document.querySelectorAll('#layer-card .toggle-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(btnId).classList.add('active');
+            
+            // Zoom out
+            if (map) map.setView([5.9804, 116.0735], 8);
+        }
+
+        document.getElementById('toggle-daerah').onclick = () => switchLayer('district', 'toggle-daerah');
+        document.getElementById('toggle-dun').onclick = () => switchLayer('dun', 'toggle-dun');
+        document.getElementById('toggle-parliament').onclick = () => switchLayer('parliament', 'toggle-parliament');
+    }
+
+    // ---------- AUTO REFRESH LOOP (ADDED FIX) ----------
+    function autoRefreshLoop() {
+        console.log("Auto refreshing data...");
+        loadAllSheetsAndNormalize().then(projects => {
+            renderMarkersInBatches(projects, () => {
+                filterAndDisplayMarkers();
+                console.log("Data refreshed.");
+            });
+        });
+    }
+
     // ---------- MAIN INIT ----------
     async function initMap() {
       // 1. Generate UI based on Config
@@ -1222,15 +1336,27 @@ body {
       try {
         const projects = await loadAllSheetsAndNormalize();
         renderMarkersInBatches(projects, () => {
-          markersList = Array.from(markersBySite.values());
+          // Fix: markersList removed as it wasn't used/needed globally
           filterAndDisplayMarkers();
         });
+        
+        // Load layers in parallel
         const pDistrict = loadGeoJsonLayer("district", URLs.district);
         const pDun = loadGeoJsonLayer("dun", URLs.dun);
         const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
         await Promise.all([pDistrict, pDun, pPar]);
-        if (dataLayers['district']) { dataLayers['district'].addTo(map); currentBoundaryKey = 'district'; }
-        setupToggles(); filterAndDisplayMarkers();
+        
+        if (dataLayers['district']) { 
+            dataLayers['district'].addTo(map); 
+            currentBoundaryKey = 'district'; 
+        }
+        
+        setupToggles(); 
+        
+        // Initial Filter
+        filterAndDisplayMarkers();
+        
+        // Start Auto Refresh
         setInterval(() => autoRefreshLoop(), refreshIntervalMs);
       } catch (e) { console.error("Init Error", e); } finally { showLoading(false); }
     }
