@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.0 (Fixed)</title>
+  <title>Web GIS Projek Sabah v5.0 (Report Kad Updated)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -25,7 +25,7 @@
   --primary: #4F46E5;        /* Indigo 600 */
   --primary-dark: #4338ca;   /* Indigo 700 */
   --primary-light: #818cf8;  /* Indigo 400 */
-  --glass-bg: rgba(255, 255, 255, 0.90); /* Sedikit lebih legap untuk kejelasan */
+  --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
   --glass-border: rgba(255, 255, 255, 0.8);       
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
@@ -290,7 +290,7 @@ body {
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-sub); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,0.5); }
 
-/* ----- REPORT MODAL ----- */
+/* ----- REPORT MODAL (UPDATED LAYOUT) ----- */
 .report-overlay {
     position: fixed; inset: 0; z-index: 5000;
     background: rgba(0,0,0,0.5); backdrop-filter: blur(5px);
@@ -300,7 +300,7 @@ body {
 .report-overlay.open { display: flex; opacity: 1; }
 
 .report-modal {
-    width: 95%; max-width: 1100px; height: 90vh;
+    width: 95%; max-width: 1200px; height: 95vh;
     background: #f8fafc; border-radius: 20px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     display: flex; flex-direction: column; overflow: hidden;
@@ -317,34 +317,50 @@ body {
 .report-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; transition: 0.2s; font-size: 16px;}
 .report-close:hover { background: rgba(255,255,255,0.4); transform: rotate(90deg); }
 
+/* --- NEW GRID LAYOUT FOR REPORT BODY --- */
 .report-body {
-    flex: 1; overflow-y: auto; padding: 30px; display: grid;
-    grid-template-columns: 350px 1fr; gap: 30px;
+    flex: 1; overflow-y: auto; padding: 30px; 
+    display: flex; flex-direction: column; gap: 20px;
+    background: #f1f5f9;
 }
 
-.report-sidebar { display: flex; flex-direction: column; gap: 20px; }
-.report-map-snapshot {
-    height: 300px; background: #ddd; border-radius: 16px; overflow: hidden;
-    border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative;
-    display: block; width: 100%;
+.report-info-bar {
+    background: white; border-radius: 12px; padding: 15px 25px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    display: flex; justify-content: space-between; align-items: center;
+    border-left: 5px solid var(--primary);
 }
-.report-sidebar .dashboard-panel {
-    position: relative; top: auto; left: auto; bottom: auto; width: 100%;
-    transform: none; opacity: 1; box-shadow: none; border: 1px solid #e2e8f0;
-    max-height: none; overflow: visible;
-}
-.report-sidebar .dashboard-panel .panel-content { max-height: none; overflow: visible; }
-.report-sidebar .status-details { display: block !important; }
+.info-bar-item { display: flex; flex-direction: column; }
+.info-bar-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; }
+.info-bar-val { font-size: 18px; font-weight: 800; color: #0f172a; }
 
-.report-charts { display: flex; flex-direction: column; gap: 20px; }
-.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; min-height: 300px; }
-.chart-card {
+.chart-grid-3x3 {
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    grid-template-rows: repeat(3, 300px);
+    gap: 20px;
+    width: 100%;
+}
+
+.chart-box {
     background: white; border-radius: 16px; padding: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;
     display: flex; flex-direction: column;
+    overflow: hidden;
 }
-.chart-title { font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; border-left: 4px solid var(--primary); padding-left: 10px;}
-.chart-container { flex: 1; min-height: 250px; width: 100%; }
+.chart-box h3 {
+    margin: 0 0 15px 0; font-size: 14px; font-weight: 800; 
+    color: var(--text-main); text-transform: uppercase;
+    border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+}
+.chart-box h3 i { color: var(--primary-light); }
+.empty-chart {
+    flex: 1; background: #f8fafc; border-radius: 8px; border: 2px dashed #cbd5e1;
+    display: flex; align-items: center; justify-content: center;
+    color: #94a3b8; font-weight: 600; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 1px;
+}
 
 .report-footer {
     padding: 15px 30px; background: white; border-top: 1px solid #e2e8f0;
@@ -374,9 +390,8 @@ body {
 .section-header { font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin: 16px 0 10px 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 4px; letter-spacing: 0.5px; }
 
 /* Responsive Report */
-@media (max-width: 900px) {
-    .report-body { grid-template-columns: 1fr; }
-    .chart-row { grid-template-columns: 1fr; }
+@media (max-width: 1024px) {
+    .chart-grid-3x3 { grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; }
 }
 @media (max-width: 600px) {
   .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; top: 85px; }
@@ -385,6 +400,10 @@ body {
   .control-card:hover, .control-card.expanded { width: 170px; }
   .search-container { top: 15px; width: 70%; left: 60%; } 
   .panel-toggle { top: 15px; left: 15px; }
+  
+  /* Report Mobile */
+  .chart-grid-3x3 { grid-template-columns: 1fr; }
+  .report-info-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
 </style>
 </head>
@@ -449,7 +468,7 @@ body {
     
     <!-- Report Button -->
     <div class="control-card" id="report-btn-card">
-        <button class="toggle-btn" id="btn-open-report" title="Report Kad">
+        <button class="toggle-btn" id="btn-open-report" title="Report Kad" onclick="openReport()">
             <span class="icon-slot"><i class="fas fa-file-invoice-dollar" style="color: #F59E0B;"></i></span> 
             <span class="text-slot">Report Kad</span>
         </button>
@@ -478,48 +497,80 @@ body {
     </div>
   </div>
 
-  <!-- REPORT MODAL UI -->
+  <!-- REPORT MODAL UI (REDESIGNED) -->
   <div class="report-overlay" id="report-overlay">
       <div class="report-modal" id="report-content">
           <div class="report-header">
               <div class="report-title">
-                  <h1><i class="fas fa-chart-line"></i> REPORT KAD PROJEK</h1>
+                  <h1><i class="fas fa-chart-pie"></i> <span id="report-title-text">REPORT KAD PROJEK</span></h1>
                   <div class="report-date" id="report-date-display">Generated on: -</div>
               </div>
               <button class="report-close" onclick="closeReport()"><i class="fas fa-times"></i></button>
           </div>
           
           <div class="report-body">
-              <!-- Left Sidebar: Map & Stats -->
-              <div class="report-sidebar">
-                  <div class="report-map-snapshot" id="report-map-target">
-                      <!-- Map Container for Report -->
+              <!-- Info Bar -->
+              <div class="report-info-bar">
+                  <div class="info-bar-item">
+                      <span class="info-bar-label">Lokasi / Kawasan</span>
+                      <span class="info-bar-val" id="report-location">SELURUH SABAH</span>
                   </div>
-                  <!-- Duplicate Dashboard for PDF view -->
-                  <div id="report-dashboard-clone"></div>
+                  <div class="info-bar-item">
+                      <span class="info-bar-label">Jumlah Projek</span>
+                      <span class="info-bar-val" id="report-total">0</span>
+                  </div>
+                  <div class="info-bar-item">
+                      <span class="info-bar-label">Tarikh Data</span>
+                      <span class="info-bar-val" id="report-data-date">-</span>
+                  </div>
               </div>
 
-              <!-- Right Content: Charts -->
-              <div class="report-charts">
-                  <div class="chart-row">
-                      <div class="chart-card">
-                          <div class="chart-title">Jumlah Projek (Kategori)</div>
-                          <div id="chart-cat-donut" class="chart-container"></div>
-                      </div>
-                      <div class="chart-card">
-                          <div class="chart-title">Status Projek (Keseluruhan)</div>
-                          <div id="chart-status-pie" class="chart-container"></div>
-                      </div>
+              <!-- 3x3 Grid Layout -->
+              <div class="chart-grid-3x3">
+                  <!-- CARTA 01 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-chart-bar"></i> CARTA 01</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
                   </div>
-                  
-                  <div class="chart-card" style="min-height: 350px;">
-                    <div class="chart-title">Kategori Projek VS Status</div>
-                    <div id="chart-cat-status-bar" class="chart-container"></div>
+                  <!-- CARTA 02 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-chart-pie"></i> CARTA 02</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
                   </div>
-
-                  <div class="chart-card" style="min-height: 400px;">
-                    <div class="chart-title">Analisis Keseluruhan Mengikut Kawasan (Race)</div>
-                    <div id="chart-area-race" class="chart-container"></div>
+                  <!-- CARTA 03 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-chart-line"></i> CARTA 03</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
+                  </div>
+                  <!-- CARTA 04 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-chart-area"></i> CARTA 04</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
+                  </div>
+                  <!-- CARTA 05 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-chart-column"></i> CARTA 05</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
+                  </div>
+                  <!-- CARTA 06 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-chart-gantt"></i> CARTA 06</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
+                  </div>
+                  <!-- CARTA 07 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-chart-simple"></i> CARTA 07</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
+                  </div>
+                  <!-- CARTA 08 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-globe"></i> CARTA 08</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
+                  </div>
+                  <!-- CARTA 09 -->
+                  <div class="chart-box">
+                      <h3><i class="fas fa-table"></i> CARTA 09</h3>
+                      <div class="empty-chart">Ruang Kosong</div>
                   </div>
               </div>
           </div>
@@ -546,6 +597,66 @@ body {
       card.addEventListener('mouseenter', () => card.classList.add('expanded'));
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
+
+    // ---------- REPORT MODAL LOGIC (UPDATED) ----------
+    function openReport() {
+        const overlay = document.getElementById('report-overlay');
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+        
+        // 1. Set Date
+        document.getElementById('report-date-display').textContent = `Dijana pada: ${dateStr}`;
+        document.getElementById('report-data-date').textContent = now.toLocaleDateString('ms-MY');
+
+        // 2. Set Dynamic Location & Title based on Selection
+        const currentLoc = activeFeatureName ? activeFeatureName : "SELURUH SABAH";
+        document.getElementById('report-location').textContent = currentLoc;
+        document.getElementById('report-title-text').textContent = `REPORT KAD PROJEK: ${currentLoc}`;
+
+        // 3. Set Total Count based on currently filtered list
+        const total = currentFilteredList ? currentFilteredList.length : 0;
+        document.getElementById('report-total').textContent = total;
+
+        // 4. Open Modal
+        overlay.classList.add('open');
+    }
+
+    function closeReport() {
+        document.getElementById('report-overlay').classList.remove('open');
+    }
+
+    function generatePDF() {
+        const element = document.getElementById('report-content');
+        const opt = {
+            margin:       0,
+            filename:     `Report_Kad_${activeFeatureName || 'Sabah'}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' } // Landscape for grid
+        };
+        
+        // Hide close button & Download button for clean PDF
+        const closeBtn = document.querySelector('.report-close');
+        const dlBtn = document.querySelector('.btn-download');
+        if(closeBtn) closeBtn.style.display = 'none';
+        if(dlBtn) dlBtn.style.display = 'none';
+
+        html2canvas(element, opt.html2canvas).then(canvas => {
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('l', 'mm', 'a4'); // Landscape
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(opt.filename);
+
+            // Restore buttons
+            if(closeBtn) closeBtn.style.display = 'block';
+            if(dlBtn) dlBtn.style.display = 'flex';
+        });
+    }
 
     // ---------- CONFIG ----------
     const URLs = { district: "district.json", dun: "dun.json", parliament: "parliament.json" };
