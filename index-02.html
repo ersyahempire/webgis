@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.0 - Updated UI</title>
+  <title>Web GIS Projek Sabah v5.1 - Fixes</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -52,6 +52,11 @@ body {
   width: 100%; height: 100%;
   z-index: 0;
   background: #ddd; 
+}
+
+/* FIX: Ensure tooltip doesn't block click events on the polygon below it */
+.leaflet-tooltip {
+    pointer-events: none !important;
 }
 
 /* ----- SEARCH BAR ----- */
@@ -241,6 +246,7 @@ body {
   background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
   padding: 6px; border-radius: 14px; box-shadow: var(--glass-shadow); width: 52px; overflow: hidden;
   transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), background 0.3s; border: 1px solid var(--glass-border); white-space: nowrap;
+  position: relative;
 }
 .control-card:hover, .control-card.expanded { width: 190px; background: var(--glass-bg-hover); }
 .control-group-title {
@@ -259,6 +265,34 @@ body {
 .toggle-btn:hover i { transform: scale(1.1); }
 .toggle-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
 .toggle-btn.active i { color: white !important; }
+
+/* FIX for "Penapis Data" visibility */
+#filter-card .toggle-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+#filter-card:hover .toggle-btn,
+#filter-card.expanded .toggle-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Placeholder Icon for Filter Card */
+#filter-main-icon {
+    position: absolute;
+    top: 0; left: 0;
+    width: 52px; height: 52px;
+    display: flex; justify-content: center; align-items: center;
+    color: var(--text-sub);
+    font-size: 18px;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+#filter-card:hover #filter-main-icon,
+#filter-card.expanded #filter-main-icon {
+    opacity: 0;
+}
 
 /* Legend Mini */
 .legend-mini { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.05); }
@@ -445,6 +479,7 @@ body {
 
     <!-- Category Filter Group - Generated Dynamically via JS -->
     <div class="control-card" id="filter-card">
+      <div id="filter-main-icon"><i class="fas fa-filter"></i></div>
       <div class="control-group-title">Penapis Data</div>
       <div id="dynamic-filter-btns">
           <!-- Content will be injected by generateDynamicUI() -->
@@ -1252,39 +1287,39 @@ body {
             const data = await res.json();
             
             const layer = L.geoJSON(data, {
-                style: { color: '#666', weight: 1, fillOpacity: 0.1, fillColor: 'transparent' }, // Default style
+                // FIXED: Lighter opacity (0.05) and no fill color by default
+                style: { color: '#666', weight: 1, fillOpacity: 0.05, fillColor: 'transparent' }, 
                 onEachFeature: (feature, layer) => {
                     const name = extractFeatureName(feature);
-                    layer.bindTooltip(name, { sticky: true });
+                    // FIXED: interactive false for tooltip to prevent clicking issues
+                    layer.bindTooltip(name, { sticky: true, interactive: false });
                     
                     // Requirement 1: Random Color on Hover
                     layer.on('mouseover', function(e) {
                         // Only change style if not currently active/selected
                         if (activeFeatureName !== name) {
-                            // Generate random color
                             const randomColor = getRandomColor();
-                            this.setStyle({ weight: 2, color: '#333', fillOpacity: 0.6, fillColor: randomColor });
+                            // FIXED: Reduced hover opacity to 0.3 ("sedikit tipis")
+                            this.setStyle({ weight: 2, color: '#333', fillOpacity: 0.3, fillColor: randomColor });
                         }
                     });
 
                     layer.on('mouseout', function(e) {
                          // Reset to default if not selected
                          if (activeFeatureName !== name) {
-                             // Using specific style reset instead of dataLayers[key].resetStyle(this) to handle fill
-                             this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.1, fillColor: 'transparent' });
+                             this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.05, fillColor: 'transparent' });
                          }
                     });
 
                     layer.on('click', () => {
                         // Reset previous selections (all other layers)
                         dataLayers[key].eachLayer(l => {
-                            l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.1, fillColor: 'transparent' });
+                            l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.05, fillColor: 'transparent' });
                         });
                         
-                        // Requirement 1: Highlight current with the color it had during hover
-                        // Since mouseover happens before click, current fill color is the random one
-                        const currentColor = this.options.fillColor;
-                        
+                        // Requirement 1: Highlight current
+                        const currentColor = this.options.fillColor; // Keep random color
+                        // FIXED: Reduced selected opacity to 0.4
                         this.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: currentColor });
                         
                         // Update app state
