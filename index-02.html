@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.7 - Custom Config</title>
+  <title>Web GIS Projek Sabah v5.0 - Debugged Layer</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Leaflet CSS -->
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <!-- ECharts (Grafik) -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
@@ -37,12 +38,6 @@
   --text-sub: #6b7280;       /* Gray 500 */
   --radius: 20px;            /* Curvier corners */
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Category Colors */
-  --color-tower: #ff6b6b;
-  --color-nadi: #4dabf7;
-  --color-wifi: #51cf66;
-  --color-pop: #fcc419;
 }
 
 * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
@@ -189,7 +184,7 @@ body {
   box-shadow: 0 2px 10px rgba(79, 70, 229, 0.1);
 }
 
-/* Grid Stats */
+/* Grid Stats - Generated Dynamically */
 .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; }
 .mini-stat {
   background: rgba(255,255,255,0.5); padding: 16px; border-radius: 16px;
@@ -205,10 +200,6 @@ body {
 .mini-stat::before {
   content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: #ccc; opacity: 0.5;
 }
-#stat-card-menara::before { background: var(--color-tower); }
-#stat-card-nadi::before { background: var(--color-nadi); }
-#stat-card-wifi::before { background: var(--color-wifi); }
-#stat-card-pop::before { background: var(--color-pop); }
 
 .mini-stat-val { font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
 .mini-stat-lbl { font-size: 11px; font-weight: 600; color: var(--text-sub); text-transform: uppercase; }
@@ -278,6 +269,16 @@ body {
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-sub); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,0.5); }
 
+/* ----- TOAST NOTIFICATION ----- */
+.toast-notification {
+  position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.8); color: white; padding: 12px 24px;
+  border-radius: 50px; font-size: 14px; font-weight: 500;
+  z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  text-align: center; width: max-content; max-width: 90%;
+}
+.toast-notification.show { opacity: 1; }
+
 /* ----- REPORT MODAL ----- */
 .report-overlay {
     position: fixed; inset: 0; z-index: 5000;
@@ -314,17 +315,15 @@ body {
 .report-map-snapshot {
     height: 300px; background: #ddd; border-radius: 16px; overflow: hidden;
     border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative;
-    /* IMPORTANT: Ensure map container is valid */
     display: block; width: 100%;
 }
-/* Clone dashboard styles for report */
 .report-sidebar .dashboard-panel {
     position: relative; top: auto; left: auto; bottom: auto; width: 100%;
     transform: none; opacity: 1; box-shadow: none; border: 1px solid #e2e8f0;
     max-height: none; overflow: visible;
 }
 .report-sidebar .dashboard-panel .panel-content { max-height: none; overflow: visible; }
-.report-sidebar .status-details { display: block !important; } /* Force expand */
+.report-sidebar .status-details { display: block !important; }
 
 .report-charts { display: flex; flex-direction: column; gap: 20px; }
 .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; min-height: 300px; }
@@ -389,6 +388,9 @@ body {
     <div style="font-weight: 700; font-size: 14px; color: var(--primary); letter-spacing: 0.5px;">MEMUATKAN DATA GIS...</div>
   </div>
 
+  <!-- Toast Notification -->
+  <div id="toast" class="toast-notification"></div>
+
   <!-- Top Search Bar -->
   <div class="search-container">
     <div class="search-box">
@@ -416,24 +418,9 @@ body {
         <div id="selected-area" class="area-badge">SELURUH SABAH</div>
       </div>
 
-      <!-- Category Grid -->
-      <div class="grid-stats">
-        <div class="mini-stat" id="stat-card-menara" onclick="handleCategoryClick('TOWER', 'stat-card-menara')">
-          <div class="mini-stat-val" id="menara-count" style="color: var(--color-tower);">0</div>
-          <div class="mini-stat-lbl">Menara</div>
-        </div>
-        <div class="mini-stat" id="stat-card-nadi" onclick="handleCategoryClick('NADI', 'stat-card-nadi')">
-          <div class="mini-stat-val" id="nadi-count" style="color: var(--color-nadi);">0</div>
-          <div class="mini-stat-lbl">NADI</div>
-        </div>
-        <div class="mini-stat" id="stat-card-wifi" onclick="handleCategoryClick('BWA', 'stat-card-wifi')">
-          <div class="mini-stat-val" id="wifi-count" style="color: var(--color-wifi);">0</div>
-          <div class="mini-stat-lbl">WiFi</div>
-        </div>
-        <div class="mini-stat" id="stat-card-pop" onclick="handleCategoryClick('POP', 'stat-card-pop')">
-          <div class="mini-stat-val" id="pop-count" style="color: var(--color-pop);">0</div>
-          <div class="mini-stat-lbl">POP</div>
-        </div>
+      <!-- Category Grid - Generated Dynamically via JS -->
+      <div class="grid-stats" id="dynamic-grid-stats">
+        <!-- Content will be injected by generateDynamicUI() -->
       </div>
 
       <!-- Status List -->
@@ -442,12 +429,9 @@ body {
         <!-- JS will inject here -->
       </div>
 
-      <!-- Mini Legend -->
-      <div class="legend-mini">
-        <div class="legend-row"><span class="dot" style="background: var(--color-tower);"></span> Menara Komunikasi</div>
-        <div class="legend-row"><span class="dot" style="background: var(--color-nadi);"></span> Pusat NADI</div>
-        <div class="legend-row"><span class="dot" style="background: var(--color-wifi);"></span> WiFi Komuniti</div>
-        <div class="legend-row"><span class="dot" style="background: var(--color-pop);"></span> Point of Presence (POP)</div>
+      <!-- Mini Legend - Generated Dynamically via JS -->
+      <div class="legend-mini" id="dynamic-legend">
+         <!-- Content will be injected by generateDynamicUI() -->
       </div>
     </div>
   </div>
@@ -476,21 +460,12 @@ body {
       </button>
     </div>
 
-    <!-- Category Filter Group -->
+    <!-- Category Filter Group - Generated Dynamically via JS -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      <button class="toggle-btn" id="toggle-menara" title="Menara">
-        <i class="fas fa-broadcast-tower" style="color: var(--color-tower);"></i> <span>Menara</span>
-      </button>
-      <button class="toggle-btn" id="toggle-nadi" title="NADI">
-        <i class="fas fa-satellite-dish" style="color: var(--color-nadi);"></i> <span>NADI</span>
-      </button>
-      <button class="toggle-btn" id="toggle-wifi" title="WiFi">
-        <i class="fas fa-wifi" style="color: var(--color-wifi);"></i> <span>WiFi</span>
-      </button>
-      <button class="toggle-btn" id="toggle-pop" title="POP">
-        <i class="fas fa-globe" style="color: var(--color-pop);"></i> <span>POP</span>
-      </button>
+      <div id="dynamic-filter-btns">
+         <!-- Content will be injected by generateDynamicUI() -->
+      </div>
     </div>
   </div>
 
@@ -563,11 +538,22 @@ body {
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
 
+    // ---------- TOAST HELPER ----------
+    function showToast(msg, duration = 4000) {
+        let toast = document.getElementById('toast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
     // ---------- CONFIG ----------
     const URLs = { district: "district.json", dun: "dun.json", parliament: "parliament.json" };
 
     // DAFTAR PROJEK & FILTER CONFIG
-    // Format: { id, sheetId, type, filter: {col, val} }
+    // UNTUK TAMBAH PROJEK BARU: 
+    // 1. Tambah entry baru dalam PROJECT_REGISTER
+    // 2. Tambah konfigurasi warna/icon dalam TYPE_CFG
     const PROJECT_REGISTER = [
       { 
         id: "db_bwa", 
@@ -588,8 +574,13 @@ body {
         id: "tower", 
         sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", 
         type: "TOWER",
-        // FILTER: Hanya ambil column 'PROJECT_TYPE' yang nilainya 'USP'
         filter: { col: "PROJECT_TYPE", val: "USP" } 
+      },
+      // Projek Baru Ditambah Sini
+      {
+        id: "db_vsat",
+        sheetId: "1KhD9LopT0thjVPhZuCI7IulNsItW9ipQ_M6Ob0V8j0o",
+        type: "VSAT" 
       }
     ];
 
@@ -597,12 +588,13 @@ body {
       BWA: { color: "#51cf66", icon: "📶", label: "WiFi" },
       NADI: { color: "#4dabf7", icon: "📡", label: "NADI" },
       POP: { color: "#fcc419", icon: "🌐", label: "POP" },
-      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" }
+      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" },
+      VSAT: { color: "#9c27b0", icon: "🛰️", label: "VSAT" }
     };
 
     // ---------- STATE ----------
     let map;
-    let reportMap = null; // Separate instance for report
+    let reportMap = null; 
     let markersBySite = new Map();
     let markersLayerGroup;
     let allProjects = [];
@@ -616,6 +608,63 @@ body {
     let activeDashboardCategory = null;
     let activeStatusFilter = null;
     let currentFilteredList = []; 
+    // New State for Dynamic Toggles
+    let categoryToggles = new Set(); // Stores which types are currently toggled OFF (active = NOT in set)
+
+    // ---------- UI GENERATOR (DYNAMIC) ----------
+    function generateDynamicUI() {
+        const gridContainer = document.getElementById("dynamic-grid-stats");
+        const legendContainer = document.getElementById("dynamic-legend");
+        const filterContainer = document.getElementById("dynamic-filter-btns");
+        
+        // Clear previous content
+        gridContainer.innerHTML = '';
+        legendContainer.innerHTML = '';
+        filterContainer.innerHTML = '';
+
+        // Get unique types from Register
+        const uniqueTypes = [...new Set(PROJECT_REGISTER.map(p => p.type.toUpperCase()))];
+
+        uniqueTypes.forEach(typeKey => {
+            const config = TYPE_CFG[typeKey] || { color: "#666", icon: "❓", label: typeKey };
+            
+            // 1. Generate Dashboard Grid Card
+            const card = document.createElement("div");
+            card.className = "mini-stat";
+            card.id = `stat-card-${typeKey}`;
+            card.onclick = () => handleCategoryClick(typeKey, `stat-card-${typeKey}`);
+            
+            // Add custom style for top border color
+            const style = document.createElement('style');
+            style.innerHTML = `#stat-card-${typeKey}::before { background: ${config.color}; }`;
+            document.head.appendChild(style);
+
+            card.innerHTML = `
+                <div class="mini-stat-val" id="count-${typeKey}" style="color: ${config.color};">0</div>
+                <div class="mini-stat-lbl">${config.label}</div>
+            `;
+            gridContainer.appendChild(card);
+
+            // 2. Generate Legend Item
+            const legItem = document.createElement("div");
+            legItem.className = "legend-row";
+            legItem.innerHTML = `<span class="dot" style="background: ${config.color};"></span> ${config.label}`;
+            legendContainer.appendChild(legItem);
+
+            // 3. Generate Filter Toggle Button
+            const btn = document.createElement("button");
+            btn.className = "toggle-btn"; 
+            btn.id = `toggle-${typeKey}`;
+            btn.title = config.label;
+            btn.innerHTML = `<i class="${config.icon.length > 2 ? 'fas' : ''} fa-circle" style="color: ${config.color}; font-style: normal;">${config.icon.length < 3 ? config.icon : ''}</i> <span>${config.label}</span>`;
+            // Default inactive state logic handle later
+            btn.onclick = function() {
+                this.classList.toggle("active");
+                filterAndDisplayMarkers();
+            };
+            filterContainer.appendChild(btn);
+        });
+    }
 
     // ---------- UTIL HELPER ----------
     function showLoading(on) {
@@ -666,6 +715,20 @@ body {
         } catch (e) { console.error("parseGviz failed", e); return null; }
     }
 
+    // ---------- NEW LOADING FUNCTION -----------
+    async function loadAllSheetsAndNormalize() {
+      // ITERATE OVER NEW PROJECT REGISTER
+      const promises = PROJECT_REGISTER.map(projConfig => fetchSheetObjectsSafe(projConfig));
+      const results = await Promise.all(promises);
+      
+      // FLATTEN RESULTS
+      const combined = results.flat();
+      allProjects = combined;
+      buildAreaIndex();
+      return combined;
+    }
+    // -------------------------------------------
+
     async function fetchSheetObjectsSafe(projectConfig) {
       const url = `https://docs.google.com/spreadsheets/d/${projectConfig.sheetId}/gviz/tq?tqx=out:json&tq=`;
       try {
@@ -709,12 +772,8 @@ body {
           if (projectConfig.filter) {
               const filterCol = projectConfig.filter.col.toUpperCase();
               const filterVal = projectConfig.filter.val;
-              
-              // Check if row has column and matches value (case-insensitive check for safety)
               const rowVal = String(r[filterCol] || "").trim();
-              if (rowVal.toUpperCase() !== filterVal.toUpperCase()) {
-                  continue; // Skip this row
-              }
+              if (rowVal.toUpperCase() !== filterVal.toUpperCase()) continue; 
           }
           // --------------------
 
@@ -742,7 +801,7 @@ body {
             }
           }
 
-          const type = projectConfig.type || "UNKNOWN";
+          const type = projectConfig.type ? projectConfig.type.toUpperCase() : "UNKNOWN";
           const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
           
           const rowObj = {
@@ -845,11 +904,20 @@ body {
     }
 
     function filterAndDisplayMarkers() {
-      const menaraToggle = document.getElementById("toggle-menara")?.classList.contains("active");
-      const nadiToggle = document.getElementById("toggle-nadi")?.classList.contains("active");
-      const popToggle = document.getElementById("toggle-pop")?.classList.contains("active");
-      const wifiToggle = document.getElementById("toggle-wifi")?.classList.contains("active");
-      
+      // Dynamic Filter Check
+      let activeTypes = new Set();
+      // Iterate over register to find which buttons are active
+      PROJECT_REGISTER.forEach(p => {
+          const typeKey = p.type.toUpperCase();
+          const btn = document.getElementById(`toggle-${typeKey}`);
+          // If button exists and is active OR button doesn't exist (default show), add to set
+          if (btn && btn.classList.contains("active")) {
+              activeTypes.add(typeKey);
+          } else if (!btn) {
+              activeTypes.add(typeKey); // Default active if no button found (failsafe)
+          }
+      });
+
       let filteredList = allProjects;
 
       if (currentBoundaryKey && activeFeatureName) {
@@ -876,7 +944,7 @@ body {
 
       if (activeDashboardCategory) filteredList = filteredList.filter(p => p._type === activeDashboardCategory);
 
-      currentFilteredList = filteredList; // Save for report
+      currentFilteredList = filteredList;
       updateDashboard(filteredList); 
 
       let mapDisplayList = filteredList;
@@ -885,15 +953,16 @@ body {
 
       markersLayerGroup.clearLayers();
       Array.from(markersBySite.values()).forEach(m => {
-        const meta = m._meta; const type = meta._type;
+        const meta = m._meta; const type = meta._type.toUpperCase();
+        
         let isCategoryAllowed = false;
-        if (activeDashboardCategory) isCategoryAllowed = (type === activeDashboardCategory);
-        else {
-          if (type === "TOWER") isCategoryAllowed = menaraToggle;
-          else if (type === "BWA") isCategoryAllowed = wifiToggle;
-          else if (type === "NADI") isCategoryAllowed = nadiToggle;
-          else if (type === "POP") isCategoryAllowed = popToggle;
+        if (activeDashboardCategory) {
+            isCategoryAllowed = (type === activeDashboardCategory);
+        } else {
+            // Check against dynamic buttons
+            isCategoryAllowed = activeTypes.has(type);
         }
+
         if (visibleLocationIds.has(meta._id) && isCategoryAllowed && meta._validCoord) markersLayerGroup.addLayer(m);
       });
     }
@@ -903,7 +972,11 @@ body {
       const totalEl = document.getElementById("total-projects");
       if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
 
-      const counts = { menara: 0, nadi: 0, wifi: 0, pop: 0 };
+      // Dynamic Counting
+      const counts = {};
+      const uniqueTypes = [...new Set(PROJECT_REGISTER.map(p => p.type.toUpperCase()))];
+      uniqueTypes.forEach(t => counts[t] = 0);
+
       const allUniqueStatuses = new Set();
       allProjects.forEach(p => allUniqueStatuses.add(String(p.STATUS || "Tidak Dinyatakan").trim()));
 
@@ -911,20 +984,21 @@ body {
       allUniqueStatuses.forEach(s => { statusBreakdown[s] = { total: 0, types: {} }; });
 
       displayList.forEach(p => {
-        if (p._type === "TOWER") counts.menara++;
-        if (p._type === "BWA") counts.wifi++;
-        if (p._type === "NADI") counts.nadi++;
-        if (p._type === "POP") counts.pop++;
+        const type = p._type.toUpperCase();
+        if (counts[type] !== undefined) counts[type]++;
 
         const s = String(p.STATUS || "Tidak Dinyatakan").trim();
         if (!statusBreakdown[s]) statusBreakdown[s] = { total: 0, types: {} };
         statusBreakdown[s].total++;
-        if (!statusBreakdown[s].types[p._type]) statusBreakdown[s].types[p._type] = 0;
-        statusBreakdown[s].types[p._type]++;
+        if (!statusBreakdown[s].types[type]) statusBreakdown[s].types[type] = 0;
+        statusBreakdown[s].types[type]++;
       });
 
-      const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-      setTxt("menara-count", counts.menara); setTxt("nadi-count", counts.nadi); setTxt("wifi-count", counts.wifi); setTxt("pop-count", counts.pop);
+      // Update Dynamic Cards
+      uniqueTypes.forEach(t => {
+          const el = document.getElementById(`count-${t}`);
+          if(el) el.textContent = counts[t] || 0;
+      });
 
       const statusEl = document.getElementById("status-list");
       if(!statusEl) return;
@@ -949,6 +1023,7 @@ body {
         const zeroClass = count === 0 ? "is-zero" : "";
         
         let detailsHtml = '';
+        // Sort types by count
         const sortedTypes = Object.entries(data.types).sort(([, a], [, b]) => b - a);
         sortedTypes.forEach(([typeKey, typeCount]) => {
           const typeCfg = TYPE_CFG[typeKey] || { label: typeKey, color: "#666" };
@@ -990,12 +1065,7 @@ body {
       const stepTime = Math.abs(Math.floor(duration / range));
       const obj = document.getElementById(id);
       if (!obj) return;
-      
-      const timer = setInterval(() => {
-        current += increment;
-        obj.innerHTML = current;
-        if (current == end) clearInterval(timer);
-      }, Math.max(stepTime, 10));
+      const timer = setInterval(() => { current += increment; obj.innerHTML = current; if (current == end) clearInterval(timer); }, Math.max(stepTime, 10));
     }
 
     // ---------- REPORT CARD LOGIC ----------
@@ -1007,105 +1077,54 @@ body {
         const now = new Date();
         document.getElementById('report-date-display').textContent = 'Generated on: ' + now.toLocaleString('ms-MY', { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'});
 
-        // UPDATE TITLE DINAMIK
         const areaName = document.getElementById("selected-area").textContent;
         document.querySelector('.report-title h1').innerHTML = `<i class="fas fa-chart-line"></i> REPORT KAD PROJEK ${areaName}`;
 
-        // 1. Clone Dashboard (Stats)
         const dashboardSource = document.querySelector('.dashboard-panel .panel-content');
         const dashboardTarget = document.getElementById('report-dashboard-clone');
         dashboardTarget.innerHTML = '';
         const clone = dashboardSource.cloneNode(true);
         dashboardTarget.appendChild(clone);
 
-        // 2. Map Snapshot "Clean Clone Method" with CANVAS Renderer Fix
         const snapshotTarget = document.getElementById('report-map-target');
-        snapshotTarget.innerHTML = ''; 
-        
-        // Create a temporary map container inside the report
-        const tempMapDiv = document.createElement('div');
-        tempMapDiv.style.width = '100%';
-        tempMapDiv.style.height = '100%';
-        snapshotTarget.appendChild(tempMapDiv);
+        snapshotTarget.innerHTML = '<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#888;"><i class="fas fa-spinner fa-spin"></i> Menjana Peta...</div>';
 
-        // Init new map instance
-        if(reportMap) { reportMap.remove(); reportMap = null; }
-        
-        reportMap = L.map(tempMapDiv, { 
-            zoomControl: false, 
-            attributionControl: false,
-            preferCanvas: true // GLOBAL CANVAS PREFERENCE
-        }).setView([5.9804, 116.0735], 8);
-
-        // Add Satellite Layer
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
-            attribution: '',
-            crossOrigin: 'anonymous' // Critical for html2canvas
-        }).addTo(reportMap);
-
-        // Add Current GeoJSON Layer with CANVAS RENDERER
-        if (currentBoundaryKey && dataLayers[currentBoundaryKey]) {
-             // We need the original GeoJSON data. Since we loaded it into dataLayers via L.geoJSON,
-             // we can grab the featureGroup's toGeoJSON() or re-fetch. 
-             // Re-fetching is safer or just use the cached data if we had it. 
-             // Simplest: re-fetch local json since we have URLs.
-             fetch(URLs[currentBoundaryKey]).then(r => r.json()).then(geoData => {
-                 const layer = L.geoJSON(geoData, {
-                     style: (feature) => ({ 
-                         color: "#4338ca", 
-                         weight: 2, 
-                         fillColor: (activeFeatureName === extractFeatureName(feature)) ? "#4338ca" : "#FFF", 
-                         fillOpacity: (activeFeatureName === extractFeatureName(feature)) ? 0.3 : 0.05 
-                     }),
-                     renderer: L.canvas() // FORCE CANVAS RENDERER TO FIX ALIGNMENT
-                 }).addTo(reportMap);
-                 
-                 // Fit bounds to selected area
-                 if(activeFeatureName) {
-                     layer.eachLayer(l => {
-                         if(extractFeatureName(l.feature) === activeFeatureName) {
-                             reportMap.fitBounds(l.getBounds());
-                         }
-                     });
-                 } else {
-                     reportMap.setView([5.9804, 116.0735], 8);
-                 }
-             });
-        } else {
-             // No boundary selected, just show Sabah
-             reportMap.setView([5.9804, 116.0735], 8);
-        }
-
-        // 2b. Convert to Static Image after delay (to freeze it)
         setTimeout(() => {
-            html2canvas(tempMapDiv, {
+            html2canvas(document.getElementById('map'), {
                 useCORS: true,
                 allowTaint: true,
-                scale: 1 // Keep exact size
+                ignoreElements: (element) => element.classList.contains('dashboard-panel') || element.classList.contains('controls-container') || element.classList.contains('search-container')
             }).then(canvas => {
                 const img = document.createElement('img');
                 img.src = canvas.toDataURL("image/png");
                 img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
-                snapshotTarget.innerHTML = ''; 
-                snapshotTarget.appendChild(img);
-                reportMap = null; // Cleanup
-            }).catch(err => console.error("Map Snapshot Failed", err));
-        }, 1500); // Give time for tiles and canvas layer to render
+                snapshotTarget.innerHTML = ''; snapshotTarget.appendChild(img);
+            }).catch(err => {
+                console.error(err);
+                snapshotTarget.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;">Map Snapshot Unavailable</div>';
+            });
+        }, 500);
 
-        // 3. Render Charts
         renderReportCharts();
     }
 
     function closeReport() { document.getElementById('report-overlay').classList.remove('open'); }
 
     function renderReportCharts() {
-        // Use filtered list for specific stats
         const data = currentFilteredList.length > 0 ? currentFilteredList : (currentBoundaryKey ? [] : allProjects);
+        const uniqueTypes = [...new Set(PROJECT_REGISTER.map(p => p.type.toUpperCase()))];
         
-        // Chart 1: Doughnut - Total Projects by Category (Selected Area)
-        const catCounts = { TOWER:0, BWA:0, NADI:0, POP:0 };
+        // 1. Cat Donut
+        const catCounts = {};
+        uniqueTypes.forEach(t => catCounts[t] = 0);
         data.forEach(d => { if(catCounts[d._type] !== undefined) catCounts[d._type]++; });
         
+        const chartData = uniqueTypes.map(t => ({
+            value: catCounts[t],
+            name: TYPE_CFG[t]?.label || t,
+            itemStyle: { color: TYPE_CFG[t]?.color || '#666' }
+        }));
+
         const chart1 = echarts.init(document.getElementById('chart-cat-donut'));
         chart1.setOption({
             tooltip: { trigger: 'item' },
@@ -1114,16 +1133,11 @@ body {
                 name: 'Kategori', type: 'pie', radius: ['40%', '70%'], avoidLabelOverlap: false,
                 itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
                 label: { show: true, formatter: '{b}: {c}' },
-                data: [
-                    { value: catCounts.TOWER, name: 'Menara', itemStyle: { color: '#ff6b6b' } },
-                    { value: catCounts.NADI, name: 'NADI', itemStyle: { color: '#4dabf7' } },
-                    { value: catCounts.BWA, name: 'WiFi', itemStyle: { color: '#51cf66' } },
-                    { value: catCounts.POP, name: 'POP', itemStyle: { color: '#fcc419' } }
-                ]
+                data: chartData
             }]
         });
 
-        // Chart 2: Pie - Status Breakdown (Selected Area)
+        // 2. Status Pie
         const statusCounts = {};
         data.forEach(d => {
             const s = String(d.STATUS || "N/A").trim();
@@ -1143,16 +1157,17 @@ body {
             }]
         });
 
-        // Chart 3: Bar - Category vs Status (Selected Area)
+        // 3. Category vs Status
         const statuses = Object.keys(statusCounts);
-        const categories = ['TOWER', 'NADI', 'BWA', 'POP'];
+        const categoryLabels = uniqueTypes.map(t => TYPE_CFG[t]?.label || t);
+        
         const seriesData = statuses.map(status => {
             return {
                 name: status,
                 type: 'bar',
                 stack: 'total',
                 label: { show: true },
-                data: categories.map(cat => data.filter(d => d._type === cat && String(d.STATUS||"").trim() === status).length)
+                data: uniqueTypes.map(cat => data.filter(d => d._type === cat && String(d.STATUS||"").trim() === status).length)
             };
         });
 
@@ -1161,40 +1176,24 @@ body {
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
             legend: { top: '0%' },
             grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: { type: 'category', data: ['Menara', 'NADI', 'WiFi', 'POP'] },
+            xAxis: { type: 'category', data: categoryLabels },
             yAxis: { type: 'value' },
-            series: seriesData.length > 0 ? seriesData : [{type:'bar', data:[0,0,0,0]}]
+            series: seriesData.length > 0 ? seriesData : [{type:'bar', data: new Array(categoryLabels.length).fill(0)}]
         });
 
-        // Chart 4: Bar Race - Area Ranking (GLOBAL COMPARISON)
-        // Logic: Use ALL projects, grouped by the CURRENT active boundary key.
+        // 4. Area Race
         const boundaryKey = currentBoundaryKey || 'district';
         const areaKey = boundaryKey === 'district' ? 'DISTRICT' : (boundaryKey === 'dun' ? 'DUN' : 'PARLIAMENT');
         
         const areaStats = {};
-        // 1. Get ALL unique areas for this layer type first to ensure 0 values are represented
         const allUniqueAreas = new Set();
-        allProjects.forEach(p => {
-             const area = normalizeString(p[areaKey]);
-             if(area) allUniqueAreas.add(area);
-        });
-
-        // Initialize 0
+        allProjects.forEach(p => { const area = normalizeString(p[areaKey]); if(area) allUniqueAreas.add(area); });
         allUniqueAreas.forEach(area => areaStats[area] = 0);
+        allProjects.forEach(p => { const area = normalizeString(p[areaKey]); if (area) areaStats[area]++; });
 
-        // Count
-        allProjects.forEach(p => {
-            const area = normalizeString(p[areaKey]);
-            if (area) areaStats[area]++;
-        });
-
-        // Sort descending
-        const sortedAreas = Object.entries(areaStats).sort(([,a], [,b]) => b - a);
-        // Take top 30 to fit graph nicely
-        const topAreas = sortedAreas.slice(0, 30);
-        
-        const yAxisData = topAreas.map(item => item[0]).reverse();
-        const xAxisData = topAreas.map(item => item[1]).reverse();
+        const sortedAreas = Object.entries(areaStats).sort(([,a], [,b]) => b - a).slice(0, 30);
+        const yAxisData = sortedAreas.map(item => item[0]).reverse();
+        const xAxisData = sortedAreas.map(item => item[1]).reverse();
 
         const chart4 = echarts.init(document.getElementById('chart-area-race'));
         chart4.setOption({
@@ -1216,61 +1215,9 @@ body {
             }]
         });
 
-        // Resizing
         window.addEventListener('resize', () => {
             chart1.resize(); chart2.resize(); chart3.resize(); chart4.resize();
         });
-    }
-
-    async function generatePDF() {
-        const { jsPDF } = window.jspdf;
-        const element = document.getElementById('report-content');
-        
-        // Temporarily modify style for PDF capture (remove scroll, show full)
-        const originalOverflow = element.style.overflow;
-        const originalHeight = element.style.height;
-        element.style.overflow = 'visible';
-        element.style.height = 'auto';
-        document.querySelector('.report-close').style.display = 'none'; // Hide close btn
-
-        showLoading(true);
-
-        try {
-            const canvas = await html2canvas(element, { scale: 1.5, useCORS: true });
-            const imgData = canvas.toDataURL('image/png');
-            
-            // PDF Setup (A4)
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgProps = pdf.getImageProperties(imgData);
-            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-            heightLeft -= pdfHeight;
-
-            // Handle multi-page if content is long
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-                heightLeft -= pdfHeight;
-            }
-
-            pdf.save('Laporan_Projek_Sabah_GIS.pdf');
-        } catch (err) {
-            console.error("PDF generation error", err);
-            alert("Ralat menjana PDF. Sila cuba lagi.");
-        } finally {
-            // Restore styles
-            element.style.overflow = originalOverflow;
-            element.style.height = originalHeight;
-            document.querySelector('.report-close').style.display = 'block';
-            showLoading(false);
-        }
     }
 
     // ---------- LOAD DATA ----------
@@ -1362,7 +1309,7 @@ body {
             }
           }
 
-          const type = projectConfig.type || "UNKNOWN";
+          const type = projectConfig.type ? projectConfig.type.toUpperCase() : "UNKNOWN";
           const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
           
           const rowObj = {
@@ -1394,40 +1341,86 @@ body {
         const resp = await fetch(url);
         if (!resp.ok) { console.warn(`GeoJSON ${key} not found`); return null; }
         const json = await resp.json();
-        const styleFn = (feature) => ({ color: baseStyle.strokeColor || "#666", weight: baseStyle.strokeWeight || 1, fillColor: baseStyle.fillColor || "#FFF", fillOpacity: 0.05 });
+        
+        const styleFn = (feature) => ({ 
+            color: "#fff", // White outline for better visibility on satellite
+            weight: 1.5,   // Thicker line
+            fillColor: "#fff", 
+            fillOpacity: 0.1 
+        });
+
         const layer = L.geoJSON(json, {
             style: styleFn,
             onEachFeature: (feature, layer) => {
                 layer.on('mouseover', (e) => {
                     const l = e.target;
+                    // Don't override if selected
                     if (activeFeatureName !== extractFeatureName(feature)) {
-                        l.setStyle({ weight: 2, color: '#4338ca', fillOpacity: 0.3, fillColor: '#4338ca' });
+                        l.setStyle({
+                            weight: 2,
+                            color: '#4338ca',
+                            fillOpacity: 0.3,
+                            fillColor: '#4338ca'
+                        });
                         l.bringToFront();
                     }
-                    l.bindTooltip(extractFeatureName(feature), { permanent: false, direction: 'top', className: 'leaflet-tooltip-glass' }).openTooltip();
+                    
+                    // Show Tooltip
+                    l.bindTooltip(extractFeatureName(feature), {
+                        permanent: false,
+                        direction: 'top',
+                        className: 'leaflet-tooltip-glass' 
+                    }).openTooltip();
                 });
+
                 layer.on('mouseout', (e) => {
-                    if (activeFeatureName !== extractFeatureName(feature)) dataLayers[key].resetStyle(e.target);
-                    e.target.closeTooltip();
+                    const l = e.target;
+                    // Reset style only if not selected
+                    if (activeFeatureName !== extractFeatureName(feature)) {
+                        dataLayers[key].resetStyle(l);
+                    }
+                    l.closeTooltip();
                 });
-                layer.on('click', (e) => handleFeatureClick(key, feature, e.target));
+
+                layer.on('click', (e) => {
+                    handleFeatureClick(key, feature, e.target);
+                });
             }
         });
-        dataLayers[key] = layer; return layer;
+
+        dataLayers[key] = layer;
+        return layer;
       } catch (e) { console.warn("loadGeoJsonLayer error", key, e); return null; }
     }
 
     function handleFeatureClick(key, feature, leafletLayer) {
       const layerGroup = dataLayers[key]; if (!layerGroup) return;
+
       const featureName = extractFeatureName(feature);
       document.getElementById("selected-area").textContent = featureName;
+
       toggleBoundaryLayerVisibility(key);
+      
+      // Reset all styles first
       layerGroup.eachLayer(l => layerGroup.resetStyle(l));
+      
       const themeColor = getRandomColor();
-      leafletLayer.setStyle({ weight: 3, color: themeColor, fillOpacity: 0.4, fillColor: themeColor });
+      
+      // Highlight Selected
+      leafletLayer.setStyle({
+          weight: 3,
+          color: themeColor,
+          fillOpacity: 0.4,
+          fillColor: themeColor
+      });
       leafletLayer.bringToFront();
-      activeFeatureName = featureName; currentBoundaryKey = key;
+
+      activeFeatureName = featureName;
+      currentBoundaryKey = key;
+
       filterAndDisplayMarkers();
+      
+      // Zoom
       map.fitBounds(leafletLayer.getBounds(), { padding: [20, 20] });
     }
 
@@ -1435,10 +1428,16 @@ body {
       Object.keys(dataLayers).forEach(k => {
         const dl = dataLayers[k];
         if (dl) {
-            if (k === key) { if(!map.hasLayer(dl)) map.addLayer(dl); } 
-            else { if(map.hasLayer(dl)) map.removeLayer(dl); }
+            if (k === key) {
+                if(!map.hasLayer(dl)) map.addLayer(dl);
+            } else {
+                if(map.hasLayer(dl)) map.removeLayer(dl);
+            }
         }
       });
+      // Ensure markers stay on top
+      if(markersLayerGroup) markersLayerGroup.bringToFront();
+      
       updateToggleButtonsUI(key);
     }
 
@@ -1451,22 +1450,29 @@ body {
     }
 
     function setupToggles() {
-      ["menara", "nadi", "pop", "wifi"].forEach(cat => {
-        document.getElementById(`toggle-${cat}`)?.addEventListener("click", function () {
-          this.classList.toggle("active");
-          activeDashboardCategory = null;
-          document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
-          filterAndDisplayMarkers();
-        });
-      });
-      const boundaries = [ { id: "toggle-daerah", key: "district" }, { id: "toggle-dun", key: "dun" }, { id: "toggle-parliament", key: "parliament" } ];
+      const boundaries = [
+        { id: "toggle-daerah", key: "district" },
+        { id: "toggle-dun", key: "dun" },
+        { id: "toggle-parliament", key: "parliament" }
+      ];
+
       boundaries.forEach(b => {
         document.getElementById(b.id)?.addEventListener("click", function () {
-          if (!dataLayers[b.key]) { alert(`Maaf, data sempadan ${b.key} gagal dimuatkan.`); return; }
+          // Check if layer exists
+          if (!dataLayers[b.key]) {
+              showToast(`Maaf, data sempadan ${b.key} tidak dijumpai.`);
+              return;
+          }
+
           if (this.classList.contains('active') && currentBoundaryKey === b.key) {
-            this.classList.remove('active'); map.removeLayer(dataLayers[b.key]);
-            currentBoundaryKey = null; activeFeatureName = null;
-            document.getElementById("selected-area").textContent = "SELURUH SABAH"; map.setView([5.9804, 116.0735], 8);
+            this.classList.remove('active');
+            map.removeLayer(dataLayers[b.key]);
+            currentBoundaryKey = null;
+            activeFeatureName = null;
+            document.getElementById("selected-area").textContent = "SELURUH SABAH";
+            
+            // Reset view
+            map.setView([5.9804, 116.0735], 8);
           } else {
             toggleBoundaryLayerVisibility(b.key);
             document.getElementById("selected-area").textContent = "SABAH (" + b.key.toUpperCase() + ")";
@@ -1475,13 +1481,19 @@ body {
           filterAndDisplayMarkers();
         });
       });
+
       document.getElementById("search-input")?.addEventListener("input", (e) => {
         searchTerm = e.target.value;
         const coordMatch = searchTerm.match(/^([-+]?[\d\.]+)[,\s]+([-+]?[\d\.]+)$/);
         if (coordMatch) {
-            const lat = parseFloat(coordMatch[1]); const lng = parseFloat(coordMatch[2]);
-            if (!isNaN(lat) && !isNaN(lng)) map.setView([lat, lng], 14);
-        } else filterAndDisplayMarkers();
+            const lat = parseFloat(coordMatch[1]);
+            const lng = parseFloat(coordMatch[2]);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                map.setView([lat, lng], 14);
+            }
+        } else {
+            filterAndDisplayMarkers();
+        }
       });
     }
 
@@ -1497,6 +1509,9 @@ body {
 
     // ---------- MAIN INIT ----------
     async function initMap() {
+      // 1. Generate UI based on Config
+      generateDynamicUI();
+
       const mapDiv = document.getElementById("map"); if (!mapDiv) return;
       map = L.map('map', { zoomControl: false }).setView([5.9804, 116.0735], 8);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -1516,16 +1531,26 @@ body {
         const pDistrict = loadGeoJsonLayer("district", URLs.district);
         const pDun = loadGeoJsonLayer("dun", URLs.dun);
         const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
+        
         await Promise.all([pDistrict, pDun, pPar]);
-        if (dataLayers['district']) { dataLayers['district'].addTo(map); currentBoundaryKey = 'district'; }
-        setupToggles(); filterAndDisplayMarkers();
+
+        // Default: Show District IF loaded successfully
+        if (dataLayers['district']) {
+             dataLayers['district'].addTo(map);
+             currentBoundaryKey = 'district';
+        } else {
+             showToast("Peta dimuatkan. Data daerah tidak dijumpai.");
+        }
+
+        setupToggles();
+        filterAndDisplayMarkers();
+        
         setInterval(() => autoRefreshLoop(), refreshIntervalMs);
+
       } catch (e) { console.error("Init Error", e); } finally { showLoading(false); }
     }
 
     window.onload = initMap;
   </script>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </body>
 </html>
