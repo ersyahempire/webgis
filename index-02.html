@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.1 - Fixes</title>
+  <title>Web GIS Projek Sabah v5.2 - Layer Fix</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1089,196 +1089,6 @@ body {
       const timer = setInterval(() => { current += increment; obj.innerHTML = current; if (current == end) clearInterval(timer); }, Math.max(stepTime, 10));
     }
 
-    // ---------- REPORT CARD LOGIC ----------
-    const btnOpenReport = document.getElementById('btn-open-report');
-    if(btnOpenReport) btnOpenReport.addEventListener('click', openReport);
-
-    async function openReport() {
-        document.getElementById('report-overlay').classList.add('open');
-        const now = new Date();
-        document.getElementById('report-date-display').textContent = 'Generated on: ' + now.toLocaleString('ms-MY', { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'});
-
-        const areaName = document.getElementById("selected-area").textContent;
-        document.querySelector('.report-title h1').innerHTML = `<i class="fas fa-chart-line"></i> REPORT KAD PROJEK ${areaName}`;
-
-        const dashboardSource = document.querySelector('.dashboard-panel .panel-content');
-        const dashboardTarget = document.getElementById('report-dashboard-clone');
-        dashboardTarget.innerHTML = '';
-        const clone = dashboardSource.cloneNode(true);
-        dashboardTarget.appendChild(clone);
-
-        const snapshotTarget = document.getElementById('report-map-target');
-        snapshotTarget.innerHTML = '<div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#888;"><i class="fas fa-spinner fa-spin"></i> Menjana Peta...</div>';
-
-        setTimeout(() => {
-            html2canvas(document.getElementById('map'), {
-                useCORS: true,
-                allowTaint: true,
-                ignoreElements: (element) => element.classList.contains('dashboard-panel') || element.classList.contains('controls-container') || element.classList.contains('search-container')
-            }).then(canvas => {
-                const img = document.createElement('img');
-                img.src = canvas.toDataURL("image/png");
-                img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
-                snapshotTarget.innerHTML = ''; snapshotTarget.appendChild(img);
-            }).catch(err => {
-                console.error(err);
-                snapshotTarget.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;">Map Snapshot Unavailable</div>';
-            });
-        }, 500);
-
-        renderReportCharts();
-    }
-
-    function closeReport() { document.getElementById('report-overlay').classList.remove('open'); }
-
-    // GENERATE PDF FUNCTION
-    window.generatePDF = function() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('l', 'mm', 'a4'); // Landscape, mm, A4
-
-        const element = document.getElementById('report-content');
-        
-        // Temporarily scale down for capture
-        const originalTransform = element.style.transform;
-        element.style.transform = "scale(1)"; 
-        
-        html2canvas(element, {
-            scale: 2, // Higher quality
-            useCORS: true
-        }).then(canvas => {
-            const imgData = canvas.toDataURL('image/png');
-            const imgWidth = 297; // A4 width mm
-            const pageHeight = 210; // A4 height mm
-            const imgHeight = canvas.height * imgWidth / canvas.width;
-            
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                doc.addPage();
-                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-            }
-            
-            doc.save('Sabah_Projek_Report.pdf');
-            element.style.transform = originalTransform; // Restore UI
-        });
-    }
-
-    function renderReportCharts() {
-        const data = currentFilteredList.length > 0 ? currentFilteredList : (currentBoundaryKey ? [] : allProjects);
-        const uniqueTypes = [...new Set(PROJECT_REGISTER.map(p => p.type.toUpperCase()))];
-        
-        // 1. Cat Donut
-        const catCounts = {};
-        uniqueTypes.forEach(t => catCounts[t] = 0);
-        data.forEach(d => { if(catCounts[d._type] !== undefined) catCounts[d._type]++; });
-        
-        const chartData = uniqueTypes.map(t => ({
-            value: catCounts[t],
-            name: TYPE_CFG[t]?.label || t,
-            itemStyle: { color: TYPE_CFG[t]?.color || '#666' }
-        }));
-
-        const chart1 = echarts.init(document.getElementById('chart-cat-donut'));
-        chart1.setOption({
-            tooltip: { trigger: 'item' },
-            legend: { bottom: '0%', left: 'center' },
-            series: [{
-                name: 'Kategori', type: 'pie', radius: ['40%', '70%'], avoidLabelOverlap: false,
-                itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-                label: { show: true, formatter: '{b}: {c}' },
-                data: chartData
-            }]
-        });
-
-        // 2. Status Pie
-        const statusCounts = {};
-        data.forEach(d => {
-            const s = String(d.STATUS || "N/A").trim();
-            statusCounts[s] = (statusCounts[s] || 0) + 1;
-        });
-        const statusData = Object.entries(statusCounts).map(([k,v]) => ({ value: v, name: k }));
-        if(statusData.length === 0) statusData.push({value:0, name:'Tiada Data'});
-
-        const chart2 = echarts.init(document.getElementById('chart-status-pie'));
-        chart2.setOption({
-            tooltip: { trigger: 'item' },
-            series: [{
-                name: 'Status', type: 'pie', radius: '70%',
-                data: statusData,
-                label: { show: true, formatter: '{b}: {c}' },
-                emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
-            }]
-        });
-
-        // 3. Category vs Status
-        const statuses = Object.keys(statusCounts);
-        const categoryLabels = uniqueTypes.map(t => TYPE_CFG[t]?.label || t);
-        
-        const seriesData = statuses.map(status => {
-            return {
-                name: status,
-                type: 'bar',
-                stack: 'total',
-                label: { show: true },
-                data: uniqueTypes.map(cat => data.filter(d => d._type === cat && String(d.STATUS||"").trim() === status).length)
-            };
-        });
-
-        const chart3 = echarts.init(document.getElementById('chart-cat-status-bar'));
-        chart3.setOption({
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-            legend: { top: '0%' },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: { type: 'category', data: categoryLabels },
-            yAxis: { type: 'value' },
-            series: seriesData.length > 0 ? seriesData : [{type:'bar', data: new Array(categoryLabels.length).fill(0)}]
-        });
-
-        // 4. Area Race
-        const boundaryKey = currentBoundaryKey || 'district';
-        const areaKey = boundaryKey === 'district' ? 'DISTRICT' : (boundaryKey === 'dun' ? 'DUN' : 'PARLIAMENT');
-        
-        const areaStats = {};
-        const allUniqueAreas = new Set();
-        allProjects.forEach(p => { const area = normalizeString(p[areaKey]); if(area) allUniqueAreas.add(area); });
-        allUniqueAreas.forEach(area => areaStats[area] = 0);
-        allProjects.forEach(p => { const area = normalizeString(p[areaKey]); if (area) areaStats[area]++; });
-
-        const sortedAreas = Object.entries(areaStats).sort(([,a], [,b]) => b - a).slice(0, 30);
-        const yAxisData = sortedAreas.map(item => item[0]).reverse();
-        const xAxisData = sortedAreas.map(item => item[1]).reverse();
-
-        const chart4 = echarts.init(document.getElementById('chart-area-race'));
-        chart4.setOption({
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-            grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true },
-            xAxis: { type: 'value' },
-            yAxis: { type: 'category', data: yAxisData },
-            series: [{
-                name: 'Jumlah Projek',
-                type: 'bar',
-                data: xAxisData,
-                label: { show: true, position: 'right' },
-                itemStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                        { offset: 0, color: '#818cf8' },
-                        { offset: 1, color: '#4F46E5' }
-                    ])
-                }
-            }]
-        });
-
-        window.addEventListener('resize', () => {
-            chart1.resize(); chart2.resize(); chart3.resize(); chart4.resize();
-        });
-    }
-
     // ---------- LOAD GEOJSON LAYER (UPDATED FOR REQUIREMENT 1) ----------
     async function loadGeoJsonLayer(key, url) {
         try {
@@ -1288,7 +1098,7 @@ body {
             
             const layer = L.geoJSON(data, {
                 // FIXED: Lighter opacity (0.05) and no fill color by default
-                style: { color: '#666', weight: 1, fillOpacity: 0.05, fillColor: 'transparent' }, 
+                style: { color: '#666', weight: 1, fillOpacity: 0.01, fillColor: '#ffffff' }, 
                 onEachFeature: (feature, layer) => {
                     const name = extractFeatureName(feature);
                     // FIXED: interactive false for tooltip to prevent clicking issues
@@ -1307,14 +1117,14 @@ body {
                     layer.on('mouseout', function(e) {
                          // Reset to default if not selected
                          if (activeFeatureName !== name) {
-                             this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.05, fillColor: 'transparent' });
+                             this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.01, fillColor: '#ffffff' });
                          }
                     });
 
                     layer.on('click', () => {
                         // Reset previous selections (all other layers)
                         dataLayers[key].eachLayer(l => {
-                            l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.05, fillColor: 'transparent' });
+                            l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.01, fillColor: '#ffffff' });
                         });
                         
                         // Requirement 1: Highlight current
