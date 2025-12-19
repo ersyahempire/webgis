@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.0</title>
+  <title>Web GIS Projek Sabah v5.0 - update UI</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -32,6 +33,17 @@
   --text-sub: #6b7280;       /* Gray 500 */
   --radius: 20px;            
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* New Dashboard Vars */
+  --bg-gradient: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
+  --new-glass-bg: rgba(255, 255, 255, 0.4);
+  --new-glass-border: rgba(255, 255, 255, 0.5);
+  --color-wifi: #2ecc71;
+  --color-nadi: #3498db;
+  --color-pop: #f1c40f;
+  --color-menara: #e74c3c;
+  --color-vsat: #9b59b6;
+  --color-telefon: #e67e22;
 }
 
 * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
@@ -288,10 +300,10 @@ body {
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-sub); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,0.5); }
 
-/* ----- REPORT MODAL (UPDATED LAYOUT - CLEAN GRID) ----- */
+/* ----- REPORT MODAL (NEW DESIGN) ----- */
 .report-overlay {
     position: fixed; inset: 0; z-index: 5000;
-    background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px);
     display: none; align-items: center; justify-content: center;
     opacity: 0; transition: opacity 0.3s;
 }
@@ -299,123 +311,182 @@ body {
 
 .report-modal {
     width: 95%; max-width: 1400px; height: 90vh;
-    background: #f1f5f9; border-radius: 20px;
+    border-radius: 15px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     display: flex; flex-direction: column; overflow: hidden;
     transform: scale(0.98); transition: transform 0.3s;
-    border: 1px solid #e2e8f0;
+    background: linear-gradient(to bottom right, #dbeafe, #ddd6fe, #fbcfe8);
+    color: #333;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .report-overlay.open .report-modal { transform: scale(1); }
 
-.report-header {
-    background: #1e293b; color: white; padding: 20px 30px;
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 1px solid #334155;
-}
-.report-title h1 { margin: 0; font-size: 22px; font-weight: 800; display:flex; align-items:center; gap:12px; text-transform: uppercase; letter-spacing: 0.5px; }
-.report-date { font-size: 13px; color: #94a3b8; margin-top: 4px; font-weight: 500;}
-.report-close { background: rgba(255,255,255,0.1); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; transition: 0.2s; font-size: 16px; display: flex; align-items: center; justify-content: center;}
-.report-close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); color: #fff; }
-
-/* REPORT BODY GRID */
-.report-body {
-    flex: 1; overflow-y: auto; padding: 24px; 
-    display: flex; flex-direction: column; gap: 20px;
-    background: #f8fafc;
+/* ---- STYLES FROM PROVIDED SNIPPET (SCOPED) ---- */
+.report-container {
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 15px;
+    height: 100%; overflow-y: auto;
 }
 
-/* Info Bar */
-.report-info-bar {
-    background: white; border-radius: 12px; padding: 20px 25px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    display: flex; justify-content: space-between; align-items: center;
-    border-left: 5px solid var(--primary);
-    border: 1px solid #e2e8f0; border-left-width: 5px;
+/* Close Button (Added specifically for modal) */
+.modal-close-btn {
+    position: absolute; top: 10px; right: 10px; z-index: 10;
+    background: rgba(255,255,255,0.5); border: none; font-size: 20px;
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer; color: #333;
 }
-.info-bar-item { display: flex; flex-direction: column; min-width: 150px; }
-.info-bar-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
-.info-bar-val { font-size: 20px; font-weight: 800; color: #0f172a; }
+.modal-close-btn:hover { background: white; color: red; }
 
-/* 3x3 Grid */
-.chart-grid-3x3 {
-    display: grid; 
-    grid-template-columns: repeat(3, 1fr); 
-    grid-template-rows: repeat(3, 300px); /* Fixed height rows */
-    gap: 20px;
-    width: 100%;
+/* Gaya Umum Kad (Glassmorphism) */
+.card {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--new-glass-border);
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
 
-.chart-box {
-    background: white; border-radius: 16px; padding: 20px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;
-    display: flex; flex-direction: column;
-    overflow: hidden;
-    transition: transform 0.2s;
+/* --- HEADER --- */
+.report-header-content {
+    display: flex; justify-content: space-between; align-items: flex-end; padding: 5px 10px;
 }
-.chart-box:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
+.header-title h1 { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; margin: 0; }
+.header-title h2 { font-size: 1.5rem; color: #4f46e5; font-weight: 700; margin: 0; }
 
-.chart-box h3 {
-    margin: 0 0 15px 0; font-size: 14px; font-weight: 800; 
-    color: #334155; text-transform: uppercase;
-    border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;
-    display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px;
+.header-info { text-align: right; margin-right: 30px;}
+.btn-download-pdf {
+    background: rgba(255,255,255,0.6); padding: 5px 15px; border-radius: 20px;
+    font-size: 0.8rem; cursor: pointer; border: 1px solid #fff; margin-bottom: 5px; display: inline-block;
+    color: #333; font-weight: 600; text-transform: uppercase;
 }
-.chart-box h3 i { color: var(--primary); font-size: 16px; }
+.btn-download-pdf:hover { background: white; color: var(--primary); }
+.current-time { font-size: 0.9rem; color: #555; }
 
-.empty-chart {
-    flex: 1; background: #f8fafc; border-radius: 8px; border: 2px dashed #cbd5e1;
+/* --- TOP STATS ROW --- */
+.top-row {
+    display: grid; grid-template-columns: 250px 1fr; gap: 15px;
+}
+
+.report-main-stat {
+    background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(200,220,255,0.8));
+    display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+}
+.report-main-stat h1 { font-size: 3rem; color: #333; line-height: 1; margin: 10px 0; }
+.report-main-stat p { font-size: 0.9rem; font-weight: 600; margin: 0; }
+.badge {
+    background: #dbeafe; color: #4f46e5; padding: 4px 12px; border-radius: 12px;
+    font-size: 0.7rem; margin-top: 5px; font-weight: bold;
+}
+
+.mini-stats-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+}
+.mini-card {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    color: #94a3b8; font-weight: 600; font-size: 12px;
-    text-transform: uppercase; letter-spacing: 1px;
-    transition: all 0.3s;
+    background: rgba(255,255,255,0.6); border-radius: 10px; padding: 10px 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #ccc;
 }
-.empty-chart i { font-size: 24px; margin-bottom: 10px; opacity: 0.5; }
+/* Warna Border Atas Mini Card */
+.mini-card.wifi { border-color: var(--color-wifi); }
+.mini-card.nadi { border-color: var(--color-nadi); }
+.mini-card.pop { border-color: var(--color-pop); }
+.mini-card.menara { border-color: var(--color-menara); }
+.mini-card.vsat { border-color: var(--color-vsat); }
+.mini-card.telefon { border-color: var(--color-telefon); }
 
-.report-footer {
-    padding: 20px 30px; background: white; border-top: 1px solid #e2e8f0;
-    display: flex; justify-content: flex-end; gap: 15px;
-    box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.02);
+.mini-card h3 { font-size: 1.5rem; color: #333; margin-bottom: 2px; margin-top:0; }
+.mini-card.wifi h3 { color: var(--color-wifi); }
+.mini-card.nadi h3 { color: var(--color-nadi); }
+.mini-card.pop h3 { color: var(--color-pop); }
+.mini-card.menara h3 { color: var(--color-menara); }
+.mini-card.vsat h3 { color: var(--color-vsat); }
+.mini-card.telefon h3 { color: var(--color-telefon); }
+.mini-card span { font-size: 0.7rem; font-weight: bold; color: #555; text-transform: uppercase; }
+
+/* --- CHARTS ROW --- */
+.charts-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
 }
-.btn-download {
-    background: #1e293b; color: white; border: none; padding: 12px 24px;
-    border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px;
-    transition: 0.2s; font-size: 14px;
+.chart-card {
+    position: relative; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between;
 }
-.btn-download:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 70, 229, 0.2); }
+.chart-icon {
+    width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1.2rem; margin-bottom: 5px;
+}
+.bg-purple { background: linear-gradient(135deg, #a855f7, #6366f1); }
+.bg-blue { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+.bg-pink { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+.chart-title { font-size: 1.1rem; font-weight: 600; text-align: center; }
+.wave-chart { width: 100%; height: 50px; opacity: 0.6; }
 
-/* Leaflet & Map Helpers */
-.loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.6); backdrop-filter: blur(15px); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s; }
-.loading-overlay.hide { opacity: 0; pointer-events: none; }
-.spinner { width: 50px; height: 50px; border: 4px solid #e0e7ff; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* --- MAIN CONTENT (MAP & STATUS) --- */
+.main-content {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 15px; min-height: 350px;
+}
+.map-container {
+    position: relative; overflow: hidden; padding: 0;
+    background-color: #a5d8ff;
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Sabah_relief_map.png/640px-Sabah_relief_map.png');
+    background-size: cover; background-position: center;
+}
+.map-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCI+PHBhdGggZD0iTTEgMGwwIDUwIE0w 1bDUwIDAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjMiIGZpbGw9Im5vbmUiLz48L3N2Zz4=');
+    opacity: 0.3; pointer-events: none;
+}
 
-.leaflet-popup-content-wrapper { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); padding: 0; overflow: hidden; }
-.leaflet-popup-content { margin: 0 !important; width: 300px !important; }
-.leaflet-control-layers { border-radius: 12px; border: none; box-shadow: 0 8px 20px rgba(0,0,0,0.1); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; }
-.info-header { background: var(--primary); color: white; padding: 16px 20px; font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-.info-body { padding: 16px 20px; max-height: 300px; overflow-y: auto; }
-.info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; border-bottom: 1px dashed #eee; padding-bottom: 6px; }
-.info-label { color: #888; font-weight: 500; min-width: 100px; }
-.info-val { color: #111; font-weight: 700; text-align: right; overflow-wrap: break-word; max-width: 170px; }
-.section-header { font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin: 16px 0 10px 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 4px; letter-spacing: 0.5px; }
+.status-container {
+    display: flex; flex-direction: column; gap: 15px; background: rgba(255, 255, 255, 0.7);
+}
+.status-header { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; color: #555; margin-bottom: 5px; }
+
+.status-group { margin-bottom: 10px; }
+.status-label-row { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; margin-bottom: 3px; }
+.progress-track { background: #e5e7eb; height: 6px; border-radius: 3px; width: 100%; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; }
+.fill-green { background-color: #2ecc71; }
+.fill-blue { background-color: #3498db; }
+.fill-yellow { background-color: #f1c40f; }
+.fill-purple { background-color: #9b59b6; }
+.fill-red { background-color: #e74c3c; }
+
+.sub-status { margin-top: 4px; display: flex; flex-direction: column; gap: 3px; }
+.sub-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.65rem; color: #666; }
+.sub-track { flex-grow: 1; height: 3px; background: #eee; margin: 0 8px; border-radius: 2px; }
+
+/* --- BOTTOM GRID --- */
+.bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.bottom-card { display: flex; align-items: center; padding: 20px; gap: 15px; }
+.icon-box {
+    width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.icon-wifi { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+.icon-nadi { background: linear-gradient(135deg, #3498db, #2980b9); }
+.icon-pop { background: linear-gradient(135deg, #f1c40f, #f39c12); }
+.icon-menara { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+.icon-vsat { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+.icon-tel { background: linear-gradient(135deg, #e67e22, #d35400); }
+
+.bottom-text h4 { font-size: 0.9rem; color: #333; margin:0; }
+.bottom-text h3 { font-size: 1.2rem; font-weight: 700; color: #222; margin:0;}
+
+footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
 /* Responsive Report */
 @media (max-width: 1024px) {
-    .chart-grid-3x3 { grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; }
+    .charts-row, .bottom-grid { grid-template-columns: repeat(2, 1fr); }
+    .mini-stats-grid { grid-template-columns: repeat(3, 1fr); }
+    .top-row { grid-template-columns: 1fr; }
+    .main-content { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; top: 85px; }
   .controls-container { top: auto; bottom: 90px; right: 20px; gap: 8px;}
-  .control-card { width: 48px; }
-  .control-card:hover, .control-card.expanded { width: 170px; }
-  .search-container { top: 15px; width: 70%; left: 60%; } 
-  .panel-toggle { top: 15px; left: 15px; }
-  
-  /* Report Mobile */
-  .chart-grid-3x3 { grid-template-columns: 1fr; }
-  .report-info-bar { flex-direction: column; align-items: flex-start; gap: 15px; }
-  .info-bar-item { width: 100%; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
-  .info-bar-item:last-child { border-bottom: none; }
+  .mini-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .charts-row, .bottom-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -512,112 +583,146 @@ body {
   <!-- REPORT MODAL UI (REDESIGNED) -->
   <div class="report-overlay" id="report-overlay">
       <div class="report-modal" id="report-content">
-          <div class="report-header">
-              <div class="report-title">
-                  <h1><i class="fas fa-chart-pie"></i> <span id="report-title-text">REPORT KAD PROJEK</span></h1>
-                  <div class="report-date" id="report-date-display">Generated on: -</div>
-              </div>
-              <button class="report-close" onclick="closeReport()"><i class="fas fa-times"></i></button>
-          </div>
+          <button class="modal-close-btn" onclick="closeReport()"><i class="fas fa-times"></i></button>
           
-          <div class="report-body">
-              <!-- Info Bar -->
-              <div class="report-info-bar">
-                  <div class="info-bar-item">
-                      <span class="info-bar-label"><i class="fas fa-map-marker-alt"></i> Lokasi / Kawasan</span>
-                      <span class="info-bar-val" id="report-location">SELURUH SABAH</span>
+          <div class="report-container">
+              <!-- HEADER -->
+              <header class="report-header-content">
+                  <div class="header-title">
+                      <h1>Dashboard Projek</h1>
+                      <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
-                  <div class="info-bar-item">
-                      <span class="info-bar-label"><i class="fas fa-cubes"></i> Jumlah Projek</span>
-                      <span class="info-bar-val" id="report-total">0</span>
+                  <div class="header-info">
+                      <button class="btn-download-pdf" onclick="generatePDF()">muat turun pdf</button>
+                      <div class="current-time" id="clock">Monday, 01 Jan 2024 10:00 AM</div>
                   </div>
-                  <div class="info-bar-item">
-                      <span class="info-bar-label"><i class="fas fa-calendar-alt"></i> Tarikh Data</span>
-                      <span class="info-bar-val" id="report-data-date">-</span>
+              </header>
+
+              <!-- TOP STATS -->
+              <div class="top-row">
+                  <div class="card report-main-stat">
+                      <h1 id="report-total-count">0</h1>
+                      <p>JUMLAH PROJEK</p>
+                      <div class="badge" id="report-badge-area">SELURUH SABAH</div>
+                  </div>
+
+                  <div class="mini-stats-grid">
+                      <div class="mini-card wifi">
+                          <h3 id="count-wifi">0</h3>
+                          <span>WIFI</span>
+                      </div>
+                      <div class="mini-card nadi">
+                          <h3 id="count-nadi">0</h3>
+                          <span>NADI</span>
+                      </div>
+                      <div class="mini-card pop">
+                          <h3 id="count-pop">0</h3>
+                          <span>POP</span>
+                      </div>
+                      <div class="mini-card menara">
+                          <h3 id="count-menara">0</h3>
+                          <span>MENARA</span>
+                      </div>
+                      <div class="mini-card vsat">
+                          <h3 id="count-vsat">0</h3>
+                          <span>VSAT</span>
+                      </div>
+                      <div class="mini-card telefon">
+                          <h3 id="count-telefon">0</h3>
+                          <span>TELEFON</span>
+                      </div>
                   </div>
               </div>
 
-              <!-- 3x3 Grid Layout - CLEAN PLACEHOLDERS -->
-              <div class="chart-grid-3x3">
-                  <!-- CARTA 01 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-chart-bar"></i> CARTA 01</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-chart-area"></i>
-                          <span>Menunggu Data</span>
+              <!-- CHARTS ROW (STATIC PLACEHOLDERS) -->
+              <div class="charts-row">
+                  <div class="card chart-card">
+                      <div class="chart-icon bg-purple"><i class="fa-solid fa-wifi"></i></div>
+                      <div class="chart-title">CARTA 01</div>
+                      <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
+                          <path d="M0,25 L0,15 Q25,0 50,15 T100,15 L100,25 Z" fill="#a855f7" />
+                          <path d="M0,25 L0,20 Q25,10 50,20 T100,20 L100,25 Z" fill="#6366f1" opacity="0.5"/>
+                      </svg>
+                  </div>
+                  <div class="card chart-card">
+                      <div class="chart-icon bg-blue"><i class="fa-solid fa-broadcast-tower"></i></div>
+                      <div class="chart-title">CARTA 02</div>
+                      <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
+                          <path d="M0,25 L0,10 Q25,20 50,5 T100,15 L100,25 Z" fill="#3b82f6" />
+                          <path d="M0,25 L0,15 Q25,25 50,10 T100,20 L100,25 Z" fill="#06b6d4" opacity="0.5"/>
+                      </svg>
+                  </div>
+                  <div class="card chart-card">
+                      <div class="chart-icon bg-pink"><i class="fa-solid fa-phone"></i></div>
+                      <div class="chart-title">CARTA 03</div>
+                      <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
+                          <path d="M0,25 L0,12 Q20,0 40,15 T80,5 T100,15 L100,25 Z" fill="#ec4899" />
+                          <path d="M0,25 L0,18 Q20,10 40,20 T80,10 T100,20 L100,25 Z" fill="#8b5cf6" opacity="0.5"/>
+                      </svg>
+                  </div>
+              </div>
+
+              <!-- MAIN CONTENT (MAP & STATUS) -->
+              <div class="main-content">
+                  <div class="card map-container">
+                      <div class="map-overlay"></div>
+                  </div>
+
+                  <div class="card status-container" id="dynamic-status-container">
+                      <div class="status-header">STATUS KEMAJUAN</div>
+                      <!-- DYNAMIC CONTENT WILL BE INJECTED HERE -->
+                  </div>
+              </div>
+
+              <!-- BOTTOM GRID (STATIC PLACEHOLDERS) -->
+              <div class="bottom-grid">
+                  <div class="card bottom-card">
+                      <div class="icon-box icon-wifi"><i class="fa-solid fa-wifi"></i></div>
+                      <div class="bottom-text">
+                          <h4>CARTA 04</h4>
+                          <h3>WIFI</h3>
                       </div>
                   </div>
-                  <!-- CARTA 02 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-chart-pie"></i> CARTA 02</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-chart-pie"></i>
-                          <span>Menunggu Data</span>
+                  <div class="card bottom-card">
+                      <div class="icon-box icon-nadi"><i class="fa-solid fa-heart-pulse"></i></div>
+                      <div class="bottom-text">
+                          <h4>CARTA 05</h4>
+                          <h3>NADI</h3>
                       </div>
                   </div>
-                  <!-- CARTA 03 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-chart-line"></i> CARTA 03</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-chart-line"></i>
-                          <span>Menunggu Data</span>
+                  <div class="card bottom-card">
+                      <div class="icon-box icon-pop"><i class="fa-solid fa-gear"></i></div>
+                      <div class="bottom-text">
+                          <h4>CARTA 06</h4>
+                          <h3>POP</h3>
                       </div>
                   </div>
-                  <!-- CARTA 04 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-chart-column"></i> CARTA 04</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-chart-column"></i>
-                          <span>Menunggu Data</span>
+                  <div class="card bottom-card">
+                      <div class="icon-box icon-menara"><i class="fa-solid fa-broadcast-tower"></i></div>
+                      <div class="bottom-text">
+                          <h4>CARTA 07</h4>
+                          <h3>MENARA</h3>
                       </div>
                   </div>
-                  <!-- CARTA 05 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-table"></i> CARTA 05</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-table"></i>
-                          <span>Menunggu Data</span>
+                  <div class="card bottom-card">
+                      <div class="icon-box icon-vsat"><i class="fa-solid fa-satellite-dish"></i></div>
+                      <div class="bottom-text">
+                          <h4>CARTA 08</h4>
+                          <h3>VSAT</h3>
                       </div>
                   </div>
-                  <!-- CARTA 06 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-project-diagram"></i> CARTA 06</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-project-diagram"></i>
-                          <span>Menunggu Data</span>
-                      </div>
-                  </div>
-                  <!-- CARTA 07 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-chart-simple"></i> CARTA 07</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-chart-simple"></i>
-                          <span>Menunggu Data</span>
-                      </div>
-                  </div>
-                  <!-- CARTA 08 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-globe-asia"></i> CARTA 08</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-globe-asia"></i>
-                          <span>Menunggu Data</span>
-                      </div>
-                  </div>
-                  <!-- CARTA 09 -->
-                  <div class="chart-box">
-                      <h3><i class="fas fa-th"></i> CARTA 09</h3>
-                      <div class="empty-chart">
-                          <i class="fas fa-th"></i>
-                          <span>Menunggu Data</span>
+                  <div class="card bottom-card">
+                      <div class="icon-box icon-tel"><i class="fa-solid fa-phone"></i></div>
+                      <div class="bottom-text">
+                          <h4>CARTA 09</h4>
+                          <h3>TELEFON</h3>
                       </div>
                   </div>
               </div>
-          </div>
 
-          <div class="report-footer">
-              <button class="btn-download" onclick="generatePDF()">
-                  <i class="fas fa-file-pdf"></i> Muat Turun PDF
-              </button>
+              <footer>
+                  system ini dibangunkan oleh MCMC Tawau
+              </footer>
           </div>
       </div>
   </div>
@@ -637,24 +742,117 @@ body {
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
 
-    // ---------- REPORT MODAL LOGIC (UPDATED) ----------
+    // ---------- REPORT MODAL LOGIC (INTEGRATED) ----------
+    
+    // Status Logic Helpers
+    function getStatusCategory(statusRaw) {
+        const s = String(statusRaw || "").toUpperCase();
+        if (s.match(/SIAP|KOMITED|OPERASI|SELESAI|COMPLETE/)) return "SIAP";
+        if (s.match(/BINA|IMPLEMENTASI|PROGRESS|PELAKSANAAN/)) return "PEMBINAAN";
+        if (s.match(/RANCANG|BARU|PLAN/)) return "PERANCANGAN";
+        return "LAIN-LAIN";
+    }
+
+    function generateStatusHTML(filteredProjects) {
+        // 1. Aggregation
+        const stats = {
+            "SIAP": { total: 0, types: {} },
+            "PEMBINAAN": { total: 0, types: {} },
+            "PERANCANGAN": { total: 0, types: {} }
+        };
+
+        filteredProjects.forEach(p => {
+            const cat = getStatusCategory(p.STATUS);
+            if(stats[cat]) {
+                stats[cat].total++;
+                const type = p._type; 
+                stats[cat].types[type] = (stats[cat].types[type] || 0) + 1;
+            }
+        });
+
+        // 2. HTML Building
+        const total = filteredProjects.length || 1; // avoid division by zero
+        let html = '<div class="status-header">STATUS KEMAJUAN</div>';
+
+        // Helper for colors
+        const colors = {
+            "BWA": "fill-green", "WIFI": "fill-green",
+            "NADI": "fill-blue",
+            "POP": "fill-yellow",
+            "TOWER": "fill-red", "MENARA": "fill-red",
+            "VSAT": "fill-purple",
+            "TELEFON": "fill-blue"
+        };
+        const catColors = { "SIAP": "fill-green", "PEMBINAAN": "fill-blue", "PERANCANGAN": "fill-yellow" };
+
+        ["SIAP", "PEMBINAAN", "PERANCANGAN"].forEach(cat => {
+            const count = stats[cat].total;
+            if(count === 0) return; // Skip empty categories
+            
+            const percent = Math.round((count / total) * 100);
+            
+            // Sub-items HTML
+            let subItemsHTML = '';
+            Object.entries(stats[cat].types).forEach(([type, tCount]) => {
+                const tPercent = Math.round((tCount / count) * 100);
+                const colorClass = colors[type] || "fill-green";
+                let displayType = type;
+                if(type === 'BWA') displayType = 'WIFI';
+                if(type === 'TOWER') displayType = 'MENARA';
+
+                subItemsHTML += `
+                    <div class="sub-item">
+                        <span>${displayType}</span>
+                        <div class="sub-track"><div class="progress-fill ${colorClass}" style="width: ${tPercent}%;"></div></div>
+                        <span>${tCount} (${tPercent}%)</span>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="status-group">
+                    <div class="status-label-row">
+                        <span>${cat}</span>
+                        <span>${count} (${percent}%)</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill ${catColors[cat]}" style="width: ${percent}%;"></div>
+                    </div>
+                    <div class="sub-status">
+                        ${subItemsHTML}
+                    </div>
+                </div>
+            `;
+        });
+        
+        return html;
+    }
+
     function openReport() {
         const overlay = document.getElementById('report-overlay');
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit' });
         
-        // 1. Set Date
-        document.getElementById('report-date-display').textContent = `Dijana pada: ${dateStr}`;
-        document.getElementById('report-data-date').textContent = now.toLocaleDateString('ms-MY');
-
-        // 2. Set Dynamic Location & Title based on Selection
+        // 1. Update Header Info
         const currentLoc = activeFeatureName ? activeFeatureName : "SELURUH SABAH";
-        document.getElementById('report-location').textContent = currentLoc;
-        document.getElementById('report-title-text').textContent = `REPORT KAD PROJEK: ${currentLoc}`;
+        document.getElementById('report-layer-name').textContent = currentLoc;
+        document.getElementById('report-badge-area').textContent = currentLoc;
+        document.getElementById('report-total-count').textContent = currentFilteredList ? currentFilteredList.length : 0;
 
-        // 3. Set Total Count based on currently filtered list
-        const total = currentFilteredList ? currentFilteredList.length : 0;
-        document.getElementById('report-total').textContent = total;
+        // 2. Update Mini Stats (Counts by Type)
+        const counts = { BWA:0, NADI:0, POP:0, TOWER:0, VSAT:0, TELEFON:0 };
+        (currentFilteredList || []).forEach(p => {
+            if(counts[p._type] !== undefined) counts[p._type]++;
+        });
+
+        document.getElementById('count-wifi').textContent = counts.BWA;
+        document.getElementById('count-nadi').textContent = counts.NADI;
+        document.getElementById('count-pop').textContent = counts.POP;
+        document.getElementById('count-menara').textContent = counts.TOWER;
+        document.getElementById('count-vsat').textContent = counts.VSAT;
+        document.getElementById('count-telefon').textContent = counts.TELEFON;
+
+        // 3. Update Status Section
+        const statusContainer = document.getElementById('dynamic-status-container');
+        statusContainer.innerHTML = generateStatusHTML(currentFilteredList || []);
 
         // 4. Open Modal
         overlay.classList.add('open');
@@ -664,41 +862,47 @@ body {
         document.getElementById('report-overlay').classList.remove('open');
     }
 
-    function generatePDF() {
-        const element = document.getElementById('report-content');
-        
-        // Temporarily modify styles for PDF capture to ensure it fits nicely
-        const originalTransform = element.style.transform;
-        const originalWidth = element.style.width;
-        const originalMaxWidth = element.style.maxWidth;
-        const originalHeight = element.style.height;
-        const originalOverflow = element.querySelector('.report-body').style.overflowY;
+    // CLOCK SCRIPT
+    function updateClock() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
+        const timeString = now.toLocaleDateString('en-US', options);
+        const clockEl = document.getElementById('clock');
+        if(clockEl) clockEl.innerText = timeString;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
 
-        // Force desktop size for the capture
-        element.style.transform = "none";
-        element.style.width = "1400px"; 
-        element.style.maxWidth = "none";
-        element.style.height = "auto";
-        element.querySelector('.report-body').style.overflowY = "visible";
+    function generatePDF() {
+        const element = document.querySelector('.report-container'); // Capture the inner container
+        const modal = document.querySelector('.report-modal');
+
+        // Temporarily modify styles for clean capture
+        const originalOverflow = modal.style.overflow;
+        modal.style.overflow = "visible"; // Allow full height capture
+        
+        // Hide scrollbar style fix
+        const originalContainerOverflow = element.style.overflowY;
+        element.style.overflowY = "visible";
 
         const opt = {
             margin:       0,
             filename:     `Report_Kad_${activeFeatureName || 'Sabah'}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 1.5, useCORS: true, scrollY: 0 },
-            jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' } // A3 Landscape for large grid
+            jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' } 
         };
         
-        // Hide close button & Download button for clean PDF
-        const closeBtn = document.querySelector('.report-close');
-        const dlBtn = document.querySelector('.btn-download');
+        // Hide buttons
+        const closeBtn = document.querySelector('.modal-close-btn');
+        const dlBtn = document.querySelector('.btn-download-pdf');
         if(closeBtn) closeBtn.style.display = 'none';
-        if(dlBtn) dlBtn.style.display = 'none';
+        if(dlBtn) dlBtn.style.visibility = 'hidden';
 
         html2canvas(element, opt.html2canvas).then(canvas => {
             const imgData = canvas.toDataURL('image/jpeg', 0.98);
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('l', 'mm', 'a3'); // Landscape A3
+            const pdf = new jsPDF('l', 'mm', 'a3'); 
             const imgProps = pdf.getImageProperties(imgData);
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -706,16 +910,11 @@ body {
             pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
             pdf.save(opt.filename);
 
-            // Restore buttons
-            if(closeBtn) closeBtn.style.display = 'flex';
-            if(dlBtn) dlBtn.style.display = 'flex';
-
-            // Restore styles
-            element.style.transform = originalTransform;
-            element.style.width = originalWidth;
-            element.style.maxWidth = originalMaxWidth;
-            element.style.height = originalHeight;
-            element.querySelector('.report-body').style.overflowY = "";
+            // Restore
+            if(closeBtn) closeBtn.style.display = 'block';
+            if(dlBtn) dlBtn.style.visibility = 'visible';
+            modal.style.overflow = originalOverflow;
+            element.style.overflowY = originalContainerOverflow;
         });
     }
 
