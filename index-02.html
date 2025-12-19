@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v4.6 - Report Card Final</title>
+  <title>Web GIS Projek Sabah v4.7 - Custom Config</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -565,13 +565,34 @@ body {
 
     // ---------- CONFIG ----------
     const URLs = { district: "district.json", dun: "dun.json", parliament: "parliament.json" };
-    const SHEETS = {
-      db_bwa: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU",
-      db_pim: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU",
-      db_POP: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8",
-      tower: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0"
-    };
-    const SHEET_TYPE = { db_bwa: "BWA", db_pim: "NADI", db_POP: "POP", tower: "TOWER" };
+
+    // DAFTAR PROJEK & FILTER CONFIG
+    // Format: { id, sheetId, type, filter: {col, val} }
+    const PROJECT_REGISTER = [
+      { 
+        id: "db_bwa", 
+        sheetId: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU", 
+        type: "BWA" 
+      },
+      { 
+        id: "db_pim", 
+        sheetId: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU", 
+        type: "NADI" 
+      },
+      { 
+        id: "db_POP", 
+        sheetId: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8", 
+        type: "POP" 
+      },
+      { 
+        id: "tower", 
+        sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", 
+        type: "TOWER",
+        // FILTER: Hanya ambil column 'PROJECT_TYPE' yang nilainya 'USP'
+        filter: { col: "PROJECT_TYPE", val: "USP" } 
+      }
+    ];
+
     const TYPE_CFG = {
       BWA: { color: "#51cf66", icon: "📶", label: "WiFi" },
       NADI: { color: "#4dabf7", icon: "📡", label: "NADI" },
@@ -645,16 +666,19 @@ body {
         } catch (e) { console.error("parseGviz failed", e); return null; }
     }
 
-    async function fetchSheetObjects(sheetId) {
-      const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&tq=`;
+    async function fetchSheetObjectsSafe(projectConfig) {
+      const url = `https://docs.google.com/spreadsheets/d/${projectConfig.sheetId}/gviz/tq?tqx=out:json&tq=`;
       try {
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`Sheet fetch ${sheetId} failed (${res.status})`);
+        if (!res.ok) throw new Error(`Sheet fetch ${projectConfig.id} failed`);
         const text = await res.text();
         const json = parseGviz(text);
         if (!json || !json.table) return { rows: [], cols: [] };
+        
         const rawCols = json.table.cols.map(c => (c && c.label) ? c.label.toUpperCase() : "");
         const rows = json.table.rows || [];
+        
+        // Convert to Key-Value Objects
         const processedRows = rows.map(r => {
             const obj = {};
             rawCols.forEach((c, i) => {
@@ -663,42 +687,84 @@ body {
             });
             return obj;
         });
-        return { rows: processedRows, cols: rawCols.filter(c => c && !c.startsWith("COL")) };
-      } catch (e) { console.warn(`Gagal memuat turun data sheet: ${sheetId}`, e); return { rows: [], cols: [] }; }
+
+        // Normalize & Filter
+        return normalizeRows(processedRows, projectConfig, rawCols);
+
+      } catch (e) { 
+          console.warn("Sheet load fail", projectConfig.id, e); 
+          return []; 
+      }
     }
 
-    function normalizeRows(rows, sheetKey, rawCols) {
+    function normalizeRows(rows, projectConfig, rawCols) {
       const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
-      const normalized = rows.map((r, i) => {
-        const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
-        const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
-        const district = get("DISTRICT") || get("DAERAH") || "";
-        const dun = get("DUN") || "";
-        const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
-        const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
-        const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
-        const rawStatus = get("STATUS") || get("STATUS_1") || "Tiada Status";
-        const rawDetails = [];
-        let count = 0;
-        for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
-          const key = rawCols[colIndex];
-          if (normalizedKeys.has(key)) continue;
-          const value = r[key];
-          if (value !== null && value !== "" && value !== undefined) {
-            rawDetails.push({ label: key, value: String(value).trim() });
-            count++;
+      
+      const normalized = [];
+
+      for(let i=0; i<rows.length; i++) {
+          const r = rows[i];
+
+          // --- FILTER LOGIC ---
+          if (projectConfig.filter) {
+              const filterCol = projectConfig.filter.col.toUpperCase();
+              const filterVal = projectConfig.filter.val;
+              
+              // Check if row has column and matches value (case-insensitive check for safety)
+              const rowVal = String(r[filterCol] || "").trim();
+              if (rowVal.toUpperCase() !== filterVal.toUpperCase()) {
+                  continue; // Skip this row
+              }
           }
-        }
-        const type = SHEET_TYPE[sheetKey] || "UNKNOWN";
-        const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
-        const rowObj = {
-          SITE_NAME: String(site || "N/A").trim(), DISTRICT: String(district || "").trim(), DUN: String(dun || "").trim(), PARLIAMENT: String(parliament || "").trim(),
-          LATITUDE: lat, LONGITUDE: lng, STATUS: String(rawStatus).trim(),
-          _sheet: sheetKey, _type: type, _raw_details: rawDetails, _validCoord: isValidCoordinate
-        };
-        rowObj._id = generateStableId(rowObj, type);
-        return rowObj;
-      }).filter(o => o.SITE_NAME !== "N/A"); 
+          // --------------------
+
+          const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
+          
+          const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
+          const district = get("DISTRICT") || get("DAERAH") || "";
+          const dun = get("DUN") || "";
+          const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
+          
+          const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
+          const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
+          
+          const rawStatus = get("STATUS") || get("STATUS_1") || "Tiada Status";
+          
+          const rawDetails = [];
+          let count = 0;
+          for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
+            const key = rawCols[colIndex];
+            if (normalizedKeys.has(key)) continue;
+            const value = r[key];
+            if (value !== null && value !== "" && value !== undefined) {
+              rawDetails.push({ label: key, value: String(value).trim() });
+              count++;
+            }
+          }
+
+          const type = projectConfig.type || "UNKNOWN";
+          const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
+          
+          const rowObj = {
+            SITE_NAME: String(site || "N/A").trim(), 
+            DISTRICT: String(district || "").trim(), 
+            DUN: String(dun || "").trim(), 
+            PARLIAMENT: String(parliament || "").trim(),
+            LATITUDE: lat, 
+            LONGITUDE: lng, 
+            STATUS: String(rawStatus).trim(),
+            _sheet: projectConfig.id, 
+            _type: type, 
+            _raw_details: rawDetails, 
+            _validCoord: isValidCoordinate
+          };
+          
+          rowObj._id = generateStableId(rowObj, type);
+          
+          if (rowObj.SITE_NAME !== "N/A") {
+              normalized.push(rowObj);
+          }
+      }
       return normalized;
     }
 
@@ -1209,19 +1275,117 @@ body {
 
     // ---------- LOAD DATA ----------
     async function loadAllSheetsAndNormalize() {
-      const entries = Object.entries(SHEETS);
-      const promises = entries.map(([k, id]) => fetchSheetObjectsSafe(k, id));
+      // ITERATE OVER NEW PROJECT REGISTER
+      const promises = PROJECT_REGISTER.map(projConfig => fetchSheetObjectsSafe(projConfig));
       const results = await Promise.all(promises);
+      
+      // FLATTEN RESULTS
       const combined = results.flat();
       allProjects = combined;
       buildAreaIndex();
       return combined;
     }
-    async function fetchSheetObjectsSafe(sheetKey, id) {
+
+    async function fetchSheetObjectsSafe(projectConfig) {
+      const url = `https://docs.google.com/spreadsheets/d/${projectConfig.sheetId}/gviz/tq?tqx=out:json&tq=`;
       try {
-        const data = await fetchSheetObjects(id);
-        return normalizeRows(data.rows, sheetKey, data.cols);
-      } catch (e) { console.warn("sheet load fail", sheetKey, e); return []; }
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Sheet fetch ${projectConfig.id} failed`);
+        const text = await res.text();
+        const json = parseGviz(text);
+        if (!json || !json.table) return { rows: [], cols: [] };
+        
+        const rawCols = json.table.cols.map(c => (c && c.label) ? c.label.toUpperCase() : "");
+        const rows = json.table.rows || [];
+        
+        // Convert to Key-Value Objects
+        const processedRows = rows.map(r => {
+            const obj = {};
+            rawCols.forEach((c, i) => {
+                const cell = (r.c && r.c[i]) ? r.c[i] : null;
+                obj[c ? c : `COL${i}`] = (cell && cell.v !== null) ? cell.v : "";
+            });
+            return obj;
+        });
+
+        // Normalize & Filter
+        return normalizeRows(processedRows, projectConfig, rawCols);
+
+      } catch (e) { 
+          console.warn("Sheet load fail", projectConfig.id, e); 
+          return []; 
+      }
+    }
+
+    function normalizeRows(rows, projectConfig, rawCols) {
+      const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
+      
+      const normalized = [];
+
+      for(let i=0; i<rows.length; i++) {
+          const r = rows[i];
+
+          // --- FILTER LOGIC ---
+          if (projectConfig.filter) {
+              const filterCol = projectConfig.filter.col.toUpperCase();
+              const filterVal = projectConfig.filter.val;
+              
+              // Check if row has column and matches value (case-insensitive check for safety)
+              const rowVal = String(r[filterCol] || "").trim();
+              if (rowVal.toUpperCase() !== filterVal.toUpperCase()) {
+                  continue; // Skip this row
+              }
+          }
+          // --------------------
+
+          const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
+          
+          const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
+          const district = get("DISTRICT") || get("DAERAH") || "";
+          const dun = get("DUN") || "";
+          const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
+          
+          const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
+          const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
+          
+          const rawStatus = get("STATUS") || get("STATUS_1") || "Tiada Status";
+          
+          const rawDetails = [];
+          let count = 0;
+          for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
+            const key = rawCols[colIndex];
+            if (normalizedKeys.has(key)) continue;
+            const value = r[key];
+            if (value !== null && value !== "" && value !== undefined) {
+              rawDetails.push({ label: key, value: String(value).trim() });
+              count++;
+            }
+          }
+
+          const type = projectConfig.type || "UNKNOWN";
+          const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
+          
+          const rowObj = {
+            SITE_NAME: String(site || "N/A").trim(), 
+            DISTRICT: String(district || "").trim(), 
+            DUN: String(dun || "").trim(), 
+            PARLIAMENT: String(parliament || "").trim(),
+            LATITUDE: lat, 
+            LONGITUDE: lng, 
+            STATUS: String(rawStatus).trim(),
+            _sheet: projectConfig.id, 
+            _type: type, 
+            _raw_details: rawDetails, 
+            _validCoord: isValidCoordinate
+          };
+          
+          rowObj._id = generateStableId(rowObj, type);
+          
+          if (rowObj.SITE_NAME !== "N/A") {
+              normalized.push(rowObj);
+          }
+      }
+      return normalized;
     }
 
     // LEAFLET GEOJSON LOADER
