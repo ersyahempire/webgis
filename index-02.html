@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.3 - Final Fixes</title>
+  <title>Web GIS Projek Sabah v5.4 - Final Update</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -452,13 +452,6 @@ body {
     <!-- Category Filter Group - Generated Dynamically via JS -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      
-      <!-- Static Header Icon (Visible when collapsed) -->
-      <div class="toggle-btn" style="cursor: default;">
-          <i class="fas fa-filter" style="color: var(--text-sub);"></i>
-          <span>Senarai</span>
-      </div>
-
       <div id="dynamic-filter-btns">
           <!-- Content will be injected by generateDynamicUI() -->
       </div>
@@ -1086,7 +1079,10 @@ body {
                     layer.on('mouseover', function(e) {
                         // Only change style if not currently active/selected
                         if (activeFeatureName !== name) {
+                            // Store the random color in a temporary property
                             const randomColor = getRandomColor();
+                            feature.properties._tempColor = randomColor;
+                            
                             // FIXED: Reduced hover opacity to 0.3 ("sedikit tipis")
                             this.setStyle({ weight: 2, color: '#333', fillOpacity: 0.3, fillColor: randomColor });
                         }
@@ -1106,9 +1102,12 @@ body {
                         });
                         
                         // Requirement 1: Highlight current
-                        const currentColor = this.options.fillColor; // Keep random color
+                        // Retrieve the color set during mouseover (or default if direct click/mobile)
+                        let selectedColor = feature.properties._tempColor;
+                        if(!selectedColor) selectedColor = getRandomColor(); // Fallback if no hover prior to click
+                        
                         // FIXED: Reduced selected opacity to 0.4
-                        this.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: currentColor });
+                        this.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: selectedColor });
                         
                         // Update app state
                         activeFeatureName = name;
@@ -1117,6 +1116,7 @@ body {
                         // Zoom to feature
                         map.fitBounds(layer.getBounds());
                         
+                        // Requirement 2: Dashboard automatic update
                         filterAndDisplayMarkers();
                     });
                 }
