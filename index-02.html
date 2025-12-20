@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.6 - Fixed Layout</title>
+  <title>Web GIS Projek Sabah v5.7 - Report Update</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -31,7 +31,7 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
   --glass-border: rgba(255, 255, 255, 0.8);        
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
-  --glass-blur: 20px;                         
+  --glass-blur: 20px;                          
   --text-main: #111827;      /* Gray 900 */
   --text-sub: #6b7280;       /* Gray 500 */
   --radius: 20px;            
@@ -374,10 +374,20 @@ body {
     font-size: 1.1rem; font-weight: 800; text-transform: uppercase; margin: 0; color: rgba(255,255,255,0.8); letter-spacing: 1px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-.header-title h2 { 
-    font-size: 2.2rem; color: #fff; font-weight: 800; margin: 5px 0 0 0; line-height: 1.1;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+/* UPDATE: RGB COLOR STYLE FOR TITLE LAYER */
+.header-title h2#report-layer-name { 
+    font-size: 2.2rem; 
+    font-weight: 800; 
+    margin: 5px 0 0 0; 
+    line-height: 1.1;
+    /* RGB Gradient Effect */
+    background: linear-gradient(90deg, #ff4d4d, #10B981, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
 }
+
 .header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-right: 40px; }
 .btn-download-pdf {
     background: rgba(255, 255, 255, 0.9); padding: 10px 20px; border-radius: 8px;
@@ -453,21 +463,21 @@ body {
 .sub-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #4b5563; font-weight: 600; }
 .sub-track { flex-grow: 1; height: 4px; background: rgba(0,0,0,0.05); margin: 0 10px; border-radius: 2px; overflow: hidden; }
 
-/* Bottom Grid - Fixed for Auto Height */
+/* Bottom Grid - UPDATED FIXED SIZE */
 .bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; padding-bottom: 20px; }
 .bottom-card { 
-    height: auto; /* Changed from fixed 260px to auto */
-    min-height: 300px;
+    height: 320px; /* FIXED HEIGHT */
     padding: 20px; 
     background: rgba(255, 255, 255, 0.65);
     display: flex; flex-direction: column; 
+    overflow: hidden; /* Ensure content doesn't spill */
 }
-.bottom-card-header { margin-bottom: 15px; height: auto; }
+.bottom-card-header { margin-bottom: 15px; flex-shrink: 0; }
 .bottom-card-body { 
     width: 100%; 
-    height: 250px; /* Fixed height for the chart container */
-    flex: 1; 
+    flex: 1; /* Fills remaining space */
     min-height: 0; 
+    overflow: hidden;
 }
 .bottom-text h4 { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; margin: 0 0 2px 0; font-weight: 600; }
 .bottom-text h3 { font-size: 1rem; font-weight: 800; color: #1f2937; margin: 0; }
@@ -588,6 +598,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
               <header class="report-header-content">
                   <div class="header-title">
                       <h1>Laporan Dashboard Projek</h1>
+                      <!-- UPDATED: RGB Title -->
                       <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
                   <div class="header-info">
@@ -632,7 +643,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                   <div class="card status-container">
                       <div class="status-header-fixed">STATUS KEMAJUAN TERPERINCI</div>
                       <div class="status-scroll-area" id="dynamic-status-container">
-                         <!-- Status Content -->
+                          <!-- Status Content -->
                       </div>
                   </div>
               </div>
@@ -811,7 +822,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
     let reportMarkerLayer = null;
     let reportMap = null; // Declare reportMap globally
 
-    // UPDATED: Charts now use STATUS_COLOR_CONFIG & Formatter Fix
+    // UPDATED: Charts now STATIC & Uses Gradient Donut for Chart 01
     function renderReportCharts(data) {
         // Data Chart 01
         const typeCounts = {};
@@ -846,13 +857,25 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             };
         });
 
-        // Common Config
-        const commonOptions = {
+        // Common Config for STATIC IMAGES (No interactions)
+        const staticChartOptions = {
             chart: { 
                 animations: { enabled: false },
                 fontFamily: 'Plus Jakarta Sans, sans-serif',
                 toolbar: { show: false },
-                parentHeightOffset: 0
+                parentHeightOffset: 0,
+                selection: { enabled: false },
+                zoom: { enabled: false }
+            },
+            tooltip: { enabled: false }, // Disable tooltips
+            states: {
+                normal: { filter: { type: 'none' } },
+                hover: { filter: { type: 'none' } }, // Disable hover effect
+                active: { filter: { type: 'none' } }, // Disable active effect
+            },
+            legend: {
+                onItemClick: { toggleDataSeries: false }, // Disable legend clicking
+                onItemHover: { highlightDataSeries: false }
             },
             grid: { padding: { top: 0, bottom: 20, left: 10, right: 10 } }
         };
@@ -860,21 +883,24 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
         // CHART 01: Gradient Donut (UPDATED)
         const typePalette = labels01.map(l => (TYPE_CFG[l] ? TYPE_CFG[l].color : '#ccc'));
         const options01 = {
-            ...commonOptions,
+            ...staticChartOptions,
             series: series01,
             labels: labels01,
-            chart: { type: 'donut', height: '100%', animations: { enabled: false } },
-            legend: { position: 'bottom', offsetY: 0, fontSize: '12px' },
+            chart: { 
+                ...staticChartOptions.chart,
+                type: 'donut', height: '100%' 
+            },
+            legend: { ...staticChartOptions.legend, position: 'bottom', offsetY: 0, fontSize: '12px' },
             fill: { 
                 type: 'gradient',
                 gradient: {
                     shade: 'dark',
-                    type: 'horizontal',
-                    shadeIntensity: 0.5,
-                    inverseColors: true,
+                    type: 'diagonal1', // Diagonal gradient for better 3D-ish effect
+                    shadeIntensity: 0.6,
+                    inverseColors: false,
                     opacityFrom: 1,
-                    opacityTo: 1,
-                    stops: [0, 50, 100]
+                    opacityTo: 0.8,
+                    stops: [0, 100]
                 }
             },
             plotOptions: { 
@@ -883,6 +909,8 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                         size: '65%', 
                         labels: { 
                             show: true, 
+                            name: { show: true, fontSize: '12px', fontWeight: 600, color: '#6b7280' },
+                            value: { show: true, fontSize: '24px', fontWeight: 700, color: '#111827', formatter: function (val) { return val } },
                             total: { show: true, showAlways: true, label: 'Jumlah', fontSize: '14px', fontWeight: 600, color: '#374151' } 
                         } 
                     } 
@@ -890,61 +918,54 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             },
             colors: typePalette,
             dataLabels: { 
-                enabled: true,
-                formatter: function (val) {
-                    return val; // DISPLAY NUMBER ONLY
-                },
-                style: {
-                    fontSize: '14px',
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
-                    fontWeight: 'bold',
-                },
-                dropShadow: { enabled: false }
+                enabled: false // Cleaner look for gradient donut
             },
-            tooltip: {
-                y: {
-                    formatter: function(val) {
-                        return val + " site";
-                    }
-                }
-            }
+            stroke: { width: 0 } // Remove stroke for cleaner gradient
         };
 
         if (chart01) chart01.destroy();
         chart01 = new ApexCharts(document.querySelector("#chart-01"), options01);
         chart01.render();
 
-        // CHART 02: Bar (Uses Status Colors)
+        // CHART 02: Bar (Static)
         const colors02 = labels02.map(label => {
             let key = label === "LAIN" ? "LAIN-LAIN" : label;
             return STATUS_COLOR_CONFIG[key] ? STATUS_COLOR_CONFIG[key].color : '#ccc';
         });
 
         const options02 = {
-            ...commonOptions,
+            ...staticChartOptions,
             series: [{ name: 'Jumlah', data: series02 }],
-            chart: { type: 'bar', height: '100%', animations: { enabled: false } },
+            chart: { ...staticChartOptions.chart, type: 'bar', height: '100%' },
             plotOptions: { bar: { horizontal: true, borderRadius: 6, distributed: true, barHeight: '60%' } },
             xaxis: { categories: labels02 },
             colors: colors02,
-            legend: { show: false }
+            legend: { show: false },
+            dataLabels: {
+                 enabled: true,
+                 textAnchor: 'start',
+                 style: { colors: ['#000'], fontSize: '12px', fontWeight: 'bold' },
+                 formatter: function (val, opt) { return val },
+                 offsetX: 0,
+            }
         };
 
         if (chart02) chart02.destroy();
         chart02 = new ApexCharts(document.querySelector("#chart-02"), options02);
         chart02.render();
 
-        // CHART 03: Stacked (Uses Status Colors)
+        // CHART 03: Stacked (Static)
         const colors03 = uniqueStatuses.map(s => STATUS_COLOR_CONFIG[s].color);
         const options03 = {
-            ...commonOptions,
+            ...staticChartOptions,
             series: series03,
-            chart: { type: 'bar', height: '100%', stacked: true, animations: { enabled: false } },
+            chart: { ...staticChartOptions.chart, type: 'bar', height: '100%', stacked: true },
             plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 } },
             xaxis: { categories: projects03, labels: { style: { fontSize: '10px' } } },
             fill: { opacity: 1 },
             colors: colors03,
-            legend: { position: 'bottom', offsetY: 5 }
+            legend: { ...staticChartOptions.legend, position: 'bottom', offsetY: 5 },
+            dataLabels: { enabled: false }
         };
 
         if (chart03) chart03.destroy();
@@ -952,12 +973,40 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
         chart03.render();
     }
 
-    // UPDATED: Bottom Charts - Better Fit & Colors
+    // UPDATED: Bottom Charts - STATIC & FIT CONTENT
     function renderBottomGridCharts(data) {
         const container = document.getElementById("dynamic-bottom-grid");
         container.innerHTML = ""; 
         bottomCharts.forEach(c => c.destroy());
         bottomCharts = [];
+
+        // Static configuration for bottom charts
+        const staticBottomOptions = {
+            chart: { 
+                type: 'bar', height: '100%', 
+                toolbar: { show: false },
+                animations: { enabled: false },
+                selection: { enabled: false },
+                zoom: { enabled: false },
+                fontFamily: 'Plus Jakarta Sans, sans-serif'
+            },
+            tooltip: { enabled: false },
+            states: {
+                hover: { filter: { type: 'none' } },
+                active: { filter: { type: 'none' } }
+            },
+            plotOptions: { 
+                bar: { horizontal: false, columnWidth: '60%', borderRadius: 3, distributed: true } 
+            },
+            xaxis: { 
+                categories: ["SIAP", "PEMBINAAN", "PERANCANGAN"],
+                labels: { style: { fontSize: '9px', fontWeight: 600 } }
+            },
+            fill: { opacity: 1 },
+            legend: { show: false }, 
+            grid: { padding: { top: 0, bottom: 0, left: 5, right: 5 } },
+            dataLabels: { enabled: true, style: { fontSize: '10px', colors: ['#333'] }, offsetY: -15 }
+        };
 
         PROJECT_REGISTER.forEach((projConfig, index) => {
             const typeKey = projConfig.type.toUpperCase();
@@ -974,7 +1023,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             const categoryColors = categories.map(c => STATUS_COLOR_CONFIG[c].color);
 
             const card = document.createElement("div");
-            card.className = "card bottom-card";
+            card.className = "card bottom-card"; // This class now has fixed height in CSS
             card.innerHTML = `
                 <div class="bottom-card-header">
                     <div class="bottom-text" style="display:flex; align-items:center; gap:10px;">
@@ -982,8 +1031,8 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                              ${cfg.icon.includes('fa-') ? `<i class="${cfg.icon}"></i>` : cfg.icon}
                          </div>
                          <div>
-                            <h4>Carta ${index + 4}</h4>
-                            <h3>${cfg.label} (${totalCount})</h3>
+                           <h4>Carta ${index + 4}</h4>
+                           <h3>${cfg.label} (${totalCount})</h3>
                          </div>
                     </div>
                 </div>
@@ -992,24 +1041,9 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             container.appendChild(card);
 
             const chartOptions = {
+                ...staticBottomOptions,
                 series: [{ name: 'Jumlah', data: seriesData }],
-                chart: { 
-                    type: 'bar', height: '100%', 
-                    toolbar: { show: false },
-                    animations: { enabled: false },
-                    fontFamily: 'Plus Jakarta Sans, sans-serif'
-                },
-                plotOptions: { 
-                    bar: { horizontal: false, columnWidth: '60%', borderRadius: 3, distributed: true } 
-                },
-                xaxis: { 
-                    categories: categories,
-                    labels: { style: { fontSize: '9px', fontWeight: 600 } }
-                },
-                fill: { opacity: 1 },
-                colors: categoryColors, 
-                legend: { show: false }, 
-                grid: { padding: { top: 0, bottom: 0, left: 5, right: 5 } } // Less padding to fit better
+                colors: categoryColors
             };
 
             const chart = new ApexCharts(document.querySelector(`#bottom-chart-${index}`), chartOptions);
