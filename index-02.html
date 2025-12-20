@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.0 - Dynamic Bottom Grid</title>
+  <title>Web GIS Projek Sabah v5.0 - Final Update</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -483,14 +483,14 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
 /* Responsive Report */
 @media (max-width: 1024px) {
-    .charts-row { grid-template-columns: repeat(2, 1fr); }
+    .charts-row, .bottom-grid { grid-template-columns: repeat(2, 1fr); }
     .top-row { grid-template-columns: 1fr; }
     .main-content { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; top: 85px; }
   .controls-container { top: auto; bottom: 90px; right: 20px; gap: 8px;}
-  .charts-row { grid-template-columns: 1fr; }
+  .charts-row, .bottom-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -553,6 +553,14 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
   <!-- Right Side Controls -->
   <div class="controls-container">
     
+    <!-- CSV Button -->
+    <div class="control-card" id="csv-btn-card">
+        <button class="toggle-btn" id="btn-download-csv" title="Muat Turun CSV" onclick="downloadCSV()">
+            <span class="icon-slot"><i class="fas fa-file-csv" style="color: #10B981;"></i></span> 
+            <span class="text-slot">Muat Turun CSV</span>
+        </button>
+    </div>
+
     <!-- Report Button -->
     <div class="control-card" id="report-btn-card">
         <button class="toggle-btn" id="btn-open-report" title="Report Kad" onclick="openReport()">
@@ -671,6 +679,48 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       card.addEventListener('mouseenter', () => card.classList.add('expanded'));
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
+
+    // ---------- NEW CSV DOWNLOAD FUNCTION ----------
+    function downloadCSV() {
+        if (!currentFilteredList || currentFilteredList.length === 0) {
+            alert("Tiada data untuk dimuat turun.");
+            return;
+        }
+
+        // Standard headers
+        const headers = ["SITE_NAME", "DISTRICT", "DUN", "PARLIAMENT", "LATITUDE", "LONGITUDE", "STATUS", "PROJECT_TYPE"];
+        
+        const csvRows = [];
+        csvRows.push(headers.join(","));
+
+        currentFilteredList.forEach(p => {
+            // Escape double quotes and handle missing data
+            const row = [
+                `"${String(p.SITE_NAME || "").replace(/"/g, '""')}"`,
+                `"${String(p.DISTRICT || "").replace(/"/g, '""')}"`,
+                `"${String(p.DUN || "").replace(/"/g, '""')}"`,
+                `"${String(p.PARLIAMENT || "").replace(/"/g, '""')}"`,
+                p.LATITUDE,
+                p.LONGITUDE,
+                `"${String(p.STATUS || "").replace(/"/g, '""')}"`,
+                `"${String(p._type || "").replace(/"/g, '""')}"`
+            ];
+            csvRows.push(row.join(","));
+        });
+
+        const csvString = csvRows.join("\n");
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        const filename = `Projek_Sabah_${activeFeatureName ? activeFeatureName.replace(/\s+/g,'_') : 'All'}_${new Date().toISOString().slice(0,10)}.csv`;
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 
     // ---------- REPORT MODAL LOGIC (INTEGRATED) ----------
     
@@ -1472,6 +1522,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                 <div class="info-row"><span class="info-label">Kategori</span><span class="info-val">${cfg.label}</span></div>
                 <div class="info-row"><span class="info-label">Daerah</span><span class="info-val">${escapeHtml(project.DISTRICT)}</span></div>
                 <div class="info-row"><span class="info-label">DUN</span><span class="info-val">${escapeHtml(project.DUN)}</span></div>
+                <div class="info-row"><span class="info-label">Kordinat</span><span class="info-val">${project.LATITUDE.toFixed(5)}, ${project.LONGITUDE.toFixed(5)}</span></div>
                 <div class="info-row"><span class="info-label">Status</span><span class="info-val" style="color:${cfg.color}">${escapeHtml(project.STATUS)}</span></div>
                 ${rawDetailsHtml} 
                 </div>
@@ -1720,20 +1771,30 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                           }
                     });
 
-                    // FIXED: Robust click handler
+                    // FIXED: Robust click handler & Tooltip logic
                     layer.on('click', (e) => {
-                        // Crucial: Stop click from propagating to map (which might zoom/pan)
+                        // Crucial: Stop click from propagating to map
                         L.DomEvent.stopPropagation(e);
 
-                        // Reset previous selections
+                        // 1. Reset ALL layers in this group (Styles AND Tooltips)
                         dataLayers[key].eachLayer(l => {
                             l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.05, fillColor: '#ffffff' });
+                            
+                            // Restore tooltip if it was unbound/closed
+                            if (!l.getTooltip()) {
+                                const lName = extractFeatureName(l.feature);
+                                l.bindTooltip(lName, { sticky: true, interactive: false, direction: 'center', className: 'area-tooltip' });
+                            }
                         });
                         
-                        // Highlight Selected
+                        // 2. Highlight Selected
                         let selectedColor = feature.properties._tempColor || getRandomColor();
                         e.target.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: selectedColor });
                         
+                        // 3. Remove Tooltip for selected layer (so it doesn't annoy user)
+                        e.target.closeTooltip();
+                        e.target.unbindTooltip();
+
                         // Update App State
                         activeFeatureName = name;
                         document.getElementById('selected-area').textContent = name;
