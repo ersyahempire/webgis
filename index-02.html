@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.5 - Glass Report</title>
+  <title>Web GIS Projek Sabah v5.6 - Fixed Layout</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -453,10 +453,22 @@ body {
 .sub-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #4b5563; font-weight: 600; }
 .sub-track { flex-grow: 1; height: 4px; background: rgba(0,0,0,0.05); margin: 0 10px; border-radius: 2px; overflow: hidden; }
 
-/* Bottom Grid */
+/* Bottom Grid - Fixed for Auto Height */
 .bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; padding-bottom: 20px; }
-.bottom-card { height: 260px; padding: 20px; background: rgba(255, 255, 255, 0.65); }
+.bottom-card { 
+    height: auto; /* Changed from fixed 260px to auto */
+    min-height: 300px;
+    padding: 20px; 
+    background: rgba(255, 255, 255, 0.65);
+    display: flex; flex-direction: column; 
+}
 .bottom-card-header { margin-bottom: 15px; height: auto; }
+.bottom-card-body { 
+    width: 100%; 
+    height: 250px; /* Fixed height for the chart container */
+    flex: 1; 
+    min-height: 0; 
+}
 .bottom-text h4 { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; margin: 0 0 2px 0; font-weight: 600; }
 .bottom-text h3 { font-size: 1rem; font-weight: 800; color: #1f2937; margin: 0; }
 .icon-box { box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 36px; height: 36px; font-size: 1rem; border-radius: 8px; }
@@ -845,7 +857,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             grid: { padding: { top: 0, bottom: 20, left: 10, right: 10 } }
         };
 
-        // CHART 01: Donut (Uses Type Colors) & Custom Label Formatter (UPDATED: Number Only)
+        // CHART 01: Gradient Donut (UPDATED)
         const typePalette = labels01.map(l => (TYPE_CFG[l] ? TYPE_CFG[l].color : '#ccc'));
         const options01 = {
             ...commonOptions,
@@ -853,8 +865,29 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             labels: labels01,
             chart: { type: 'donut', height: '100%', animations: { enabled: false } },
             legend: { position: 'bottom', offsetY: 0, fontSize: '12px' },
-            fill: { type: 'gradient' },
-            plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, showAlways: true, label: 'Jumlah', fontSize: '14px', fontWeight: 600, color: '#374151' } } } } },
+            fill: { 
+                type: 'gradient',
+                gradient: {
+                    shade: 'dark',
+                    type: 'horizontal',
+                    shadeIntensity: 0.5,
+                    inverseColors: true,
+                    opacityFrom: 1,
+                    opacityTo: 1,
+                    stops: [0, 50, 100]
+                }
+            },
+            plotOptions: { 
+                pie: { 
+                    donut: { 
+                        size: '65%', 
+                        labels: { 
+                            show: true, 
+                            total: { show: true, showAlways: true, label: 'Jumlah', fontSize: '14px', fontWeight: 600, color: '#374151' } 
+                        } 
+                    } 
+                } 
+            },
             colors: typePalette,
             dataLabels: { 
                 enabled: true,
