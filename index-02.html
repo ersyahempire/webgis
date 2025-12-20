@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.0 - Realtime Report Fixed</title>
+  <title>Web GIS Projek Sabah v5.0 - Dynamic Bottom Grid</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -449,34 +449,48 @@ body {
 .sub-track { flex-grow: 1; height: 3px; background: #eee; margin: 0 8px; border-radius: 2px; }
 
 /* --- BOTTOM GRID --- */
-.bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-.bottom-card { display: flex; align-items: center; padding: 20px; gap: 15px; }
-.icon-box {
-    width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+.bottom-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 15px; 
 }
-.icon-wifi { background: linear-gradient(135deg, #2ecc71, #27ae60); }
-.icon-nadi { background: linear-gradient(135deg, #3498db, #2980b9); }
-.icon-pop { background: linear-gradient(135deg, #f1c40f, #f39c12); }
-.icon-menara { background: linear-gradient(135deg, #e74c3c, #c0392b); }
-.icon-vsat { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
-.icon-tel { background: linear-gradient(135deg, #e67e22, #d35400); }
+.bottom-card { 
+    display: flex; 
+    align-items: center; 
+    padding: 20px; 
+    gap: 15px; 
+    background: rgba(255,255,255,0.7);
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    min-height: 250px;
+    flex-direction: column;
+    justify-content: center;
+}
+.bottom-card-header {
+    display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 10px;
+}
+.bottom-card-body {
+    width: 100%; flex: 1; min-height: 180px;
+}
 
-.bottom-text h4 { font-size: 0.9rem; color: #333; margin:0; }
-.bottom-text h3 { font-size: 1.2rem; font-weight: 700; color: #222; margin:0;}
+.icon-box {
+    width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.bottom-text h3 { font-size: 1rem; font-weight: 700; color: #333; margin:0; text-transform: uppercase;}
 
 footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
 /* Responsive Report */
 @media (max-width: 1024px) {
-    .charts-row, .bottom-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: repeat(2, 1fr); }
     .top-row { grid-template-columns: 1fr; }
     .main-content { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; top: 85px; }
   .controls-container { top: auto; bottom: 90px; right: 20px; gap: 8px;}
-  .charts-row, .bottom-grid { grid-template-columns: 1fr; }
+  .charts-row { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -631,50 +645,9 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                   </div>
               </div>
 
-              <!-- BOTTOM GRID (STATIC PLACEHOLDERS) -->
-              <div class="bottom-grid">
-                  <div class="card bottom-card">
-                      <div class="icon-box icon-wifi"><i class="fa-solid fa-wifi"></i></div>
-                      <div class="bottom-text">
-                          <h4>CARTA 04</h4>
-                          <h3>WIFI</h3>
-                      </div>
-                  </div>
-                  <div class="card bottom-card">
-                      <div class="icon-box icon-nadi"><i class="fa-solid fa-heart-pulse"></i></div>
-                      <div class="bottom-text">
-                          <h4>CARTA 05</h4>
-                          <h3>NADI</h3>
-                      </div>
-                  </div>
-                  <div class="card bottom-card">
-                      <div class="icon-box icon-pop"><i class="fa-solid fa-gear"></i></div>
-                      <div class="bottom-text">
-                          <h4>CARTA 06</h4>
-                          <h3>POP</h3>
-                      </div>
-                  </div>
-                  <div class="card bottom-card">
-                      <div class="icon-box icon-menara"><i class="fa-solid fa-broadcast-tower"></i></div>
-                      <div class="bottom-text">
-                          <h4>CARTA 07</h4>
-                          <h3>MENARA</h3>
-                      </div>
-                  </div>
-                  <div class="card bottom-card">
-                      <div class="icon-box icon-vsat"><i class="fa-solid fa-satellite-dish"></i></div>
-                      <div class="bottom-text">
-                          <h4>CARTA 08</h4>
-                          <h3>VSAT</h3>
-                      </div>
-                  </div>
-                  <div class="card bottom-card">
-                      <div class="icon-box icon-tel"><i class="fa-solid fa-phone"></i></div>
-                      <div class="bottom-text">
-                          <h4>CARTA 09</h4>
-                          <h3>TELEFON</h3>
-                      </div>
-                  </div>
+              <!-- BOTTOM GRID (DYNAMIC APEXCHARTS) -->
+              <div class="bottom-grid" id="dynamic-bottom-grid">
+                  <!-- CONTENT WILL BE INJECTED VIA JS -->
               </div>
 
               <footer>
@@ -785,6 +758,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
     // Global Chart Instances to manage destruction
     let chart01 = null, chart02 = null, chart03 = null;
+    let bottomCharts = []; // Array to store bottom grid charts
     let reportMarkerLayer = null;
 
     function renderReportCharts(data) {
@@ -893,6 +867,74 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         chart03.render();
     }
 
+    // NEW: Function to render dynamic bottom grid charts
+    function renderBottomGridCharts(data) {
+        const container = document.getElementById("dynamic-bottom-grid");
+        container.innerHTML = ""; // Clear existing
+        
+        // Destroy existing bottom charts to prevent memory leaks
+        bottomCharts.forEach(c => c.destroy());
+        bottomCharts = [];
+
+        // Loop through each registered project type
+        PROJECT_REGISTER.forEach((projConfig, index) => {
+            const typeKey = projConfig.type.toUpperCase();
+            const cfg = TYPE_CFG[typeKey] || { color: '#666', icon: '?', label: typeKey };
+            
+            // Filter data for this project type
+            const typeData = data.filter(p => p._type.toUpperCase() === typeKey);
+            const totalCount = typeData.length;
+
+            // Prepare Series for Stacked Column (Statuses)
+            const uniqueStatuses = ["SIAP", "PEMBINAAN", "PERANCANGAN"];
+            const seriesData = uniqueStatuses.map(statusName => {
+                return {
+                    name: statusName,
+                    data: [typeData.filter(p => getStatusCategory(p.STATUS) === statusName).length]
+                };
+            });
+
+            // Create HTML Elements
+            const card = document.createElement("div");
+            card.className = "card bottom-card";
+            card.innerHTML = `
+                <div class="bottom-card-header">
+                    <div class="icon-box" style="background: ${cfg.color}">
+                        ${cfg.icon.includes('fa-') ? `<i class="${cfg.icon}"></i>` : cfg.icon}
+                    </div>
+                    <div class="bottom-text">
+                        <h4>Carta ${index + 4}</h4>
+                        <h3>${cfg.label} (${totalCount})</h3>
+                    </div>
+                </div>
+                <div class="bottom-card-body" id="bottom-chart-${index}"></div>
+            `;
+            container.appendChild(card);
+
+            // Create Chart
+            const chartOptions = {
+                series: seriesData,
+                chart: { 
+                    type: 'bar', 
+                    height: '100%', 
+                    stacked: true, 
+                    toolbar: { show: false },
+                    animations: { enabled: false }
+                },
+                plotOptions: { bar: { horizontal: false, columnWidth: '40%', borderRadius: 4 } },
+                xaxis: { categories: [cfg.label] }, // Single category
+                fill: { opacity: 1 },
+                colors: ['#2ecc71', '#3498db', '#f1c40f'],
+                legend: { position: 'bottom' },
+                grid: { padding: { top: 0, bottom: 0, left: 10, right: 10 } }
+            };
+
+            const chart = new ApexCharts(document.querySelector(`#bottom-chart-${index}`), chartOptions);
+            chart.render();
+            bottomCharts.push(chart);
+        });
+    }
+
     function openReport() {
         const overlay = document.getElementById('report-overlay');
         const dataToUse = currentFilteredList || [];
@@ -935,9 +977,12 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         const statusContainer = document.getElementById('dynamic-status-container');
         statusContainer.innerHTML = generateStatusHTML(dataToUse);
 
-        // 4. Render Charts
+        // 4. Render Charts (Main + Bottom Grid)
         // We delay slightly to let the modal open so ApexCharts can calculate width
-        setTimeout(() => renderReportCharts(dataToUse), 10);
+        setTimeout(() => {
+            renderReportCharts(dataToUse);
+            renderBottomGridCharts(dataToUse); // NEW FUNCTION CALL
+        }, 10);
 
         // 5. Open Modal & Render Report Map
         overlay.classList.add('open');
@@ -1134,8 +1179,12 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         id: "db_vsat",
         sheetId: "1KhD9LopT0thjVPhZuCI7IulNsItW9ipQ_M6Ob0V8j0o",
         type: "VSAT" 
+      },
+      {
+        id: "db_telefon",
+        sheetId: "1OMOyrS34mAYtg-UxlE4xs0iyMoSdqc3WFbhgMlHsgqo",
+        type: "TELEFON" 
       }
-
     ];
 
     const TYPE_CFG = {
@@ -1143,8 +1192,8 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       NADI: { color: "#4dabf7", icon: "📡", label: "NADI" },
       POP: { color: "#fcc419", icon: "🌐", label: "POP" },
       TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" },
-      VSAT: { color: "#9c27b0", icon: "🛰️", label: "VSAT" }
-   
+      VSAT: { color: "#9c27b0", icon: "🛰️", label: "VSAT" },
+      TELEFON: { color: "#ff922b", icon: "📞", label: "Telefon" }
     };
 
     // ---------- STATE ----------
