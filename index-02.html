@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.0 - update UI</title>
+  <title>Web GIS Projek Sabah v5.0 - Dynamic Report</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -382,26 +382,14 @@ body {
 .mini-stats-grid {
     display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
 }
+/* DYNAMIC CARD STYLES */
 .mini-card {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: rgba(255,255,255,0.6); border-radius: 10px; padding: 10px 5px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #ccc;
+    min-height: 80px;
 }
-/* Warna Border Atas Mini Card */
-.mini-card.wifi { border-color: var(--color-wifi); }
-.mini-card.nadi { border-color: var(--color-nadi); }
-.mini-card.pop { border-color: var(--color-pop); }
-.mini-card.menara { border-color: var(--color-menara); }
-.mini-card.vsat { border-color: var(--color-vsat); }
-.mini-card.telefon { border-color: var(--color-telefon); }
-
 .mini-card h3 { font-size: 1.5rem; color: #333; margin-bottom: 2px; margin-top:0; }
-.mini-card.wifi h3 { color: var(--color-wifi); }
-.mini-card.nadi h3 { color: var(--color-nadi); }
-.mini-card.pop h3 { color: var(--color-pop); }
-.mini-card.menara h3 { color: var(--color-menara); }
-.mini-card.vsat h3 { color: var(--color-vsat); }
-.mini-card.telefon h3 { color: var(--color-telefon); }
 .mini-card span { font-size: 0.7rem; font-weight: bold; color: #555; text-transform: uppercase; }
 
 /* --- CHARTS ROW --- */
@@ -602,31 +590,9 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                       <div class="badge" id="report-badge-area">SELURUH SABAH</div>
                   </div>
 
-                  <div class="mini-stats-grid">
-                      <div class="mini-card wifi">
-                          <h3 id="count-wifi">0</h3>
-                          <span>WIFI</span>
-                      </div>
-                      <div class="mini-card nadi">
-                          <h3 id="count-nadi">0</h3>
-                          <span>NADI</span>
-                      </div>
-                      <div class="mini-card pop">
-                          <h3 id="count-pop">0</h3>
-                          <span>POP</span>
-                      </div>
-                      <div class="mini-card menara">
-                          <h3 id="count-menara">0</h3>
-                          <span>MENARA</span>
-                      </div>
-                      <div class="mini-card vsat">
-                          <h3 id="count-vsat">0</h3>
-                          <span>VSAT</span>
-                      </div>
-                      <div class="mini-card telefon">
-                          <h3 id="count-telefon">0</h3>
-                          <span>TELEFON</span>
-                      </div>
+                  <!-- DYNAMIC MINI CARDS CONTAINER -->
+                  <div class="mini-stats-grid" id="report-mini-stats">
+                      <!-- Cards will be injected via JS -->
                   </div>
               </div>
 
@@ -793,9 +759,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             Object.entries(stats[cat].types).forEach(([type, tCount]) => {
                 const tPercent = Math.round((tCount / count) * 100);
                 const colorClass = colors[type] || "fill-green";
-                let displayType = type;
-                if(type === 'BWA') displayType = 'WIFI';
-                if(type === 'TOWER') displayType = 'MENARA';
+                let displayType = TYPE_CFG[type] ? TYPE_CFG[type].label : type;
 
                 subItemsHTML += `
                     <div class="sub-item">
@@ -825,6 +789,9 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         return html;
     }
 
+    // Stores report markers to allow clearing
+    let reportMarkerLayer = null;
+
     function openReport() {
         const overlay = document.getElementById('report-overlay');
         
@@ -834,18 +801,37 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         document.getElementById('report-badge-area').textContent = currentLoc;
         document.getElementById('report-total-count').textContent = currentFilteredList ? currentFilteredList.length : 0;
 
-        // 2. Update Mini Stats (Counts by Type)
-        const counts = { BWA:0, NADI:0, POP:0, TOWER:0, VSAT:0, TELEFON:0 };
+        // 2. DYNAMIC MINI CARDS LOGIC
+        const cardContainer = document.getElementById('report-mini-stats');
+        cardContainer.innerHTML = ''; // Clear existing
+
+        // Calculate counts
+        const counts = {};
+        // Initialize counts for all registered types to 0
+        PROJECT_REGISTER.forEach(p => { counts[p.type.toUpperCase()] = 0; });
+        
+        // Count actual filtered projects
         (currentFilteredList || []).forEach(p => {
-            if(counts[p._type] !== undefined) counts[p._type]++;
+            const t = p._type.toUpperCase();
+            if(counts[t] !== undefined) counts[t]++;
         });
 
-        document.getElementById('count-wifi').textContent = counts.BWA;
-        document.getElementById('count-nadi').textContent = counts.NADI;
-        document.getElementById('count-pop').textContent = counts.POP;
-        document.getElementById('count-menara').textContent = counts.TOWER;
-        document.getElementById('count-vsat').textContent = counts.VSAT;
-        document.getElementById('count-telefon').textContent = counts.TELEFON;
+        // Generate Cards
+        Object.keys(counts).forEach(typeKey => {
+            const cfg = TYPE_CFG[typeKey] || { color: '#666', label: typeKey };
+            const count = counts[typeKey];
+            
+            const card = document.createElement('div');
+            card.className = 'mini-card';
+            // Set border top color via inline style or logic
+            card.style.borderTopColor = cfg.color;
+            
+            card.innerHTML = `
+                <h3 style="color:${cfg.color}">${count}</h3>
+                <span>${cfg.label}</span>
+            `;
+            cardContainer.appendChild(card);
+        });
 
         // 3. Update Status Section
         const statusContainer = document.getElementById('dynamic-status-container');
@@ -854,7 +840,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         // 4. Open Modal & Render Report Map
         overlay.classList.add('open');
         
-        // --- NEW MAP LOGIC ---
+        // --- NEW MAP LOGIC (ZOOM & MARKERS) ---
         // Initialize Report Map if needed
         if (!reportMap) {
             reportMap = L.map('report-map', {
@@ -870,18 +856,23 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 maxZoom: 20
             }).addTo(reportMap);
+            
+            reportMarkerLayer = L.layerGroup().addTo(reportMap);
         }
         
         // Resize fix and Layer Logic
         setTimeout(() => {
             reportMap.invalidateSize();
             
-            // Clear previous boundary layers (except tiles)
+            // Clear previous layers
             reportMap.eachLayer(layer => {
-                if (!layer._url) reportMap.removeLayer(layer);
+                if (!layer._url && layer !== reportMarkerLayer) reportMap.removeLayer(layer);
             });
+            reportMarkerLayer.clearLayers();
 
             // Add Boundaries
+            let boundsToFit = null;
+
             if (currentBoundaryKey && dataLayers[currentBoundaryKey]) {
                 const geoJsonData = dataLayers[currentBoundaryKey].toGeoJSON();
                 
@@ -893,14 +884,58 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                             color: isActive ? '#DC2626' : '#94a3b8', // Red for active, Gray for others
                             weight: isActive ? 2 : 1,
                             fillColor: isActive ? '#EF4444' : '#f1f5f9',
-                            fillOpacity: isActive ? 0.6 : 0.2
+                            fillOpacity: isActive ? 0.4 : 0.1
                         };
+                    },
+                    filter: (feature) => {
+                        // Optimization: Only show selected feature + context if needed, or all.
+                        // Showing all provides context.
+                        return true;
                     }
                 }).addTo(reportMap);
 
-                // Default: Fit to Sabah/All Boundaries to show context
-                reportMap.fitBounds(boundaryLayer.getBounds());
+                // If specific area selected, fit to that area. Else fit to whole layer.
+                if (activeFeatureName) {
+                    boundaryLayer.eachLayer(l => {
+                        if (extractFeatureName(l.feature) === activeFeatureName) {
+                            boundsToFit = l.getBounds();
+                        }
+                    });
+                } else {
+                    boundsToFit = boundaryLayer.getBounds();
+                }
+            } 
 
+            // Add Markers (Snapshot of active view)
+            if (currentFilteredList && currentFilteredList.length > 0) {
+                // Limit markers for performance in report view if huge number
+                const markersToShow = currentFilteredList.slice(0, 1000); 
+                
+                const markerGroup = L.featureGroup();
+                
+                markersToShow.forEach(p => {
+                    const cfg = TYPE_CFG[p._type] || { color: '#333' };
+                    const m = L.circleMarker([p.LATITUDE, p.LONGITUDE], {
+                        radius: 4, // Slightly smaller for report
+                        fillColor: cfg.color,
+                        color: "#fff",
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    });
+                    m.addTo(reportMarkerLayer);
+                    markerGroup.addLayer(m);
+                });
+
+                // If no specific boundary selected, fit to markers
+                if (!activeFeatureName && markersToShow.length > 0) {
+                    boundsToFit = markerGroup.getBounds();
+                }
+            }
+
+            // Apply Fit Bounds
+            if (boundsToFit && boundsToFit.isValid()) {
+                reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
             } else {
                  // Fallback view of Sabah
                  reportMap.setView([5.9804, 116.0735], 7);
@@ -993,16 +1028,27 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", 
         type: "TOWER",
         filter: { col: "PROJECT_TYPE", val: "USP" } 
-      }
+      },
       // Projek Baru Ditambah Sini
-      
+      {
+        id: "db_vsat",
+        sheetId: "1KhD9LopT0thjVPhZuCI7IulNsItW9ipQ_M6Ob0V8j0o",
+        type: "VSAT" 
+      },
+      {
+        id: "db_telefon",
+        sheetId: "1OMOyrS34mAYtg-UxlE4xs0iyMoSdqc3WFbhgMlHsgqo",
+        type: "TELEFON" 
+      }
     ];
 
     const TYPE_CFG = {
       BWA: { color: "#51cf66", icon: "📶", label: "WiFi" },
       NADI: { color: "#4dabf7", icon: "📡", label: "NADI" },
       POP: { color: "#fcc419", icon: "🌐", label: "POP" },
-      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" }
+      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" },
+      VSAT: { color: "#9c27b0", icon: "🛰️", label: "VSAT" },
+      TELEFON: { color: "#ff922b", icon: "📞", label: "Telefon" }
     };
 
     // ---------- STATE ----------
