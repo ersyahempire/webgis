@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.1 - Updated Colors</title>
+  <title>Web GIS Projek Sabah v5.2 - Final Report Fix</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -428,31 +428,32 @@ body {
 .sub-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.65rem; color: #666; }
 .sub-track { flex-grow: 1; height: 3px; background: #eee; margin: 0 8px; border-radius: 2px; }
 
-/* --- BOTTOM GRID (SPACING FIXED) --- */
+/* --- BOTTOM GRID (SPACING & OVERFLOW FIXED) --- */
 .bottom-grid { 
     display: grid; 
     grid-template-columns: repeat(3, 1fr); 
     gap: 15px; 
-    margin-top: 20px; /* EXTRA SPACE ABOVE BOTTOM GRID */
-    padding-bottom: 20px; /* EXTRA SPACE AT BOTTOM */
+    margin-top: 20px; 
+    padding-bottom: 20px; 
 }
 .bottom-card { 
     display: flex; 
     align-items: center; 
-    padding: 20px; 
-    gap: 15px; 
+    padding: 15px; 
+    gap: 10px; 
     background: rgba(255,255,255,0.7);
     border-radius: 15px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    height: 280px; 
+    height: 300px; /* Sedikit tinggi untuk muat carta */
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow: hidden; /* Pastikan tiada yang terkeluar */
 }
 .bottom-card-header {
-    display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 10px; height: 40px;
+    display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 5px; height: 40px; flex-shrink: 0;
 }
 .bottom-card-body {
-    width: 100%; flex: 1; min-height: 0; 
+    width: 100%; flex: 1; min-height: 0; overflow: hidden; /* Penting untuk ApexCharts */
 }
 
 .icon-box {
@@ -636,7 +637,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
     
   <!-- Main Script Logic -->
   <script>
-    // ---------- 1. STATUS COLOR CONFIGURATION (CONFIGURATION HERE) ----------
+    // ---------- 1. STATUS COLOR CONFIGURATION ----------
     const STATUS_COLOR_CONFIG = {
         "SIAP": { label: "SIAP", color: "#86efac" },         // Hijau Lembut (Soft Green)
         "PEMBINAAN": { label: "PEMBINAAN", color: "#fde047" }, // Kuning Lembut (Soft Yellow)
@@ -795,7 +796,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
     let bottomCharts = []; 
     let reportMarkerLayer = null;
 
-    // UPDATED: Charts now use STATUS_COLOR_CONFIG
+    // UPDATED: Charts now use STATUS_COLOR_CONFIG & Formatter Fix
     function renderReportCharts(data) {
         // Data Chart 01
         const typeCounts = {};
@@ -841,7 +842,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             grid: { padding: { top: 0, bottom: 20, left: 10, right: 10 } }
         };
 
-        // CHART 01: Donut (Uses Type Colors)
+        // CHART 01: Donut (Uses Type Colors) & Custom Label Formatter
         const typePalette = labels01.map(l => (TYPE_CFG[l] ? TYPE_CFG[l].color : '#ccc'));
         const options01 = {
             ...commonOptions,
@@ -852,7 +853,15 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             fill: { type: 'gradient' },
             plotOptions: { pie: { donut: { size: '65%' } } },
             colors: typePalette,
-            dataLabels: { enabled: true }
+            dataLabels: { 
+                enabled: true,
+                formatter: function (val, opts) {
+                    const series = opts.w.config.series;
+                    const sum = series.reduce((a, b) => a + b, 0);
+                    const percent = sum > 0 ? (val / sum * 100).toFixed(1) : 0;
+                    return `${val} (${percent}%)`;
+                }
+            }
         };
 
         if (chart01) chart01.destroy();
@@ -860,9 +869,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         chart01.render();
 
         // CHART 02: Bar (Uses Status Colors)
-        // Map colors based on labels02 contents
         const colors02 = labels02.map(label => {
-            // Handle edge case if label is LAIN or not found
             let key = label === "LAIN" ? "LAIN-LAIN" : label;
             return STATUS_COLOR_CONFIG[key] ? STATUS_COLOR_CONFIG[key].color : '#ccc';
         });
@@ -899,7 +906,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         chart03.render();
     }
 
-    // UPDATED: Bottom Charts using STATUS_COLOR_CONFIG
+    // UPDATED: Bottom Charts - Better Fit & Colors
     function renderBottomGridCharts(data) {
         const container = document.getElementById("dynamic-bottom-grid");
         container.innerHTML = ""; 
@@ -944,16 +951,16 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                     animations: { enabled: false }
                 },
                 plotOptions: { 
-                    bar: { horizontal: false, columnWidth: '50%', borderRadius: 4, distributed: true } 
+                    bar: { horizontal: false, columnWidth: '60%', borderRadius: 3, distributed: true } 
                 },
                 xaxis: { 
                     categories: categories,
-                    labels: { style: { fontSize: '10px' } }
+                    labels: { style: { fontSize: '9px', fontWeight: 600 } }
                 },
                 fill: { opacity: 1 },
                 colors: categoryColors, 
                 legend: { show: false }, 
-                grid: { padding: { top: 0, bottom: 0, left: 10, right: 10 } }
+                grid: { padding: { top: 0, bottom: 0, left: 5, right: 5 } } // Less padding to fit better
             };
 
             const chart = new ApexCharts(document.querySelector(`#bottom-chart-${index}`), chartOptions);
@@ -964,7 +971,10 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
     function openReport() {
         const overlay = document.getElementById('report-overlay');
-        const dataToUse = currentFilteredList || [];
+        
+        // FIX: Ensure data is available. Fallback to allProjects if filtered list is empty (likely due to initial load)
+        let dataToUse = (currentFilteredList && currentFilteredList.length > 0) ? currentFilteredList : allProjects;
+        
         const currentLoc = activeFeatureName ? activeFeatureName : "SELURUH SABAH";
         document.getElementById('report-layer-name').textContent = currentLoc;
         document.getElementById('report-badge-area').textContent = currentLoc;
@@ -992,24 +1002,26 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         const statusContainer = document.getElementById('dynamic-status-container');
         statusContainer.innerHTML = generateStatusHTML(dataToUse);
 
-        setTimeout(() => {
-            renderReportCharts(dataToUse);
-            renderBottomGridCharts(dataToUse); 
-        }, 10);
+        // Immediate Rendering Attempt
+        renderReportCharts(dataToUse);
+        renderBottomGridCharts(dataToUse); 
 
         overlay.classList.add('open');
         
-        if (!reportMap) {
-            reportMap = L.map('report-map', {
-                zoomControl: false, attributionControl: false, dragging: false,
-                scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false
-            });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(reportMap);
-            reportMarkerLayer = L.layerGroup().addTo(reportMap);
-        }
-        
+        // --- MAP INITIALIZATION & ZOOM FIX ---
         setTimeout(() => {
-            reportMap.invalidateSize();
+            if (!reportMap) {
+                reportMap = L.map('report-map', {
+                    zoomControl: false, attributionControl: false, dragging: true,
+                    scrollWheelZoom: true, doubleClickZoom: true, boxZoom: true, keyboard: false
+                });
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(reportMap);
+                reportMarkerLayer = L.layerGroup().addTo(reportMap);
+            }
+            
+            reportMap.invalidateSize(); // CRITICAL FIX for Map Display in Modal
+            
+            // Clean layers
             reportMap.eachLayer(layer => {
                 if (!layer._url && layer !== reportMarkerLayer) reportMap.removeLayer(layer);
             });
@@ -1017,6 +1029,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
             let boundsToFit = null;
 
+            // Add Boundaries
             if (currentBoundaryKey && dataLayers[currentBoundaryKey]) {
                 const geoJsonData = dataLayers[currentBoundaryKey].toGeoJSON();
                 const boundaryLayer = L.geoJSON(geoJsonData, {
@@ -1041,8 +1054,9 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                 }
             } 
 
+            // Add Markers
             if (dataToUse && dataToUse.length > 0) {
-                const markersToShow = dataToUse.slice(0, 1500); 
+                const markersToShow = dataToUse.slice(0, 2000); 
                 const markerGroup = L.featureGroup();
                 markersToShow.forEach(p => {
                     const cfg = TYPE_CFG[p._type] || { color: '#333' };
@@ -1052,12 +1066,16 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                     m.addTo(reportMarkerLayer);
                     markerGroup.addLayer(m);
                 });
-                if (!activeFeatureName && markersToShow.length > 0) boundsToFit = markerGroup.getBounds();
+                
+                // If no boundary selected, prioritize marker bounds
+                if (!activeFeatureName && markersToShow.length > 0) {
+                    boundsToFit = markerGroup.getBounds();
+                }
             }
 
             if (boundsToFit && boundsToFit.isValid()) reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
             else reportMap.setView([5.9804, 116.0735], 7);
-        }, 300); 
+        }, 300); // Wait for modal transition
     }
 
     function closeReport() {
