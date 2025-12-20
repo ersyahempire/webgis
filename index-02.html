@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.0 - update UI</title>
+  <title>Web GIS Projek Sabah v5.1 - update UI</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -428,14 +428,10 @@ body {
 .map-container {
     position: relative; overflow: hidden; padding: 0;
     background-color: #a5d8ff;
-    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Sabah_relief_map.png/640px-Sabah_relief_map.png');
-    background-size: cover; background-position: center;
+    /* Map will be injected here */
 }
-.map-overlay {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCI+PHBhdGggZD0iTTEgMGwwIDUwIE0w 1bDUwIDAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjMiIGZpbGw9Im5vbmUiLz48L3N2Zz4=');
-    opacity: 0.3; pointer-events: none;
-}
+/* Ensure the inner report map div fills the container */
+#report-map { width: 100%; height: 100%; min-height: 350px; border-radius: 15px; }
 
 .status-container {
     display: flex; flex-direction: column; gap: 15px; background: rgba(255, 255, 255, 0.7);
@@ -665,7 +661,8 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
               <!-- MAIN CONTENT (MAP & STATUS) -->
               <div class="main-content">
                   <div class="card map-container">
-                      <div class="map-overlay"></div>
+                      <!-- UPDATED: Dynamic map container -->
+                      <div id="report-map"></div>
                   </div>
 
                   <div class="card status-container" id="dynamic-status-container">
@@ -854,8 +851,61 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         const statusContainer = document.getElementById('dynamic-status-container');
         statusContainer.innerHTML = generateStatusHTML(currentFilteredList || []);
 
-        // 4. Open Modal
+        // 4. Open Modal & Render Report Map
         overlay.classList.add('open');
+        
+        // --- NEW MAP LOGIC ---
+        // Initialize Report Map if needed
+        if (!reportMap) {
+            reportMap = L.map('report-map', {
+                zoomControl: false,
+                attributionControl: false,
+                dragging: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                keyboard: false
+            });
+            // Use a clean light map for the report
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20
+            }).addTo(reportMap);
+        }
+        
+        // Resize fix and Layer Logic
+        setTimeout(() => {
+            reportMap.invalidateSize();
+            
+            // Clear previous boundary layers (except tiles)
+            reportMap.eachLayer(layer => {
+                if (!layer._url) reportMap.removeLayer(layer);
+            });
+
+            // Add Boundaries
+            if (currentBoundaryKey && dataLayers[currentBoundaryKey]) {
+                const geoJsonData = dataLayers[currentBoundaryKey].toGeoJSON();
+                
+                const boundaryLayer = L.geoJSON(geoJsonData, {
+                    style: (feature) => {
+                        const name = extractFeatureName(feature);
+                        const isActive = name === activeFeatureName;
+                        return {
+                            color: isActive ? '#DC2626' : '#94a3b8', // Red for active, Gray for others
+                            weight: isActive ? 2 : 1,
+                            fillColor: isActive ? '#EF4444' : '#f1f5f9',
+                            fillOpacity: isActive ? 0.6 : 0.2
+                        };
+                    }
+                }).addTo(reportMap);
+
+                // Default: Fit to Sabah/All Boundaries to show context
+                reportMap.fitBounds(boundaryLayer.getBounds());
+
+            } else {
+                 // Fallback view of Sabah
+                 reportMap.setView([5.9804, 116.0735], 7);
+            }
+        }, 300); // Slight delay to ensure modal transition finishes
     }
 
     function closeReport() {
