@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.7 - Report Update</title>
+  <title>Web GIS Projek Sabah v5.8 - Report Fix</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -375,16 +375,16 @@ body {
     text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* UPDATE: RGB COLOR STYLE FOR TITLE LAYER */
+/* UPDATE: REVERTED TO CLEAN WHITE TITLE */
 .header-title h2#report-layer-name { 
     font-size: 2.2rem; 
     font-weight: 800; 
     margin: 5px 0 0 0; 
     line-height: 1.1;
-    /* RGB Gradient Effect */
-    background: linear-gradient(90deg, #ff4d4d, #10B981, #3b82f6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #fff; /* Clean White */
+    text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    background: none;
+    -webkit-text-fill-color: initial;
     display: inline-block;
 }
 
@@ -890,12 +890,13 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                 ...staticChartOptions.chart,
                 type: 'donut', height: '100%' 
             },
-            legend: { ...staticChartOptions.legend, position: 'bottom', offsetY: 0, fontSize: '12px' },
+            // FIX: Added Legend to bottom and configured dataLabels to show numbers
+            legend: { ...staticChartOptions.legend, show: true, position: 'bottom', offsetY: 0, fontSize: '11px' },
             fill: { 
                 type: 'gradient',
                 gradient: {
                     shade: 'dark',
-                    type: 'diagonal1', // Diagonal gradient for better 3D-ish effect
+                    type: 'diagonal1', 
                     shadeIntensity: 0.6,
                     inverseColors: false,
                     opacityFrom: 1,
@@ -906,7 +907,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             plotOptions: { 
                 pie: { 
                     donut: { 
-                        size: '65%', 
+                        size: '60%', // Reduced slightly to prevent cutting
                         labels: { 
                             show: true, 
                             name: { show: true, fontSize: '12px', fontWeight: 600, color: '#6b7280' },
@@ -917,10 +918,16 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                 } 
             },
             colors: typePalette,
+            // FIX: Enable Data Labels to show Numbers
             dataLabels: { 
-                enabled: false // Cleaner look for gradient donut
+                enabled: true,
+                formatter: function (val, opts) {
+                    return opts.w.config.series[opts.seriesIndex]
+                },
+                style: { fontSize: '12px', fontWeight: 'bold' },
+                dropShadow: { enabled: true }
             },
-            stroke: { width: 0 } // Remove stroke for cleaner gradient
+            stroke: { width: 0 } 
         };
 
         if (chart01) chart01.destroy();
@@ -940,7 +947,9 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             plotOptions: { bar: { horizontal: true, borderRadius: 6, distributed: true, barHeight: '60%' } },
             xaxis: { categories: labels02 },
             colors: colors02,
-            legend: { show: false },
+            // FIX: Enable Legend
+            legend: { show: true, position: 'bottom', fontSize: '11px' },
+            grid: { padding: { top: 0, bottom: 10, left: 10, right: 20 } }, // Added padding to fix clipping
             dataLabels: {
                  enabled: true,
                  textAnchor: 'start',
@@ -996,15 +1005,16 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                 active: { filter: { type: 'none' } }
             },
             plotOptions: { 
-                bar: { horizontal: false, columnWidth: '60%', borderRadius: 3, distributed: true } 
+                bar: { horizontal: false, columnWidth: '50%', borderRadius: 3, distributed: true } 
             },
             xaxis: { 
                 categories: ["SIAP", "PEMBINAAN", "PERANCANGAN"],
                 labels: { style: { fontSize: '9px', fontWeight: 600 } }
             },
             fill: { opacity: 1 },
-            legend: { show: false }, 
-            grid: { padding: { top: 0, bottom: 0, left: 5, right: 5 } },
+            // FIX: Added Legend and Padding
+            legend: { show: true, position: 'bottom', fontSize: '10px', markers: { width: 8, height: 8 } }, 
+            grid: { padding: { top: 0, bottom: 0, left: 10, right: 10 } },
             dataLabels: { enabled: true, style: { fontSize: '10px', colors: ['#333'] }, offsetY: -15 }
         };
 
