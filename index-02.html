@@ -14,6 +14,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+  <!-- ApexCharts -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
   <!-- PDF Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -379,39 +382,35 @@ body {
     font-size: 0.7rem; margin-top: 5px; font-weight: bold;
 }
 
+/* UPDATED: Flexbox for Auto Resize */
 .mini-stats-grid {
-    display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+    display: flex; flex-wrap: wrap; gap: 10px; width: 100%;
 }
 /* DYNAMIC CARD STYLES */
 .mini-card {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(255,255,255,0.6); border-radius: 10px; padding: 10px 5px;
+    background: rgba(255,255,255,0.6); border-radius: 10px; padding: 15px 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #ccc;
-    min-height: 80px;
+    min-height: 90px;
+    flex: 1; /* Make items grow to fill space */
+    min-width: 120px; /* Minimum width before wrapping */
 }
-.mini-card h3 { font-size: 1.5rem; color: #333; margin-bottom: 2px; margin-top:0; }
-.mini-card span { font-size: 0.7rem; font-weight: bold; color: #555; text-transform: uppercase; }
+.mini-card h3 { font-size: 2rem; color: #333; margin-bottom: 5px; margin-top:0; font-weight: 800;}
+.mini-card span { font-size: 0.85rem; font-weight: 800; color: #555; text-transform: uppercase; letter-spacing: 0.5px;}
 
 /* --- CHARTS ROW --- */
 .charts-row {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
 }
 .chart-card {
-    position: relative; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; min-height: 300px; display: flex; flex-direction: column; 
+    padding: 15px; background: rgba(255,255,255,0.7);
 }
-.chart-icon {
-    width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 1.2rem; margin-bottom: 5px;
-}
-.bg-purple { background: linear-gradient(135deg, #a855f7, #6366f1); }
-.bg-blue { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
-.bg-pink { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
-.chart-title { font-size: 1.1rem; font-weight: 600; text-align: center; }
-.wave-chart { width: 100%; height: 50px; opacity: 0.6; }
+.chart-title { font-size: 1rem; font-weight: 700; text-align: center; margin-bottom: 10px; text-transform: uppercase; color: #333;}
 
 /* --- MAIN CONTENT (MAP & STATUS) --- */
 .main-content {
-    display: grid; grid-template-columns: 2fr 1fr; gap: 15px; min-height: 350px;
+    display: grid; grid-template-columns: 2fr 1fr; gap: 15px; min-height: 400px;
 }
 .map-container {
     position: relative; overflow: hidden; padding: 0;
@@ -419,7 +418,7 @@ body {
     /* Map will be injected here */
 }
 /* Ensure the inner report map div fills the container */
-#report-map { width: 100%; height: 100%; min-height: 350px; border-radius: 15px; }
+#report-map { width: 100%; height: 100%; min-height: 400px; border-radius: 15px; }
 
 .status-container {
     display: flex; flex-direction: column; gap: 15px; background: rgba(255, 255, 255, 0.7);
@@ -462,14 +461,12 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 /* Responsive Report */
 @media (max-width: 1024px) {
     .charts-row, .bottom-grid { grid-template-columns: repeat(2, 1fr); }
-    .mini-stats-grid { grid-template-columns: repeat(3, 1fr); }
     .top-row { grid-template-columns: 1fr; }
     .main-content { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; top: 85px; }
   .controls-container { top: auto; bottom: 90px; right: 20px; gap: 8px;}
-  .mini-stats-grid { grid-template-columns: repeat(2, 1fr); }
   .charts-row, .bottom-grid { grid-template-columns: 1fr; }
 }
 </style>
@@ -596,31 +593,19 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                   </div>
               </div>
 
-              <!-- CHARTS ROW (STATIC PLACEHOLDERS) -->
+              <!-- CHARTS ROW (APEXCHARTS) -->
               <div class="charts-row">
                   <div class="card chart-card">
-                      <div class="chart-icon bg-purple"><i class="fa-solid fa-wifi"></i></div>
-                      <div class="chart-title">CARTA 01</div>
-                      <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
-                          <path d="M0,25 L0,15 Q25,0 50,15 T100,15 L100,25 Z" fill="#a855f7" />
-                          <path d="M0,25 L0,20 Q25,10 50,20 T100,20 L100,25 Z" fill="#6366f1" opacity="0.5"/>
-                      </svg>
+                      <div class="chart-title">Carta 01: Jumlah Site Mengikut Projek</div>
+                      <div id="chart-01" style="flex:1;"></div>
                   </div>
                   <div class="card chart-card">
-                      <div class="chart-icon bg-blue"><i class="fa-solid fa-broadcast-tower"></i></div>
-                      <div class="chart-title">CARTA 02</div>
-                      <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
-                          <path d="M0,25 L0,10 Q25,20 50,5 T100,15 L100,25 Z" fill="#3b82f6" />
-                          <path d="M0,25 L0,15 Q25,25 50,10 T100,20 L100,25 Z" fill="#06b6d4" opacity="0.5"/>
-                      </svg>
+                      <div class="chart-title">Carta 02: Status Projek</div>
+                      <div id="chart-02" style="flex:1;"></div>
                   </div>
                   <div class="card chart-card">
-                      <div class="chart-icon bg-pink"><i class="fa-solid fa-phone"></i></div>
-                      <div class="chart-title">CARTA 03</div>
-                      <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
-                          <path d="M0,25 L0,12 Q20,0 40,15 T80,5 T100,15 L100,25 Z" fill="#ec4899" />
-                          <path d="M0,25 L0,18 Q20,10 40,20 T80,10 T100,20 L100,25 Z" fill="#8b5cf6" opacity="0.5"/>
-                      </svg>
+                      <div class="chart-title">Carta 03: Jumlah Projek vs Status</div>
+                      <div id="chart-03" style="flex:1;"></div>
                   </div>
               </div>
 
@@ -789,29 +774,106 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         return html;
     }
 
-    // Stores report markers to allow clearing
+    // Global Chart Instances to manage destruction
+    let chart01, chart02, chart03;
     let reportMarkerLayer = null;
+
+    function renderReportCharts(data) {
+        // --- PREPARE DATA ---
+        
+        // Data for Chart 01: Project Counts
+        const typeCounts = {};
+        PROJECT_REGISTER.forEach(p => typeCounts[p.type.toUpperCase()] = 0);
+        data.forEach(p => {
+            const t = p._type.toUpperCase();
+            if (typeCounts[t] !== undefined) typeCounts[t]++;
+        });
+        const labels01 = Object.keys(typeCounts);
+        const series01 = Object.values(typeCounts);
+
+        // Data for Chart 02: Status Counts
+        const statusCounts = {};
+        data.forEach(p => {
+            const s = getStatusCategory(p.STATUS); // Use our category logic or raw status? Request says "STATUS". Let's use simplified category for better visual
+            const finalS = s === "LAIN-LAIN" ? "LAIN" : s;
+            statusCounts[finalS] = (statusCounts[finalS] || 0) + 1;
+        });
+        const labels02 = Object.keys(statusCounts);
+        const series02 = Object.values(statusCounts);
+
+        // Data for Chart 03: Project vs Status (Stacked Column)
+        // Series: Statuses, X-axis: Project Types
+        const projects03 = Object.keys(typeCounts); // X-Axis
+        const uniqueStatuses = ["SIAP", "PEMBINAAN", "PERANCANGAN"]; // Pre-define order
+        
+        const series03 = uniqueStatuses.map(statusName => {
+            return {
+                name: statusName,
+                data: projects03.map(proj => {
+                    // Count how many of this project type have this status
+                    return data.filter(p => p._type.toUpperCase() === proj && getStatusCategory(p.STATUS) === statusName).length;
+                })
+            };
+        });
+
+        // --- RENDER CHART 01 (Donut) ---
+        if (chart01) chart01.destroy();
+        chart01 = new ApexCharts(document.querySelector("#chart-01"), {
+            series: series01,
+            labels: labels01,
+            chart: { type: 'donut', height: '100%', fontFamily: 'Segoe UI, sans-serif' },
+            legend: { position: 'bottom' },
+            fill: { type: 'gradient' },
+            plotOptions: { pie: { donut: { size: '65%' } } },
+            colors: ['#2ecc71', '#3498db', '#f1c40f', '#e74c3c', '#9b59b6', '#e67e22'],
+            dataLabels: { enabled: true, formatter: function (val, opts) { return opts.w.config.series[opts.seriesIndex] } }
+        });
+        chart01.render();
+
+        // --- RENDER CHART 02 (Horizontal Bar) ---
+        if (chart02) chart02.destroy();
+        chart02 = new ApexCharts(document.querySelector("#chart-02"), {
+            series: [{ name: 'Jumlah', data: series02 }],
+            chart: { type: 'bar', height: '100%', fontFamily: 'Segoe UI, sans-serif' },
+            plotOptions: { bar: { horizontal: true, borderRadius: 4, distributed: true } },
+            xaxis: { categories: labels02 },
+            colors: ['#2ecc71', '#3498db', '#f1c40f'], // Green, Blue, Yellow
+            legend: { show: false }
+        });
+        chart02.render();
+
+        // --- RENDER CHART 03 (Column Stacked) ---
+        if (chart03) chart03.destroy();
+        chart03 = new ApexCharts(document.querySelector("#chart-03"), {
+            series: series03,
+            chart: { type: 'bar', height: '100%', stacked: true, fontFamily: 'Segoe UI, sans-serif' },
+            plotOptions: { bar: { horizontal: false, columnWidth: '55%' } },
+            xaxis: { categories: projects03 },
+            fill: { opacity: 1 },
+            colors: ['#2ecc71', '#3498db', '#f1c40f'], // Matches status colors
+            legend: { position: 'bottom' }
+        });
+        chart03.render();
+    }
 
     function openReport() {
         const overlay = document.getElementById('report-overlay');
-        
+        const dataToUse = currentFilteredList || [];
+
         // 1. Update Header Info
         const currentLoc = activeFeatureName ? activeFeatureName : "SELURUH SABAH";
         document.getElementById('report-layer-name').textContent = currentLoc;
         document.getElementById('report-badge-area').textContent = currentLoc;
-        document.getElementById('report-total-count').textContent = currentFilteredList ? currentFilteredList.length : 0;
+        document.getElementById('report-total-count').textContent = dataToUse.length;
 
-        // 2. DYNAMIC MINI CARDS LOGIC
+        // 2. DYNAMIC MINI CARDS LOGIC (Auto Resize Flexbox)
         const cardContainer = document.getElementById('report-mini-stats');
         cardContainer.innerHTML = ''; // Clear existing
 
         // Calculate counts
         const counts = {};
-        // Initialize counts for all registered types to 0
         PROJECT_REGISTER.forEach(p => { counts[p.type.toUpperCase()] = 0; });
-        
-        // Count actual filtered projects
-        (currentFilteredList || []).forEach(p => {
+        dataToUse.forEach(p => {
             const t = p._type.toUpperCase();
             if(counts[t] !== undefined) counts[t]++;
         });
@@ -823,7 +885,6 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             
             const card = document.createElement('div');
             card.className = 'mini-card';
-            // Set border top color via inline style or logic
             card.style.borderTopColor = cfg.color;
             
             card.innerHTML = `
@@ -835,9 +896,13 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
         // 3. Update Status Section
         const statusContainer = document.getElementById('dynamic-status-container');
-        statusContainer.innerHTML = generateStatusHTML(currentFilteredList || []);
+        statusContainer.innerHTML = generateStatusHTML(dataToUse);
 
-        // 4. Open Modal & Render Report Map
+        // 4. Render Charts
+        // We delay slightly to let the modal open so ApexCharts can calculate width
+        setTimeout(() => renderReportCharts(dataToUse), 100);
+
+        // 5. Open Modal & Render Report Map
         overlay.classList.add('open');
         
         // --- NEW MAP LOGIC (ZOOM & MARKERS) ---
@@ -888,8 +953,6 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                         };
                     },
                     filter: (feature) => {
-                        // Optimization: Only show selected feature + context if needed, or all.
-                        // Showing all provides context.
                         return true;
                     }
                 }).addTo(reportMap);
@@ -907,9 +970,9 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             } 
 
             // Add Markers (Snapshot of active view)
-            if (currentFilteredList && currentFilteredList.length > 0) {
+            if (dataToUse && dataToUse.length > 0) {
                 // Limit markers for performance in report view if huge number
-                const markersToShow = currentFilteredList.slice(0, 1000); 
+                const markersToShow = dataToUse.slice(0, 1500); 
                 
                 const markerGroup = L.featureGroup();
                 
@@ -1028,17 +1091,28 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", 
         type: "TOWER",
         filter: { col: "PROJECT_TYPE", val: "USP" } 
-      }
+      },
       // Projek Baru Ditambah Sini
-     
+      {
+        id: "db_vsat",
+        sheetId: "1KhD9LopT0thjVPhZuCI7IulNsItW9ipQ_M6Ob0V8j0o",
+        type: "VSAT" 
+      },
+      {
+        id: "db_telefon",
+        sheetId: "1OMOyrS34mAYtg-UxlE4xs0iyMoSdqc3WFbhgMlHsgqo",
+        type: "TELEFON" 
+      }
     ];
 
     const TYPE_CFG = {
       BWA: { color: "#51cf66", icon: "📶", label: "WiFi" },
       NADI: { color: "#4dabf7", icon: "📡", label: "NADI" },
       POP: { color: "#fcc419", icon: "🌐", label: "POP" },
-      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" }
-     };
+      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" },
+      VSAT: { color: "#9c27b0", icon: "🛰️", label: "VSAT" },
+      TELEFON: { color: "#ff922b", icon: "📞", label: "Telefon" }
+    };
 
     // ---------- STATE ----------
     let map;
