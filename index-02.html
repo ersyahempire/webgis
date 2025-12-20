@@ -451,7 +451,7 @@ body {
 /* --- BOTTOM GRID --- */
 .bottom-grid { 
     display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    grid-template-columns: repeat(3, 1fr); /* FIX: Maximum 3 cards per row */
     gap: 15px; 
 }
 .bottom-card { 
@@ -939,7 +939,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         chart03.render();
     }
 
-    // NEW: Function to render dynamic bottom grid charts
+    // NEW: Function to render dynamic bottom grid charts (UPDATED to Column Chart)
     function renderBottomGridCharts(data) {
         const container = document.getElementById("dynamic-bottom-grid");
         container.innerHTML = ""; // Clear existing
@@ -957,13 +957,11 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             const typeData = data.filter(p => p._type.toUpperCase() === typeKey);
             const totalCount = typeData.length;
 
-            // Prepare Series for Stacked Column (Statuses)
-            const uniqueStatuses = ["SIAP", "PEMBINAAN", "PERANCANGAN"];
-            const seriesData = uniqueStatuses.map(statusName => {
-                return {
-                    name: statusName,
-                    data: [typeData.filter(p => getStatusCategory(p.STATUS) === statusName).length]
-                };
+            // Prepare Data for Column Chart: X=Status, Y=Value
+            // We use predefined statuses for consistency across cards
+            const categories = ["SIAP", "PEMBINAAN", "PERANCANGAN"];
+            const seriesData = categories.map(statusName => {
+                return typeData.filter(p => getStatusCategory(p.STATUS) === statusName).length;
             });
 
             // Create HTML Elements
@@ -983,21 +981,33 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             `;
             container.appendChild(card);
 
-            // Create Chart
+            // Create Chart: Basic Column (Vertical Bar)
             const chartOptions = {
-                series: seriesData,
+                series: [{
+                    name: 'Jumlah',
+                    data: seriesData
+                }],
                 chart: { 
-                    type: 'bar', 
+                    type: 'bar', // Column chart is bar type with horizontal: false
                     height: '100%', 
-                    stacked: true, 
                     toolbar: { show: false },
                     animations: { enabled: false }
                 },
-                plotOptions: { bar: { horizontal: false, columnWidth: '40%', borderRadius: 4 } },
-                xaxis: { categories: [cfg.label] }, // Single category
+                plotOptions: { 
+                    bar: { 
+                        horizontal: false, // Vertical bars
+                        columnWidth: '50%', 
+                        borderRadius: 4,
+                        distributed: true // Enable different colors per bar
+                    } 
+                },
+                xaxis: { 
+                    categories: categories,
+                    labels: { style: { fontSize: '10px' } }
+                },
                 fill: { opacity: 1 },
-                colors: ['#2ecc71', '#3498db', '#f1c40f'],
-                legend: { position: 'bottom' },
+                colors: ['#2ecc71', '#3498db', '#f1c40f'], // Green, Blue, Yellow mapping to categories
+                legend: { show: false }, // Hide legend since distributed colors explain themselves
                 grid: { padding: { top: 0, bottom: 0, left: 10, right: 10 } }
             };
 
