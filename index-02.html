@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.0 - Fixed Report</title>
+  <title>Web GIS Projek Sabah v5.1 - Updated Colors</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -36,17 +36,6 @@
   --text-sub: #6b7280;       /* Gray 500 */
   --radius: 20px;            
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* New Dashboard Vars */
-  --bg-gradient: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
-  --new-glass-bg: rgba(255, 255, 255, 0.4);
-  --new-glass-border: rgba(255, 255, 255, 0.5);
-  --color-wifi: #2ecc71;
-  --color-nadi: #3498db;
-  --color-pop: #f1c40f;
-  --color-menara: #e74c3c;
-  --color-vsat: #9b59b6;
-  --color-telefon: #e67e22;
 }
 
 * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
@@ -77,7 +66,6 @@ body {
     font-size: 11px;
     color: var(--primary-dark);
 }
-/* Ensure SVG paths (polygons) are interactive */
 .leaflet-interactive {
     cursor: pointer;
 }
@@ -289,7 +277,6 @@ body {
 }
 .toggle-btn span.text-slot { opacity: 0; transition: opacity 0.2s; font-size: 13px; font-weight: 600; padding-left: 5px;}
 
-/* Show text on hover/expand */
 .control-card:hover .toggle-btn span.text-slot, .control-card.expanded .toggle-btn span.text-slot { opacity: 1; }
 .control-card:hover .toggle-btn, .control-card.expanded .toggle-btn { padding: 10px 14px; }
 
@@ -324,14 +311,15 @@ body {
 }
 .report-overlay.open .report-modal { transform: scale(1); }
 
-/* ---- STYLES FROM PROVIDED SNIPPET (SCOPED) ---- */
+/* ---- STYLES REPORT CONTAINER (GAP UPDATED) ---- */
 .report-container {
     padding: 20px;
-    display: flex; flex-direction: column; gap: 15px;
+    display: flex; flex-direction: column; 
+    gap: 30px; /* INCREASED GAP for cleaner layout */
     height: 100%; overflow-y: auto;
 }
 
-/* Close Button (Added specifically for modal) */
+/* Close Button */
 .modal-close-btn {
     position: absolute; top: 10px; right: 10px; z-index: 10;
     background: rgba(255,255,255,0.5); border: none; font-size: 20px;
@@ -339,7 +327,7 @@ body {
 }
 .modal-close-btn:hover { background: white; color: red; }
 
-/* Gaya Umum Kad (Glassmorphism) */
+/* Gaya Umum Kad */
 .card {
     background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(12px);
@@ -382,18 +370,17 @@ body {
     font-size: 0.7rem; margin-top: 5px; font-weight: bold;
 }
 
-/* UPDATED: Flexbox for Auto Resize */
+/* Mini Stats */
 .mini-stats-grid {
     display: flex; flex-wrap: wrap; gap: 10px; width: 100%;
 }
-/* DYNAMIC CARD STYLES */
 .mini-card {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: rgba(255,255,255,0.6); border-radius: 10px; padding: 15px 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #ccc;
     min-height: 90px;
-    flex: 1; /* Make items grow to fill space */
-    min-width: 120px; /* Minimum width before wrapping */
+    flex: 1; 
+    min-width: 120px; 
 }
 .mini-card h3 { font-size: 2rem; color: #333; margin-bottom: 5px; margin-top:0; font-weight: 800;}
 .mini-card span { font-size: 0.85rem; font-weight: 800; color: #555; text-transform: uppercase; letter-spacing: 0.5px;}
@@ -402,10 +389,9 @@ body {
 .charts-row {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
 }
-/* UPDATED: FIX FOR INFINITE GROWING CHART */
 .chart-card {
     position: relative; 
-    height: 420px; /* FIXED HEIGHT - CRITICAL FOR APEXCHARTS */
+    height: 420px; 
     display: flex; 
     flex-direction: column; 
     padding: 20px; 
@@ -423,10 +409,8 @@ body {
 .map-container {
     position: relative; overflow: hidden; padding: 0;
     background-color: #a5d8ff;
-    height: 500px; /* Fixed height for map */
-    /* Map will be injected here */
+    height: 500px; 
 }
-/* Ensure the inner report map div fills the container */
 #report-map { width: 100%; height: 100%; border-radius: 15px; }
 
 .status-container {
@@ -439,21 +423,18 @@ body {
 .status-label-row { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; margin-bottom: 3px; }
 .progress-track { background: #e5e7eb; height: 6px; border-radius: 3px; width: 100%; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 3px; }
-.fill-green { background-color: #2ecc71; }
-.fill-blue { background-color: #3498db; }
-.fill-yellow { background-color: #f1c40f; }
-.fill-purple { background-color: #9b59b6; }
-.fill-red { background-color: #e74c3c; }
 
 .sub-status { margin-top: 4px; display: flex; flex-direction: column; gap: 3px; }
 .sub-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.65rem; color: #666; }
 .sub-track { flex-grow: 1; height: 3px; background: #eee; margin: 0 8px; border-radius: 2px; }
 
-/* --- BOTTOM GRID --- */
+/* --- BOTTOM GRID (SPACING FIXED) --- */
 .bottom-grid { 
     display: grid; 
-    grid-template-columns: repeat(3, 1fr); /* FIX: Maximum 3 cards per row */
+    grid-template-columns: repeat(3, 1fr); 
     gap: 15px; 
+    margin-top: 20px; /* EXTRA SPACE ABOVE BOTTOM GRID */
+    padding-bottom: 20px; /* EXTRA SPACE AT BOTTOM */
 }
 .bottom-card { 
     display: flex; 
@@ -463,7 +444,7 @@ body {
     background: rgba(255,255,255,0.7);
     border-radius: 15px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    height: 280px; /* FIXED HEIGHT - CRITICAL */
+    height: 280px; 
     flex-direction: column;
     justify-content: center;
 }
@@ -471,7 +452,7 @@ body {
     display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 10px; height: 40px;
 }
 .bottom-card-body {
-    width: 100%; flex: 1; min-height: 0; /* Important for flex child */
+    width: 100%; flex: 1; min-height: 0; 
 }
 
 .icon-box {
@@ -533,21 +514,15 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         <div id="selected-area" class="area-badge">SELURUH SABAH</div>
       </div>
 
-      <!-- Category Grid - Generated Dynamically via JS -->
-      <div class="grid-stats" id="dynamic-grid-stats">
-        <!-- Content will be injected by generateDynamicUI() -->
-      </div>
+      <!-- Category Grid -->
+      <div class="grid-stats" id="dynamic-grid-stats"></div>
 
       <!-- Status List -->
       <div class="status-section-title">Status Kemajuan</div>
-      <div id="status-list">
-        <!-- JS will inject here -->
-      </div>
+      <div id="status-list"></div>
 
-      <!-- Mini Legend - Generated Dynamically via JS -->
-      <div class="legend-mini" id="dynamic-legend">
-          <!-- Content will be injected by generateDynamicUI() -->
-      </div>
+      <!-- Mini Legend -->
+      <div class="legend-mini" id="dynamic-legend"></div>
     </div>
   </div>
 
@@ -584,16 +559,14 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       </button>
     </div>
 
-    <!-- Category Filter Group - Generated Dynamically via JS -->
+    <!-- Category Filter Group -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
-      <div id="dynamic-filter-btns">
-          <!-- Content will be injected by generateDynamicUI() -->
-      </div>
+      <div id="dynamic-filter-btns"></div>
     </div>
   </div>
 
-  <!-- REPORT MODAL UI (REDESIGNED) -->
+  <!-- REPORT MODAL UI -->
   <div class="report-overlay" id="report-overlay">
       <div class="report-modal" id="report-content">
           <button class="modal-close-btn" onclick="closeReport()"><i class="fas fa-times"></i></button>
@@ -618,18 +591,14 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                       <p>JUMLAH PROJEK</p>
                       <div class="badge" id="report-badge-area">SELURUH SABAH</div>
                   </div>
-
-                  <!-- DYNAMIC MINI CARDS CONTAINER -->
-                  <div class="mini-stats-grid" id="report-mini-stats">
-                      <!-- Cards will be injected via JS -->
-                  </div>
+                  <!-- DYNAMIC MINI CARDS -->
+                  <div class="mini-stats-grid" id="report-mini-stats"></div>
               </div>
 
-              <!-- CHARTS ROW (APEXCHARTS) -->
+              <!-- CHARTS ROW -->
               <div class="charts-row">
                   <div class="card chart-card">
                       <div class="chart-title">Carta 01: Jumlah Site Mengikut Projek</div>
-                      <!-- Add min-height:0 to allow flexbox shrinking if needed -->
                       <div id="chart-01" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
                   </div>
                   <div class="card chart-card">
@@ -642,22 +611,20 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                   </div>
               </div>
 
-              <!-- MAIN CONTENT (MAP & STATUS) -->
+              <!-- MAIN CONTENT -->
               <div class="main-content">
                   <div class="card map-container">
-                      <!-- UPDATED: Dynamic map container -->
                       <div id="report-map"></div>
                   </div>
 
                   <div class="card status-container" id="dynamic-status-container">
                       <div class="status-header">STATUS KEMAJUAN</div>
-                      <!-- DYNAMIC CONTENT WILL BE INJECTED HERE -->
                   </div>
               </div>
 
-              <!-- BOTTOM GRID (DYNAMIC APEXCHARTS) -->
+              <!-- BOTTOM GRID (Updated Layout) -->
               <div class="bottom-grid" id="dynamic-bottom-grid">
-                  <!-- CONTENT WILL BE INJECTED VIA JS -->
+                  <!-- Content injected via JS -->
               </div>
 
               <footer>
@@ -669,6 +636,14 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
     
   <!-- Main Script Logic -->
   <script>
+    // ---------- 1. STATUS COLOR CONFIGURATION (CONFIGURATION HERE) ----------
+    const STATUS_COLOR_CONFIG = {
+        "SIAP": { label: "SIAP", color: "#86efac" },         // Hijau Lembut (Soft Green)
+        "PEMBINAAN": { label: "PEMBINAAN", color: "#fde047" }, // Kuning Lembut (Soft Yellow)
+        "PERANCANGAN": { label: "PERANCANGAN", color: "#fca5a5" }, // Merah Lembut (Soft Red)
+        "LAIN-LAIN": { label: "LAIN-LAIN", color: "#cbd5e1" }  // Kelabu Lembut (Soft Grey)
+    };
+
     // ---------- UI HELPER ----------
     function toggleDashboard() {
       const panel = document.getElementById('dashboard-panel');
@@ -682,14 +657,13 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
 
-    // ---------- NEW CSV DOWNLOAD FUNCTION (UPDATED) ----------
+    // ---------- NEW CSV DOWNLOAD FUNCTION ----------
     function downloadCSV() {
         if (!currentFilteredList || currentFilteredList.length === 0) {
             alert("Tiada data untuk dimuat turun.");
             return;
         }
 
-        // 1. Collect all unique headers including _raw_details
         const standardHeaders = ["SITE_NAME", "DISTRICT", "DUN", "PARLIAMENT", "LATITUDE", "LONGITUDE", "STATUS", "PROJECT_TYPE"];
         const dynamicHeaders = new Set();
 
@@ -699,43 +673,32 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             }
         });
 
-        // Combine standard and dynamic headers
         const allHeaders = [...standardHeaders, ...Array.from(dynamicHeaders)];
-        
-        // 2. Build CSV Content
         const csvRows = [];
-        // Add header row
         csvRows.push(allHeaders.map(h => `"${h.replace(/"/g, '""')}"`).join(",")); 
 
         currentFilteredList.forEach(p => {
             const row = allHeaders.map(header => {
                 let val = "";
-                // Check standard keys first (mapping needed for some internal keys)
                 if (header === "PROJECT_TYPE") val = p._type;
-                else if (p[header] !== undefined) val = p[header]; // Direct access for SITE_NAME, DISTRICT etc
+                else if (p[header] !== undefined) val = p[header]; 
                 else {
-                    // Check raw details for dynamic columns
                     const detail = p._raw_details.find(d => d.label === header);
                     if (detail) val = detail.value;
                 }
-                
-                // Helper to safely stringify and escape
                 const strVal = String(val || "").replace(/"/g, '""');
                 return `"${strVal}"`;
             });
             csvRows.push(row.join(","));
         });
 
-        // 3. Generate File
         const csvString = csvRows.join("\n");
         const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         
-        // Filename Logic
         let areaPart = activeFeatureName ? activeFeatureName.replace(/\s+/g,'_') : 'Seluruh_Sabah';
         let typePart = activeDashboardCategory ? activeDashboardCategory : 'SEMUA_PROJEK';
-        
         const filename = `Data_${typePart}_${areaPart}_${new Date().toISOString().slice(0,10)}.csv`;
         
         link.setAttribute("href", url);
@@ -757,8 +720,8 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         return "LAIN-LAIN";
     }
 
+    // UPDATED: Using STATUS_COLOR_CONFIG
     function generateStatusHTML(filteredProjects) {
-        // 1. Aggregation
         const stats = {
             "SIAP": { total: 0, types: {} },
             "PEMBINAAN": { total: 0, types: {} },
@@ -774,38 +737,35 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             }
         });
 
-        // 2. HTML Building
-        const total = filteredProjects.length || 1; // avoid division by zero
+        const total = filteredProjects.length || 1; 
         let html = '<div class="status-header">STATUS KEMAJUAN</div>';
 
-        // Helper for colors
-        const colors = {
-            "BWA": "fill-green", "WIFI": "fill-green",
-            "NADI": "fill-blue",
-            "POP": "fill-yellow",
-            "TOWER": "fill-red", "MENARA": "fill-red",
-            "VSAT": "fill-purple",
-            "TELEFON": "fill-blue"
-        };
-        const catColors = { "SIAP": "fill-green", "PEMBINAAN": "fill-blue", "PERANCANGAN": "fill-yellow" };
+        // Project Type Colors
+        const typeColors = {};
+        PROJECT_REGISTER.forEach(p => {
+             const cfg = TYPE_CFG[p.type] || { color: '#ccc' };
+             typeColors[p.type] = cfg.color;
+        });
 
         ["SIAP", "PEMBINAAN", "PERANCANGAN"].forEach(cat => {
             const count = stats[cat].total;
-            if(count === 0) return; // Skip empty categories
+            if(count === 0) return; 
             
             const percent = Math.round((count / total) * 100);
             
-            // Sub-items HTML
+            // Get Color from Config
+            const catColor = STATUS_COLOR_CONFIG[cat] ? STATUS_COLOR_CONFIG[cat].color : '#ccc';
+
             let subItemsHTML = '';
             Object.entries(stats[cat].types).forEach(([type, tCount]) => {
                 const tPercent = Math.round((tCount / count) * 100);
-                const colorClass = colors[type] || "fill-green";
+                const colorCode = typeColors[type] || "#ccc";
                 let displayType = TYPE_CFG[type] ? TYPE_CFG[type].label : type;
 
                 subItemsHTML += `
                     <div class="sub-item">
                         <span>${displayType}</span>
-                        <div class="sub-track"><div class="progress-fill ${colorClass}" style="width: ${tPercent}%;"></div></div>
+                        <div class="sub-track"><div class="progress-fill" style="width: ${tPercent}%; background-color: ${colorCode};"></div></div>
                         <span>${tCount} (${tPercent}%)</span>
                     </div>
                 `;
@@ -818,7 +778,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                         <span>${count} (${percent}%)</span>
                     </div>
                     <div class="progress-track">
-                        <div class="progress-fill ${catColors[cat]}" style="width: ${percent}%;"></div>
+                        <div class="progress-fill" style="width: ${percent}%; background-color: ${catColor};"></div>
                     </div>
                     <div class="sub-status">
                         ${subItemsHTML}
@@ -830,15 +790,14 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         return html;
     }
 
-    // Global Chart Instances to manage destruction
+    // Global Chart Instances
     let chart01 = null, chart02 = null, chart03 = null;
-    let bottomCharts = []; // Array to store bottom grid charts
+    let bottomCharts = []; 
     let reportMarkerLayer = null;
 
+    // UPDATED: Charts now use STATUS_COLOR_CONFIG
     function renderReportCharts(data) {
-        // --- PREPARE DATA ---
-        
-        // Data for Chart 01: Project Counts
+        // Data Chart 01
         const typeCounts = {};
         PROJECT_REGISTER.forEach(p => typeCounts[p.type.toUpperCase()] = 0);
         data.forEach(p => {
@@ -848,45 +807,42 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         const labels01 = Object.keys(typeCounts);
         const series01 = Object.values(typeCounts);
 
-        // Data for Chart 02: Status Counts
+        // Data Chart 02 (Status)
         const statusCounts = {};
         data.forEach(p => {
-            const s = getStatusCategory(p.STATUS); // Use our category logic or raw status? Request says "STATUS". Let's use simplified category for better visual
+            const s = getStatusCategory(p.STATUS);
             const finalS = s === "LAIN-LAIN" ? "LAIN" : s;
             statusCounts[finalS] = (statusCounts[finalS] || 0) + 1;
         });
         const labels02 = Object.keys(statusCounts);
         const series02 = Object.values(statusCounts);
 
-        // Data for Chart 03: Project vs Status (Stacked Column)
-        // Series: Statuses, X-axis: Project Types
-        const projects03 = Object.keys(typeCounts); // X-Axis
-        const uniqueStatuses = ["SIAP", "PEMBINAAN", "PERANCANGAN"]; // Pre-define order
+        // Data Chart 03 (Stacked)
+        const projects03 = Object.keys(typeCounts); 
+        const uniqueStatuses = ["SIAP", "PEMBINAAN", "PERANCANGAN"];
         
         const series03 = uniqueStatuses.map(statusName => {
             return {
                 name: statusName,
                 data: projects03.map(proj => {
-                    // Count how many of this project type have this status
                     return data.filter(p => p._type.toUpperCase() === proj && getStatusCategory(p.STATUS) === statusName).length;
                 })
             };
         });
 
-        // Common Chart Options for Performance
+        // Common Config
         const commonOptions = {
             chart: { 
-                animations: { enabled: false }, // DISABLE ANIMATION FOR INSTANT DATA
+                animations: { enabled: false },
                 fontFamily: 'Segoe UI, sans-serif',
                 toolbar: { show: false },
                 parentHeightOffset: 0
             },
-            grid: {
-                padding: { top: 0, bottom: 20, left: 10, right: 10 }
-            }
+            grid: { padding: { top: 0, bottom: 20, left: 10, right: 10 } }
         };
 
-        // --- RENDER CHART 01 (Donut) ---
+        // CHART 01: Donut (Uses Type Colors)
+        const typePalette = labels01.map(l => (TYPE_CFG[l] ? TYPE_CFG[l].color : '#ccc'));
         const options01 = {
             ...commonOptions,
             series: series01,
@@ -895,34 +851,38 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             legend: { position: 'bottom', offsetY: 0 },
             fill: { type: 'gradient' },
             plotOptions: { pie: { donut: { size: '65%' } } },
-            colors: ['#2ecc71', '#3498db', '#f1c40f', '#e74c3c', '#9b59b6', '#e67e22'],
-            dataLabels: { enabled: true, formatter: function (val, opts) { return opts.w.config.series[opts.seriesIndex] } }
+            colors: typePalette,
+            dataLabels: { enabled: true }
         };
 
-        if (chart01) {
-            chart01.destroy();
-        }
+        if (chart01) chart01.destroy();
         chart01 = new ApexCharts(document.querySelector("#chart-01"), options01);
         chart01.render();
 
-        // --- RENDER CHART 02 (Horizontal Bar) ---
+        // CHART 02: Bar (Uses Status Colors)
+        // Map colors based on labels02 contents
+        const colors02 = labels02.map(label => {
+            // Handle edge case if label is LAIN or not found
+            let key = label === "LAIN" ? "LAIN-LAIN" : label;
+            return STATUS_COLOR_CONFIG[key] ? STATUS_COLOR_CONFIG[key].color : '#ccc';
+        });
+
         const options02 = {
             ...commonOptions,
             series: [{ name: 'Jumlah', data: series02 }],
             chart: { type: 'bar', height: '100%', animations: { enabled: false } },
             plotOptions: { bar: { horizontal: true, borderRadius: 4, distributed: true } },
             xaxis: { categories: labels02 },
-            colors: ['#2ecc71', '#3498db', '#f1c40f'], // Green, Blue, Yellow
+            colors: colors02,
             legend: { show: false }
         };
 
-        if (chart02) {
-            chart02.destroy();
-        }
+        if (chart02) chart02.destroy();
         chart02 = new ApexCharts(document.querySelector("#chart-02"), options02);
         chart02.render();
 
-        // --- RENDER CHART 03 (Column Stacked) ---
+        // CHART 03: Stacked (Uses Status Colors)
+        const colors03 = uniqueStatuses.map(s => STATUS_COLOR_CONFIG[s].color);
         const options03 = {
             ...commonOptions,
             series: series03,
@@ -930,43 +890,36 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             plotOptions: { bar: { horizontal: false, columnWidth: '55%' } },
             xaxis: { categories: projects03 },
             fill: { opacity: 1 },
-            colors: ['#2ecc71', '#3498db', '#f1c40f'], // Matches status colors
+            colors: colors03,
             legend: { position: 'bottom', offsetY: 5 }
         };
 
-        if (chart03) {
-            chart03.destroy();
-        }
+        if (chart03) chart03.destroy();
         chart03 = new ApexCharts(document.querySelector("#chart-03"), options03);
         chart03.render();
     }
 
-    // NEW: Function to render dynamic bottom grid charts (UPDATED to Column Chart)
+    // UPDATED: Bottom Charts using STATUS_COLOR_CONFIG
     function renderBottomGridCharts(data) {
         const container = document.getElementById("dynamic-bottom-grid");
-        container.innerHTML = ""; // Clear existing
-        
-        // Destroy existing bottom charts to prevent memory leaks
+        container.innerHTML = ""; 
         bottomCharts.forEach(c => c.destroy());
         bottomCharts = [];
 
-        // Loop through each registered project type
         PROJECT_REGISTER.forEach((projConfig, index) => {
             const typeKey = projConfig.type.toUpperCase();
             const cfg = TYPE_CFG[typeKey] || { color: '#666', icon: '?', label: typeKey };
-            
-            // Filter data for this project type
             const typeData = data.filter(p => p._type.toUpperCase() === typeKey);
             const totalCount = typeData.length;
 
-            // Prepare Data for Column Chart: X=Status, Y=Value
-            // We use predefined statuses for consistency across cards
             const categories = ["SIAP", "PEMBINAAN", "PERANCANGAN"];
             const seriesData = categories.map(statusName => {
                 return typeData.filter(p => getStatusCategory(p.STATUS) === statusName).length;
             });
+            
+            // Map colors to categories
+            const categoryColors = categories.map(c => STATUS_COLOR_CONFIG[c].color);
 
-            // Create HTML Elements
             const card = document.createElement("div");
             card.className = "card bottom-card";
             card.innerHTML = `
@@ -983,33 +936,23 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             `;
             container.appendChild(card);
 
-            // Create Chart: Basic Column (Vertical Bar)
             const chartOptions = {
-                series: [{
-                    name: 'Jumlah',
-                    data: seriesData
-                }],
+                series: [{ name: 'Jumlah', data: seriesData }],
                 chart: { 
-                    type: 'bar', // Column chart is bar type with horizontal: false
-                    height: '100%', 
+                    type: 'bar', height: '100%', 
                     toolbar: { show: false },
                     animations: { enabled: false }
                 },
                 plotOptions: { 
-                    bar: { 
-                        horizontal: false, // Vertical bars
-                        columnWidth: '50%', 
-                        borderRadius: 4,
-                        distributed: true // Enable different colors per bar
-                    } 
+                    bar: { horizontal: false, columnWidth: '50%', borderRadius: 4, distributed: true } 
                 },
                 xaxis: { 
                     categories: categories,
                     labels: { style: { fontSize: '10px' } }
                 },
                 fill: { opacity: 1 },
-                colors: ['#2ecc71', '#3498db', '#f1c40f'], // Green, Blue, Yellow mapping to categories
-                legend: { show: false }, // Hide legend since distributed colors explain themselves
+                colors: categoryColors, 
+                legend: { show: false }, 
                 grid: { padding: { top: 0, bottom: 0, left: 10, right: 10 } }
             };
 
@@ -1022,18 +965,13 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
     function openReport() {
         const overlay = document.getElementById('report-overlay');
         const dataToUse = currentFilteredList || [];
-
-        // 1. Update Header Info
         const currentLoc = activeFeatureName ? activeFeatureName : "SELURUH SABAH";
         document.getElementById('report-layer-name').textContent = currentLoc;
         document.getElementById('report-badge-area').textContent = currentLoc;
         document.getElementById('report-total-count').textContent = dataToUse.length;
 
-        // 2. DYNAMIC MINI CARDS LOGIC (Auto Resize Flexbox)
         const cardContainer = document.getElementById('report-mini-stats');
-        cardContainer.innerHTML = ''; // Clear existing
-
-        // Calculate counts
+        cardContainer.innerHTML = ''; 
         const counts = {};
         PROJECT_REGISTER.forEach(p => { counts[p.type.toUpperCase()] = 0; });
         dataToUse.forEach(p => {
@@ -1041,135 +979,85 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             if(counts[t] !== undefined) counts[t]++;
         });
 
-        // Generate Cards
         Object.keys(counts).forEach(typeKey => {
             const cfg = TYPE_CFG[typeKey] || { color: '#666', label: typeKey };
             const count = counts[typeKey];
-            
             const card = document.createElement('div');
             card.className = 'mini-card';
             card.style.borderTopColor = cfg.color;
-            
-            card.innerHTML = `
-                <h3 style="color:${cfg.color}">${count}</h3>
-                <span>${cfg.label}</span>
-            `;
+            card.innerHTML = `<h3 style="color:${cfg.color}">${count}</h3><span>${cfg.label}</span>`;
             cardContainer.appendChild(card);
         });
 
-        // 3. Update Status Section
         const statusContainer = document.getElementById('dynamic-status-container');
         statusContainer.innerHTML = generateStatusHTML(dataToUse);
 
-        // 4. Render Charts (Main + Bottom Grid)
-        // We delay slightly to let the modal open so ApexCharts can calculate width
         setTimeout(() => {
             renderReportCharts(dataToUse);
-            renderBottomGridCharts(dataToUse); // NEW FUNCTION CALL
+            renderBottomGridCharts(dataToUse); 
         }, 10);
 
-        // 5. Open Modal & Render Report Map
         overlay.classList.add('open');
         
-        // --- NEW MAP LOGIC (ZOOM & MARKERS) ---
-        // Initialize Report Map if needed
         if (!reportMap) {
             reportMap = L.map('report-map', {
-                zoomControl: false,
-                attributionControl: false,
-                dragging: false,
-                scrollWheelZoom: false,
-                doubleClickZoom: false,
-                boxZoom: false,
-                keyboard: false
+                zoomControl: false, attributionControl: false, dragging: false,
+                scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false
             });
-            // Use a clean light map for the report
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 20
-            }).addTo(reportMap);
-            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(reportMap);
             reportMarkerLayer = L.layerGroup().addTo(reportMap);
         }
         
-        // Resize fix and Layer Logic
         setTimeout(() => {
             reportMap.invalidateSize();
-            
-            // Clear previous layers
             reportMap.eachLayer(layer => {
                 if (!layer._url && layer !== reportMarkerLayer) reportMap.removeLayer(layer);
             });
             reportMarkerLayer.clearLayers();
 
-            // Add Boundaries
             let boundsToFit = null;
 
             if (currentBoundaryKey && dataLayers[currentBoundaryKey]) {
                 const geoJsonData = dataLayers[currentBoundaryKey].toGeoJSON();
-                
                 const boundaryLayer = L.geoJSON(geoJsonData, {
                     style: (feature) => {
                         const name = extractFeatureName(feature);
                         const isActive = name === activeFeatureName;
                         return {
-                            color: isActive ? '#DC2626' : '#94a3b8', // Red for active, Gray for others
+                            color: isActive ? '#DC2626' : '#94a3b8', 
                             weight: isActive ? 2 : 1,
                             fillColor: isActive ? '#EF4444' : '#f1f5f9',
                             fillOpacity: isActive ? 0.4 : 0.1
                         };
-                    },
-                    filter: (feature) => {
-                        return true;
                     }
                 }).addTo(reportMap);
 
-                // If specific area selected, fit to that area. Else fit to whole layer.
                 if (activeFeatureName) {
                     boundaryLayer.eachLayer(l => {
-                        if (extractFeatureName(l.feature) === activeFeatureName) {
-                            boundsToFit = l.getBounds();
-                        }
+                        if (extractFeatureName(l.feature) === activeFeatureName) boundsToFit = l.getBounds();
                     });
                 } else {
                     boundsToFit = boundaryLayer.getBounds();
                 }
             } 
 
-            // Add Markers (Snapshot of active view)
             if (dataToUse && dataToUse.length > 0) {
-                // Limit markers for performance in report view if huge number
                 const markersToShow = dataToUse.slice(0, 1500); 
-                
                 const markerGroup = L.featureGroup();
-                
                 markersToShow.forEach(p => {
                     const cfg = TYPE_CFG[p._type] || { color: '#333' };
                     const m = L.circleMarker([p.LATITUDE, p.LONGITUDE], {
-                        radius: 4, // Slightly smaller for report
-                        fillColor: cfg.color,
-                        color: "#fff",
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.9
+                        radius: 4, fillColor: cfg.color, color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.9
                     });
                     m.addTo(reportMarkerLayer);
                     markerGroup.addLayer(m);
                 });
-
-                // If no specific boundary selected, fit to markers
-                if (!activeFeatureName && markersToShow.length > 0) {
-                    boundsToFit = markerGroup.getBounds();
-                }
+                if (!activeFeatureName && markersToShow.length > 0) boundsToFit = markerGroup.getBounds();
             }
 
-            // Apply Fit Bounds
-            if (boundsToFit && boundsToFit.isValid()) {
-                reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
-            } else {
-                 // Fallback view of Sabah
-                 reportMap.setView([5.9804, 116.0735], 7);
-            }
-        }, 300); // Slight delay to ensure modal transition finishes
+            if (boundsToFit && boundsToFit.isValid()) reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
+            else reportMap.setView([5.9804, 116.0735], 7);
+        }, 300); 
     }
 
     function closeReport() {
@@ -1188,26 +1076,20 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
     updateClock();
 
     function generatePDF() {
-        const element = document.querySelector('.report-container'); // Capture the inner container
+        const element = document.querySelector('.report-container');
         const modal = document.querySelector('.report-modal');
-
-        // Temporarily modify styles for clean capture
         const originalOverflow = modal.style.overflow;
-        modal.style.overflow = "visible"; // Allow full height capture
-        
-        // Hide scrollbar style fix
+        modal.style.overflow = "visible"; 
         const originalContainerOverflow = element.style.overflowY;
         element.style.overflowY = "visible";
 
         const opt = {
-            margin:       0,
-            filename:     `Report_Kad_${activeFeatureName || 'Sabah'}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 1.5, useCORS: true, scrollY: 0 },
-            jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' } 
+            margin: 0, filename: `Report_Kad_${activeFeatureName || 'Sabah'}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
+            jsPDF: { unit: 'in', format: 'a3', orientation: 'landscape' } 
         };
         
-        // Hide buttons
         const closeBtn = document.querySelector('.modal-close-btn');
         const dlBtn = document.querySelector('.btn-download-pdf');
         if(closeBtn) closeBtn.style.display = 'none';
@@ -1220,11 +1102,9 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             const imgProps = pdf.getImageProperties(imgData);
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            
             pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
             pdf.save(opt.filename);
 
-            // Restore
             if(closeBtn) closeBtn.style.display = 'block';
             if(dlBtn) dlBtn.style.visibility = 'visible';
             modal.style.overflow = originalOverflow;
@@ -1234,45 +1114,26 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
     // ---------- CONFIG ----------
     const URLs = { district: "district.json", dun: "dun.json", parliament: "parliament.json" };
-
-    // DAFTAR PROJEK & FILTER CONFIG
     const PROJECT_REGISTER = [
-      { 
-        id: "db_bwa", 
-        sheetId: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU", 
-        type: "BWA" 
-      },
-      { 
-        id: "db_pim", 
-        sheetId: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU", 
-        type: "NADI" 
-      },
-      { 
-        id: "db_POP", 
-        sheetId: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8", 
-        type: "POP" 
-      },
-      { 
-        id: "tower", 
-        sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", 
-        type: "TOWER",
-        filter: { col: "PROJECT_TYPE", val: "USP" } 
-      }
-      // Projek Baru Ditambah Sini
-      
+      { id: "db_bwa", sheetId: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU", type: "BWA" },
+      { id: "db_pim", sheetId: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU", type: "NADI" },
+      { id: "db_POP", sheetId: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8", type: "POP" },
+      { id: "tower", sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", type: "TOWER", filter: { col: "PROJECT_TYPE", val: "USP" } },
+      { id: "db_vsat", sheetId: "1KhD9LopT0thjVPhZuCI7IulNsItW9ipQ_M6Ob0V8j0o", type: "VSAT" },
+      { id: "db_telefon", sheetId: "1OMOyrS34mAYtg-UxlE4xs0iyMoSdqc3WFbhgMlHsgqo", type: "TELEFON" }
     ];
 
     const TYPE_CFG = {
       BWA: { color: "#51cf66", icon: "📶", label: "WiFi" },
       NADI: { color: "#4dabf7", icon: "📡", label: "NADI" },
       POP: { color: "#fcc419", icon: "🌐", label: "POP" },
-      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" }
-   
+      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" },
+      VSAT: { color: "#9c27b0", icon: "🛰️", label: "VSAT" },
+      TELEFON: { color: "#ff922b", icon: "📞", label: "Telefon" }
     };
 
     // ---------- STATE ----------
     let map;
-    let reportMap = null; 
     let markersBySite = new Map();
     let markersLayerGroup;
     let allProjects = [];
@@ -1286,62 +1147,40 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
     let activeDashboardCategory = null;
     let activeStatusFilter = null;
     let currentFilteredList = []; 
-    // New State for Dynamic Toggles
-    let categoryToggles = new Set(); // Stores which types are currently toggled OFF (active = NOT in set)
+    let categoryToggles = new Set(); 
 
-    // ---------- UI GENERATOR (DYNAMIC) ----------
+    // ---------- UI GENERATOR ----------
     function generateDynamicUI() {
         const gridContainer = document.getElementById("dynamic-grid-stats");
         const legendContainer = document.getElementById("dynamic-legend");
         const filterContainer = document.getElementById("dynamic-filter-btns");
-        
-        // Clear previous content
         gridContainer.innerHTML = '';
         legendContainer.innerHTML = '';
         filterContainer.innerHTML = '';
 
-        // Get unique types from Register
         const uniqueTypes = [...new Set(PROJECT_REGISTER.map(p => p.type.toUpperCase()))];
-
         uniqueTypes.forEach(typeKey => {
             const config = TYPE_CFG[typeKey] || { color: "#666", icon: "❓", label: typeKey };
-            
-            // 1. Generate Dashboard Grid Card
             const card = document.createElement("div");
             card.className = "mini-stat";
             card.id = `stat-card-${typeKey}`;
             card.onclick = () => handleCategoryClick(typeKey, `stat-card-${typeKey}`);
-            
-            // Add custom style for top border color
             const style = document.createElement('style');
             style.innerHTML = `#stat-card-${typeKey}::before { background: ${config.color}; }`;
             document.head.appendChild(style);
-
-            card.innerHTML = `
-                <div class="mini-stat-val" id="count-${typeKey}" style="color: ${config.color};">0</div>
-                <div class="mini-stat-lbl">${config.label}</div>
-            `;
+            card.innerHTML = `<div class="mini-stat-val" id="count-${typeKey}" style="color: ${config.color};">0</div><div class="mini-stat-lbl">${config.label}</div>`;
             gridContainer.appendChild(card);
 
-            // 2. Generate Legend Item
             const legItem = document.createElement("div");
             legItem.className = "legend-row";
             legItem.innerHTML = `<span class="dot" style="background: ${config.color};"></span> ${config.label}`;
             legendContainer.appendChild(legItem);
 
-            // 3. Generate Filter Toggle Button (Updated Requirement 3)
             const btn = document.createElement("button");
-            btn.className = "toggle-btn"; // Default inactive (per request 2/3)
+            btn.className = "toggle-btn"; 
             btn.id = `toggle-${typeKey}`;
             btn.title = config.label;
-            
-            // Requirement 3: Clean Icon Display (No Checklist text/symbol)
-            // Use span.icon-slot so CSS keeps it visible when menu collapsed
-            btn.innerHTML = `
-                <span class="icon-slot" style="font-size: 1.2em; font-style:normal;">${config.icon}</span> 
-                <span class="text-slot">${config.label}</span>
-            `;
-            
+            btn.innerHTML = `<span class="icon-slot" style="font-size: 1.2em; font-style:normal;">${config.icon}</span><span class="text-slot">${config.label}</span>`;
             btn.onclick = function() {
                 this.classList.toggle("active");
                 filterAndDisplayMarkers();
@@ -1350,13 +1189,12 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         });
     }
 
-    // ---------- UTIL HELPER ----------
+    // ---------- DATA & MAIN INIT ----------
     function showLoading(on) {
       const el = document.getElementById("loading");
       if (!el) return;
       on ? el.classList.remove("hide") : el.classList.add("hide");
     }
-
     function escapeHtml(s) { return String(s || "").replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
     function debounce(fn, wait = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); }; }
     function normalizeString(str) { return String(str || "").trim().toUpperCase(); }
@@ -1386,7 +1224,6 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       return color;
     }
 
-    // ---------- DATA PARSING ----------
     function parseGviz(text) {
         try {
             const regex = /google\.visualization\.Query\.setResponse\((.*)\);/;
@@ -1399,13 +1236,9 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         } catch (e) { console.error("parseGviz failed", e); return null; }
     }
 
-    // ---------- LOADING FUNCTION -----------
     async function loadAllSheetsAndNormalize() {
-      // ITERATE OVER NEW PROJECT REGISTER
       const promises = PROJECT_REGISTER.map(projConfig => fetchSheetObjectsSafe(projConfig));
       const results = await Promise.all(promises);
-      
-      // FLATTEN RESULTS
       const combined = results.flat();
       allProjects = combined;
       buildAreaIndex();
@@ -1424,7 +1257,6 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         const rawCols = json.table.cols.map(c => (c && c.label) ? c.label.toUpperCase() : "");
         const rows = json.table.rows || [];
         
-        // Convert to Key-Value Objects
         const processedRows = rows.map(r => {
             const obj = {};
             rawCols.forEach((c, i) => {
@@ -1433,10 +1265,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             });
             return obj;
         });
-
-        // Normalize & Filter
         return normalizeRows(processedRows, projectConfig, rawCols);
-
       } catch (e) { 
           console.warn("Sheet load fail", projectConfig.id, e); 
           return []; 
@@ -1445,33 +1274,23 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
 
     function normalizeRows(rows, projectConfig, rawCols) {
       const normalizedKeys = new Set(["SITE_NAME", "SITE NAME", "SITE", "DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIAMENT_NAME", "LATITUDE", "LAT", "LONGITUDE", "LON", "LNG", "STATUS", "STATUS_1"]);
-      
       const normalized = [];
-
       for(let i=0; i<rows.length; i++) {
           const r = rows[i];
-
-          // --- FILTER LOGIC ---
           if (projectConfig.filter) {
               const filterCol = projectConfig.filter.col.toUpperCase();
               const filterVal = projectConfig.filter.val;
               const rowVal = String(r[filterCol] || "").trim();
               if (rowVal.toUpperCase() !== filterVal.toUpperCase()) continue; 
           }
-          // --------------------
-
           const get = k => (r[k] !== undefined ? r[k] : (r[k.toLowerCase()] !== undefined ? r[k.toLowerCase()] : ""));
-          
           const site = get("SITE_NAME") || get("SITE NAME") || get("SITE") || "";
           const district = get("DISTRICT") || get("DAERAH") || "";
           const dun = get("DUN") || "";
           const parliament = get("PARLIAMENT") || get("PARLIAMENT_NAME") || "";
-          
           const lat = cleanFloat(get("LATITUDE") || get("LAT") || get("LATITUDE_DEC"));
           const lng = cleanFloat(get("LONGITUDE") || get("LON") || get("LNG"));
-          
           const rawStatus = get("STATUS") || get("STATUS_1") || "Tiada Status";
-          
           const rawDetails = [];
           let count = 0;
           for (let colIndex = 0; colIndex < rawCols.length && count < 15; colIndex++) {
@@ -1483,29 +1302,19 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
               count++;
             }
           }
-
           const type = projectConfig.type ? projectConfig.type.toUpperCase() : "UNKNOWN";
           const isValidCoordinate = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng)); 
-          
           const rowObj = {
             SITE_NAME: String(site || "N/A").trim(), 
             DISTRICT: String(district || "").trim(), 
             DUN: String(dun || "").trim(), 
             PARLIAMENT: String(parliament || "").trim(),
-            LATITUDE: lat, 
-            LONGITUDE: lng, 
+            LATITUDE: lat, LONGITUDE: lng, 
             STATUS: String(rawStatus).trim(),
-            _sheet: projectConfig.id, 
-            _type: type, 
-            _raw_details: rawDetails, 
-            _validCoord: isValidCoordinate
+            _sheet: projectConfig.id, _type: type, _raw_details: rawDetails, _validCoord: isValidCoordinate
           };
-          
           rowObj._id = generateStableId(rowObj, type);
-          
-          if (rowObj.SITE_NAME !== "N/A") {
-              normalized.push(rowObj);
-          }
+          if (rowObj.SITE_NAME !== "N/A") normalized.push(rowObj);
       }
       return normalized;
     }
@@ -1522,7 +1331,6 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       });
     }
 
-    // ---------- MARKERS LOGIC ----------
     function createOrUpdateMarker(project) {
       if (!project._validCoord) return null;
       const uniqueKey = project._id;
@@ -1570,7 +1378,6 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       runChunk();
     }
 
-    // ---------- DASHBOARD INTERACTION ----------
     function handleCategoryClick(type, elementId) {
       if (activeDashboardCategory === type) {
         activeDashboardCategory = null;
@@ -1587,42 +1394,26 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       filterAndDisplayMarkers();
     }
 
-    // SEARCH LISTENER
     document.getElementById('search-input').addEventListener('input', function(e) {
         searchTerm = e.target.value;
         filterAndDisplayMarkers();
     });
 
-    // Requirement 2: Function that handles filtering including the Area Selection
     function filterAndDisplayMarkers() {
-      // Dynamic Filter Check
       let activeTypes = new Set();
       PROJECT_REGISTER.forEach(p => {
           const typeKey = p.type.toUpperCase();
           const btn = document.getElementById(`toggle-${typeKey}`);
-          
-          if (btn && btn.classList.contains("active")) {
-              activeTypes.add(typeKey);
-          } 
+          if (btn && btn.classList.contains("active")) activeTypes.add(typeKey);
       });
 
       let filteredList = allProjects;
-
-      // Requirement 2 & 1 Fix: Filter by Selected Area Polygon
       if (currentBoundaryKey && activeFeatureName) {
         const areaName = normalizeString(activeFeatureName); 
-        
         filteredList = allProjects.filter(p => {
-          // Normalize Data from Sheet to match GeoJSON Name
-          if (currentBoundaryKey === 'district') {
-             return normalizeString(p.DISTRICT) === areaName;
-          }
-          if (currentBoundaryKey === 'dun') {
-             return normalizeString(p.DUN) === areaName;
-          }
-          if (currentBoundaryKey === 'parliament') {
-             return normalizeString(p.PARLIAMENT) === areaName;
-          }
+          if (currentBoundaryKey === 'district') return normalizeString(p.DISTRICT) === areaName;
+          if (currentBoundaryKey === 'dun') return normalizeString(p.DUN) === areaName;
+          if (currentBoundaryKey === 'parliament') return normalizeString(p.PARLIAMENT) === areaName;
           return false;
         });
       }
@@ -1640,7 +1431,6 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       }
 
       if (activeDashboardCategory) filteredList = filteredList.filter(p => p._type === activeDashboardCategory);
-
       currentFilteredList = filteredList;
       updateDashboard(filteredList); 
 
@@ -1651,39 +1441,31 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       markersLayerGroup.clearLayers();
       Array.from(markersBySite.values()).forEach(m => {
         const meta = m._meta; const type = meta._type.toUpperCase();
-        
         let isCategoryAllowed = false;
-        if (activeDashboardCategory) {
-            isCategoryAllowed = (type === activeDashboardCategory);
-        } else {
-            // Check against dynamic buttons
-            isCategoryAllowed = activeTypes.has(type);
-        }
-
+        if (activeDashboardCategory) isCategoryAllowed = (type === activeDashboardCategory);
+        else isCategoryAllowed = activeTypes.has(type);
         if (visibleLocationIds.has(meta._id) && isCategoryAllowed && meta._validCoord) markersLayerGroup.addLayer(m);
       });
     }
 
+    // UPDATED: Using STATUS_COLOR_CONFIG for Main Dashboard Status
     const updateDashboard = debounce(function (list) {
       const displayList = list || [];
       const totalEl = document.getElementById("total-projects");
       if(totalEl) animateValue("total-projects", parseInt(totalEl.innerText) || 0, displayList.length, 500);
 
-      // Dynamic Counting
       const counts = {};
       const uniqueTypes = [...new Set(PROJECT_REGISTER.map(p => p.type.toUpperCase()))];
       uniqueTypes.forEach(t => counts[t] = 0);
 
       const allUniqueStatuses = new Set();
       allProjects.forEach(p => allUniqueStatuses.add(String(p.STATUS || "Tidak Dinyatakan").trim()));
-
       const statusBreakdown = {};
       allUniqueStatuses.forEach(s => { statusBreakdown[s] = { total: 0, types: {} }; });
 
       displayList.forEach(p => {
         const type = p._type.toUpperCase();
         if (counts[type] !== undefined) counts[type]++;
-
         const s = String(p.STATUS || "Tidak Dinyatakan").trim();
         if (!statusBreakdown[s]) statusBreakdown[s] = { total: 0, types: {} };
         statusBreakdown[s].total++;
@@ -1691,7 +1473,6 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         statusBreakdown[s].types[type]++;
       });
 
-      // Update Dynamic Cards
       uniqueTypes.forEach(t => {
           const el = document.getElementById(`count-${t}`);
           if(el) el.textContent = counts[t] || 0;
@@ -1708,19 +1489,19 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         const count = data.total;
         const percent = totalProjects > 0 ? Math.round((count / totalProjects) * 100) : 0;
         
-        let endColor = "#4F46E5"; let startColor = "#818cf8";
-        const statusUpper = statusName.toUpperCase();
-        if (statusUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) { endColor = "#51cf66"; startColor = "#8ce99a"; } 
-        else if (statusUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) { endColor = "#4dabf7"; startColor = "#a5d8ff"; } 
-        else if (statusUpper.match(/TANGGUH|BATAL|CANCEL/)) { endColor = "#ff6b6b"; startColor = "#ffc9c9"; } 
-        else if (statusUpper.match(/RANCANG|BARU|PLAN/)) { endColor = "#fcc419"; startColor = "#ffe066"; } 
+        let catKey = "LAIN-LAIN";
+        const sUpper = statusName.toUpperCase();
+        if (sUpper.match(/SIAP|SELESAI|COMPLETE|OPERASI/)) catKey = "SIAP"; 
+        else if (sUpper.match(/BINA|IMPLEMENTASI|PROGRESS/)) catKey = "PEMBINAAN"; 
+        else if (sUpper.match(/RANCANG|BARU|PLAN/)) catKey = "PERANCANGAN"; 
+
+        const color = STATUS_COLOR_CONFIG[catKey] ? STATUS_COLOR_CONFIG[catKey].color : "#ccc";
 
         const isSelected = (activeStatusFilter === statusName);
         const selectedClass = isSelected ? "selected" : "";
         const zeroClass = count === 0 ? "is-zero" : "";
         
         let detailsHtml = '';
-        // Sort types by count
         const sortedTypes = Object.entries(data.types).sort(([, a], [, b]) => b - a);
         sortedTypes.forEach(([typeKey, typeCount]) => {
           const typeCfg = TYPE_CFG[typeKey] || { label: typeKey, color: "#666" };
@@ -1741,10 +1522,10 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
               <div class="status-item ${selectedClass} ${zeroClass}" onclick="handleStatusClick('${escapeHtml(statusName)}')">
                 <div class="status-header">
                   <span class="status-name">${escapeHtml(statusName)}</span>
-                  <span class="status-percent" style="color: ${endColor};">${count} (${percent}%)</span>
+                  <span class="status-percent" style="color: ${color}; font-weight:800;">${count} (${percent}%)</span>
                 </div>
                 <div class="progress-bg">
-                  <div class="progress-fill" style="width: ${percent}%; background: linear-gradient(90deg, ${startColor}, ${endColor}); box-shadow: 0 0 10px ${startColor};"></div>
+                  <div class="progress-fill" style="width: ${percent}%; background-color: ${color}; box-shadow: 0 0 5px ${color};"></div>
                 </div>
               </div>
               <div class="status-details ${isSelected ? 'show' : ''}">
@@ -1765,22 +1546,16 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       const timer = setInterval(() => { current += increment; obj.innerHTML = current; if (current == end) clearInterval(timer); }, Math.max(stepTime, 10));
     }
 
-    // ---------- LOAD GEOJSON LAYER (FIXED REQUIREMENT 1) ----------
     async function loadGeoJsonLayer(key, url) {
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error("File not found");
             const data = await res.json();
-            
             const layer = L.geoJSON(data, {
-                // FIXED: fillOpacity must be > 0 to be clickable. Set to 0.05 (nearly invisible but clickable)
                 style: { color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' }, 
                 onEachFeature: (feature, layer) => {
                     const name = extractFeatureName(feature);
-                    // FIXED: Tooltip non-interactive to prevent click blocking
                     layer.bindTooltip(name, { sticky: true, interactive: false, direction: 'center', className: 'area-tooltip' });
-                    
-                    // Requirement 1: Random Color on Hover
                     layer.on('mouseover', function(e) {
                         if (activeFeatureName !== name) {
                             const randomColor = getRandomColor();
@@ -1788,88 +1563,53 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                             this.setStyle({ weight: 2, color: '#333', fillOpacity: 0.3, fillColor: randomColor });
                         }
                     });
-
                     layer.on('mouseout', function(e) {
-                          if (activeFeatureName !== name) {
-                              this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' });
-                          }
+                          if (activeFeatureName !== name) this.setStyle({ color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' });
                     });
-
-                    // FIXED: Robust click handler & Tooltip logic
                     layer.on('click', (e) => {
-                        // Crucial: Stop click from propagating to map
                         L.DomEvent.stopPropagation(e);
-
-                        // 1. Reset ALL layers in this group (Styles AND Tooltips)
                         dataLayers[key].eachLayer(l => {
                             l.setStyle({ weight: 1, color: '#666', fillOpacity: 0.05, fillColor: '#ffffff' });
-                            
-                            // Restore tooltip if it was unbound/closed
                             if (!l.getTooltip()) {
                                 const lName = extractFeatureName(l.feature);
                                 l.bindTooltip(lName, { sticky: true, interactive: false, direction: 'center', className: 'area-tooltip' });
                             }
                         });
-                        
-                        // 2. Highlight Selected
                         let selectedColor = feature.properties._tempColor || getRandomColor();
                         e.target.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: selectedColor });
-                        
-                        // 3. Remove Tooltip for selected layer (so it doesn't annoy user)
                         e.target.closeTooltip();
                         e.target.unbindTooltip();
-
-                        // Update App State
                         activeFeatureName = name;
                         document.getElementById('selected-area').textContent = name;
-                        
-                        // Zoom to feature
                         map.fitBounds(e.target.getBounds());
-                        
-                        // Requirement 2: Trigger Dashboard Update
                         filterAndDisplayMarkers();
                     });
                 }
             });
             dataLayers[key] = layer;
         } catch (e) {
-            console.warn(`Could not load GeoJSON for ${key}. Map will work without boundaries.`, e);
+            console.warn(`Could not load GeoJSON for ${key}.`, e);
             dataLayers[key] = L.layerGroup();
         }
     }
 
-    // ---------- SETUP TOGGLES (ADDED FIX) ----------
     function setupToggles() {
-        // Toggle Logic for Map Layers
         function switchLayer(layerKey, btnId) {
-            // Remove all boundary layers
             Object.values(dataLayers).forEach(l => { if(l) map.removeLayer(l); });
-            
-            // Add selected layer
             if (dataLayers[layerKey]) map.addLayer(dataLayers[layerKey]);
             currentBoundaryKey = layerKey;
-            
-            // Reset selection when switching layer type
             activeFeatureName = null; 
             document.getElementById('selected-area').textContent = "SELURUH SABAH";
-            
-            // Reset markers filter to show all
             filterAndDisplayMarkers();
-            
-            // UI Update
             document.querySelectorAll('#layer-card .toggle-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(btnId).classList.add('active');
-            
-            // Reset Zoom
             if (map) map.setView([5.9804, 116.0735], 8);
         }
-
         document.getElementById('toggle-daerah').onclick = () => switchLayer('district', 'toggle-daerah');
         document.getElementById('toggle-dun').onclick = () => switchLayer('dun', 'toggle-dun');
         document.getElementById('toggle-parliament').onclick = () => switchLayer('parliament', 'toggle-parliament');
     }
 
-    // ---------- AUTO REFRESH LOOP (ADDED FIX) ----------
     function autoRefreshLoop() {
         console.log("Auto refreshing data...");
         loadAllSheetsAndNormalize().then(projects => {
@@ -1880,11 +1620,8 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         });
     }
 
-    // ---------- MAIN INIT ----------
     async function initMap() {
-      // 1. Generate UI based on Config
       generateDynamicUI();
-
       const mapDiv = document.getElementById("map"); if (!mapDiv) return;
       map = L.map('map', { zoomControl: false }).setView([5.9804, 116.0735], 8);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -1898,31 +1635,21 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       try {
         const projects = await loadAllSheetsAndNormalize();
         renderMarkersInBatches(projects, () => {
-          // Initial filter to update dashboard
           filterAndDisplayMarkers();
         });
-        
-        // Load layers in parallel
         const pDistrict = loadGeoJsonLayer("district", URLs.district);
         const pDun = loadGeoJsonLayer("dun", URLs.dun);
         const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
         await Promise.all([pDistrict, pDun, pPar]);
-        
         if (dataLayers['district']) { 
             dataLayers['district'].addTo(map); 
             currentBoundaryKey = 'district'; 
         }
-        
         setupToggles(); 
-        
-        // Initial Filter
         filterAndDisplayMarkers();
-        
-        // Start Auto Refresh
         setInterval(() => autoRefreshLoop(), refreshIntervalMs);
       } catch (e) { console.error("Init Error", e); } finally { showLoading(false); }
     }
-
     window.onload = initMap;
   </script>
 </body>
