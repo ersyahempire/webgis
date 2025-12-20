@@ -680,39 +680,61 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       card.addEventListener('mouseleave', () => card.classList.remove('expanded'));
     });
 
-    // ---------- NEW CSV DOWNLOAD FUNCTION ----------
+    // ---------- NEW CSV DOWNLOAD FUNCTION (UPDATED) ----------
     function downloadCSV() {
         if (!currentFilteredList || currentFilteredList.length === 0) {
             alert("Tiada data untuk dimuat turun.");
             return;
         }
 
-        // Standard headers
-        const headers = ["SITE_NAME", "DISTRICT", "DUN", "PARLIAMENT", "LATITUDE", "LONGITUDE", "STATUS", "PROJECT_TYPE"];
-        
-        const csvRows = [];
-        csvRows.push(headers.join(","));
+        // 1. Collect all unique headers including _raw_details
+        const standardHeaders = ["SITE_NAME", "DISTRICT", "DUN", "PARLIAMENT", "LATITUDE", "LONGITUDE", "STATUS", "PROJECT_TYPE"];
+        const dynamicHeaders = new Set();
 
         currentFilteredList.forEach(p => {
-            // Escape double quotes and handle missing data
-            const row = [
-                `"${String(p.SITE_NAME || "").replace(/"/g, '""')}"`,
-                `"${String(p.DISTRICT || "").replace(/"/g, '""')}"`,
-                `"${String(p.DUN || "").replace(/"/g, '""')}"`,
-                `"${String(p.PARLIAMENT || "").replace(/"/g, '""')}"`,
-                p.LATITUDE,
-                p.LONGITUDE,
-                `"${String(p.STATUS || "").replace(/"/g, '""')}"`,
-                `"${String(p._type || "").replace(/"/g, '""')}"`
-            ];
+            if (p._raw_details && Array.isArray(p._raw_details)) {
+                p._raw_details.forEach(d => dynamicHeaders.add(d.label));
+            }
+        });
+
+        // Combine standard and dynamic headers
+        const allHeaders = [...standardHeaders, ...Array.from(dynamicHeaders)];
+        
+        // 2. Build CSV Content
+        const csvRows = [];
+        // Add header row
+        csvRows.push(allHeaders.map(h => `"${h.replace(/"/g, '""')}"`).join(",")); 
+
+        currentFilteredList.forEach(p => {
+            const row = allHeaders.map(header => {
+                let val = "";
+                // Check standard keys first (mapping needed for some internal keys)
+                if (header === "PROJECT_TYPE") val = p._type;
+                else if (p[header] !== undefined) val = p[header]; // Direct access for SITE_NAME, DISTRICT etc
+                else {
+                    // Check raw details for dynamic columns
+                    const detail = p._raw_details.find(d => d.label === header);
+                    if (detail) val = detail.value;
+                }
+                
+                // Helper to safely stringify and escape
+                const strVal = String(val || "").replace(/"/g, '""');
+                return `"${strVal}"`;
+            });
             csvRows.push(row.join(","));
         });
 
+        // 3. Generate File
         const csvString = csvRows.join("\n");
         const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
-        const filename = `Projek_Sabah_${activeFeatureName ? activeFeatureName.replace(/\s+/g,'_') : 'All'}_${new Date().toISOString().slice(0,10)}.csv`;
+        
+        // Filename Logic
+        let areaPart = activeFeatureName ? activeFeatureName.replace(/\s+/g,'_') : 'Seluruh_Sabah';
+        let typePart = activeDashboardCategory ? activeDashboardCategory : 'SEMUA_PROJEK';
+        
+        const filename = `Data_${typePart}_${areaPart}_${new Date().toISOString().slice(0,10)}.csv`;
         
         link.setAttribute("href", url);
         link.setAttribute("download", filename);
