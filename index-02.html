@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.3 - Debugged</title>
+  <title>Web GIS Projek Sabah v5.4 - Report Update</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -306,193 +306,164 @@ body {
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-sub); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,0.5); }
 
-/* ----- REPORT MODAL (NEW DESIGN) ----- */
+/* ----- REPORT MODAL UI UPDATES ----- */
 .report-overlay {
     position: fixed; inset: 0; z-index: 5000;
-    background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px);
+    background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(8px);
     display: none; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 0.3s;
+    opacity: 0; transition: opacity 0.3s ease;
 }
 .report-overlay.open { display: flex; opacity: 1; }
 
 .report-modal {
     width: 95%; max-width: 1400px; height: 90vh;
-    border-radius: 15px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.6);
     display: flex; flex-direction: column; overflow: hidden;
-    transform: scale(0.98); transition: transform 0.3s;
-    background: linear-gradient(to bottom right, #dbeafe, #ddd6fe, #fbcfe8);
-    color: #333;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #f3f4f6; /* Bersih, latar belakang kelabu muda */
+    color: #1f2937;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     position: relative;
+    border: 1px solid rgba(255,255,255,0.3);
 }
 .report-overlay.open .report-modal { transform: scale(1); }
 
-/* ---- STYLES REPORT CONTAINER (GAP UPDATED) ---- */
+/* Report Container */
 .report-container {
-    padding: 20px;
+    padding: 30px;
     display: flex; flex-direction: column; 
-    gap: 30px; /* INCREASED GAP for cleaner layout */
+    gap: 25px; 
     height: 100%; overflow-y: auto;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
 }
 
-/* Close Button */
+/* Close Button - Lebih Kemas */
 .modal-close-btn {
-    position: absolute; top: 15px; right: 15px; z-index: 5001;
-    background: rgba(255,255,255,0.8); border: none; font-size: 20px;
-    width: 36px; height: 36px; border-radius: 50%; cursor: pointer; color: #333;
+    position: absolute; top: 15px; right: 20px; z-index: 5002;
+    background: #fff; border: 1px solid #e5e7eb; 
+    width: 40px; height: 40px; border-radius: 50%; cursor: pointer; color: #6b7280;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
 }
-.modal-close-btn:hover { background: white; color: red; transform: scale(1.1); }
+.modal-close-btn:hover { background: #fee2e2; color: #ef4444; transform: rotate(90deg); border-color: #fecaca; }
 
-/* Gaya Umum Kad */
+/* Gaya Kad - Lebih Solid & Bersih */
 .card {
-    background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
-    border-radius: 15px;
-    padding: 15px;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f3f4f6;
+    transition: transform 0.2s;
 }
 
-/* --- HEADER --- */
+/* Header Update */
 .report-header-content {
-    display: flex; justify-content: space-between; align-items: flex-end; padding: 5px 10px;
+    display: flex; justify-content: space-between; align-items: center; 
+    padding-bottom: 20px; border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 10px;
 }
-.header-title h1 { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; margin: 0; }
-.header-title h2 { font-size: 1.5rem; color: #4f46e5; font-weight: 700; margin: 0; }
-
-.header-info { text-align: right; margin-right: 30px;}
+.header-title h1 { 
+    font-size: 1.1rem; font-weight: 800; text-transform: uppercase; margin: 0; color: #6b7280; letter-spacing: 1px;
+}
+.header-title h2 { 
+    font-size: 2rem; color: #111827; font-weight: 800; margin: 5px 0 0 0; line-height: 1.1;
+    background: linear-gradient(90deg, #4f46e5, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-right: 40px; }
 .btn-download-pdf {
-    background: rgba(255,255,255,0.6); padding: 5px 15px; border-radius: 20px;
-    font-size: 0.8rem; cursor: pointer; border: 1px solid #fff; margin-bottom: 5px; display: inline-block;
-    color: #333; font-weight: 600; text-transform: uppercase;
+    background: #4f46e5; padding: 10px 20px; border-radius: 8px;
+    font-size: 0.85rem; cursor: pointer; border: none; 
+    color: #fff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3); transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
 }
-.btn-download-pdf:hover { background: white; color: var(--primary); }
-.current-time { font-size: 0.9rem; color: #555; }
+.btn-download-pdf:hover { background: #4338ca; transform: translateY(-2px); box-shadow: 0 8px 12px rgba(79, 70, 229, 0.4); }
+.btn-download-pdf::before { content: '\f1c1'; font-family: 'Font Awesome 6 Free'; font-weight: 900; }
+.current-time { font-size: 0.85rem; color: #6b7280; font-weight: 500; background: #eef2f5; padding: 5px 10px; border-radius: 6px; }
 
-/* --- TOP STATS ROW --- */
-.top-row {
-    display: grid; grid-template-columns: 250px 1fr; gap: 15px;
-}
-
+/* Top Stats - Clean & Modern */
+.top-row { display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
 .report-main-stat {
-    background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(200,220,255,0.8));
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #bfdbfe;
     display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
 }
-.report-main-stat h1 { font-size: 3rem; color: #333; line-height: 1; margin: 10px 0; }
-.report-main-stat p { font-size: 0.9rem; font-weight: 600; margin: 0; }
+.report-main-stat h1 { font-size: 3.5rem; color: #1e40af; line-height: 1; margin: 10px 0; font-weight: 800; }
+.report-main-stat p { font-size: 0.85rem; font-weight: 700; color: #60a5fa; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
 .badge {
-    background: #dbeafe; color: #4f46e5; padding: 4px 12px; border-radius: 12px;
-    font-size: 0.7rem; margin-top: 5px; font-weight: bold;
+    background: #2563eb; color: #fff; padding: 6px 14px; border-radius: 20px;
+    font-size: 0.75rem; margin-top: 15px; font-weight: 700; text-transform: uppercase;
 }
 
-/* Mini Stats */
-.mini-stats-grid {
-    display: flex; flex-wrap: wrap; gap: 10px; width: 100%;
-}
+.mini-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; }
 .mini-card {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(255,255,255,0.6); border-radius: 10px; padding: 15px 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #ccc;
-    min-height: 90px;
-    flex: 1; 
-    min-width: 120px; 
+    background: #fff; border-radius: 12px; padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #f3f4f6; border-top-width: 4px;
+    transition: transform 0.2s;
 }
-.mini-card h3 { font-size: 2rem; color: #333; margin-bottom: 5px; margin-top:0; font-weight: 800;}
-.mini-card span { font-size: 0.85rem; font-weight: 800; color: #555; text-transform: uppercase; letter-spacing: 0.5px;}
+.mini-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
+.mini-card h3 { font-size: 1.8rem; color: #1f2937; margin: 0 0 5px 0; font-weight: 800; }
+.mini-card span { font-size: 0.75rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* --- CHARTS ROW --- */
-.charts-row {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
-}
+/* Charts Area */
+.charts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .chart-card {
-    position: relative; 
-    height: 420px; 
-    display: flex; 
-    flex-direction: column; 
-    padding: 20px; 
-    background: rgba(255,255,255,0.7);
-    border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    overflow: hidden; 
+    height: 380px; padding: 20px; display: flex; flex-direction: column;
 }
-.chart-title { font-size: 1rem; font-weight: 800; text-align: center; margin-bottom: 15px; text-transform: uppercase; color: #333; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 10px;}
+.chart-title { 
+    font-size: 0.9rem; font-weight: 700; text-align: left; margin-bottom: 15px; 
+    text-transform: uppercase; color: #374151; padding-bottom: 10px; border-bottom: 1px solid #f3f4f6;
+    display: flex; align-items: center; gap: 8px;
+}
+.chart-title::before { content: ''; width: 4px; height: 16px; background: var(--primary); border-radius: 2px; display: inline-block; }
 
-/* --- MAIN CONTENT (MAP & STATUS) --- */
-.main-content {
-    display: grid; grid-template-columns: 2fr 1fr; gap: 15px; min-height: 400px;
-}
-.map-container {
-    position: relative; overflow: hidden; padding: 0;
-    background-color: #a5d8ff;
-    height: 500px; 
-}
-#report-map { width: 100%; height: 100%; border-radius: 15px; }
+/* Main Content (Map & Status) */
+.main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; min-height: 450px; }
+.map-container { padding: 0; border: 1px solid #e5e7eb; overflow: hidden; border-radius: 16px; }
+#report-map { width: 100%; height: 100%; }
 
 .status-container {
-    display: flex; flex-direction: column; gap: 15px; background: rgba(255, 255, 255, 0.7);
-    max-height: 500px; overflow-y: auto;
+    background: #fff; padding: 0; overflow: hidden; display: flex; flex-direction: column;
 }
-.status-header { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; color: #555; margin-bottom: 5px; }
+.status-header-fixed {
+    padding: 15px 20px; background: #f9fafb; border-bottom: 1px solid #f3f4f6;
+    font-size: 0.85rem; font-weight: 800; color: #374151; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.status-scroll-area { padding: 20px; overflow-y: auto; flex: 1; }
 
-.status-group { margin-bottom: 10px; }
-.status-label-row { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; margin-bottom: 3px; }
-.progress-track { background: #e5e7eb; height: 6px; border-radius: 3px; width: 100%; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 3px; }
+.status-group { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #f3f4f6; }
+.status-group:last-child { border-bottom: none; margin-bottom: 0; }
+.status-label-row { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; color: #1f2937; }
+.progress-track { background: #f3f4f6; height: 8px; border-radius: 4px; width: 100%; overflow: hidden; margin-bottom: 10px; }
+.progress-fill { height: 100%; border-radius: 4px; }
 
-.sub-status { margin-top: 4px; display: flex; flex-direction: column; gap: 3px; }
-.sub-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.65rem; color: #666; }
-.sub-track { flex-grow: 1; height: 3px; background: #eee; margin: 0 8px; border-radius: 2px; }
+.sub-status { display: flex; flex-direction: column; gap: 6px; padding-left: 0; }
+.sub-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #6b7280; font-weight: 500; }
+.sub-track { flex-grow: 1; height: 4px; background: #f3f4f6; margin: 0 10px; border-radius: 2px; overflow: hidden; }
 
-/* --- BOTTOM GRID (SPACING & OVERFLOW FIXED) --- */
-.bottom-grid { 
-    display: grid; 
-    grid-template-columns: repeat(3, 1fr); 
-    gap: 15px; 
-    margin-top: 20px; 
-    padding-bottom: 20px; 
-}
-.bottom-card { 
-    display: flex; 
-    align-items: center; 
-    padding: 15px; 
-    gap: 10px; 
-    background: rgba(255,255,255,0.7);
-    border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    height: 300px; /* Sedikit tinggi untuk muat carta */
-    flex-direction: column;
-    justify-content: flex-start;
-    overflow: hidden; /* Pastikan tiada yang terkeluar */
-}
-.bottom-card-header {
-    display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 5px; height: 40px; flex-shrink: 0;
-}
-.bottom-card-body {
-    width: 100%; flex: 1; min-height: 0; overflow: hidden; /* Penting untuk ApexCharts */
-}
+/* Bottom Grid */
+.bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; padding-bottom: 20px; }
+.bottom-card { height: 260px; padding: 20px; }
+.bottom-card-header { margin-bottom: 15px; height: auto; }
+.bottom-text h4 { font-size: 0.7rem; color: #9ca3af; text-transform: uppercase; margin: 0 0 2px 0; font-weight: 600; }
+.bottom-text h3 { font-size: 1rem; font-weight: 800; color: #1f2937; margin: 0; }
+.icon-box { box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 36px; height: 36px; font-size: 1rem; border-radius: 8px; }
 
-.icon-box {
-    width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.bottom-text h3 { font-size: 1rem; font-weight: 700; color: #333; margin:0; text-transform: uppercase;}
-
-footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
+footer { text-align: right; font-size: 0.75rem; color: #9ca3af; margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 15px; font-weight: 500; }
 
 /* Responsive Report */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
     .charts-row, .bottom-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+    .charts-row, .bottom-grid { grid-template-columns: 1fr; }
     .top-row { grid-template-columns: 1fr; }
     .main-content { grid-template-columns: 1fr; }
-}
-@media (max-width: 600px) {
-  .dashboard-panel { width: calc(100% - 40px); bottom: auto; max-height: 60vh; top: 85px; }
-  .controls-container { top: auto; bottom: 90px; right: 20px; gap: 8px;}
-  .charts-row, .bottom-grid { grid-template-columns: 1fr; }
+    .header-info { margin-right: 40px; }
 }
 </style>
 </head>
@@ -587,7 +558,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
     </div>
   </div>
 
-  <!-- REPORT MODAL UI -->
+  <!-- REPORT MODAL UI (UPDATED) -->
   <div class="report-overlay" id="report-overlay">
       <div class="report-modal" id="report-content">
           <button class="modal-close-btn" onclick="closeReport()"><i class="fas fa-times"></i></button>
@@ -596,11 +567,11 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
               <!-- HEADER -->
               <header class="report-header-content">
                   <div class="header-title">
-                      <h1>Dashboard Projek</h1>
+                      <h1>Laporan Dashboard Projek</h1>
                       <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
                   <div class="header-info">
-                      <button class="btn-download-pdf" onclick="generatePDF()">muat turun pdf</button>
+                      <button class="btn-download-pdf" onclick="generatePDF()">Muat Turun PDF</button>
                       <div class="current-time" id="clock">Monday, 01 Jan 2024 10:00 AM</div>
                   </div>
               </header>
@@ -609,7 +580,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
               <div class="top-row">
                   <div class="card report-main-stat">
                       <h1 id="report-total-count">0</h1>
-                      <p>JUMLAH PROJEK</p>
+                      <p>JUMLAH KESELURUHAN PROJEK</p>
                       <div class="badge" id="report-badge-area">SELURUH SABAH</div>
                   </div>
                   <!-- DYNAMIC MINI CARDS -->
@@ -638,8 +609,11 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                       <div id="report-map"></div>
                   </div>
 
-                  <div class="card status-container" id="dynamic-status-container">
-                      <div class="status-header">STATUS KEMAJUAN</div>
+                  <div class="card status-container">
+                      <div class="status-header-fixed">STATUS KEMAJUAN TERPERINCI</div>
+                      <div class="status-scroll-area" id="dynamic-status-container">
+                         <!-- Status Content -->
+                      </div>
                   </div>
               </div>
 
@@ -649,7 +623,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
               </div>
 
               <footer>
-                  system ini dibangunkan oleh MCMC Tawau
+                  Sistem dibangunkan oleh MCMC Tawau &copy; 2024
               </footer>
           </div>
       </div>
@@ -759,7 +733,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         });
 
         const total = filteredProjects.length || 1; 
-        let html = '<div class="status-header">STATUS KEMAJUAN</div>';
+        let html = '';
 
         // Project Type Colors
         const typeColors = {};
@@ -856,31 +830,41 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
         const commonOptions = {
             chart: { 
                 animations: { enabled: false },
-                fontFamily: 'Segoe UI, sans-serif',
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
                 toolbar: { show: false },
                 parentHeightOffset: 0
             },
             grid: { padding: { top: 0, bottom: 20, left: 10, right: 10 } }
         };
 
-        // CHART 01: Donut (Uses Type Colors) & Custom Label Formatter
+        // CHART 01: Donut (Uses Type Colors) & Custom Label Formatter (UPDATED: Number Only)
         const typePalette = labels01.map(l => (TYPE_CFG[l] ? TYPE_CFG[l].color : '#ccc'));
         const options01 = {
             ...commonOptions,
             series: series01,
             labels: labels01,
             chart: { type: 'donut', height: '100%', animations: { enabled: false } },
-            legend: { position: 'bottom', offsetY: 0 },
+            legend: { position: 'bottom', offsetY: 0, fontSize: '12px' },
             fill: { type: 'gradient' },
-            plotOptions: { pie: { donut: { size: '65%' } } },
+            plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, showAlways: true, label: 'Jumlah', fontSize: '14px', fontWeight: 600, color: '#374151' } } } } },
             colors: typePalette,
             dataLabels: { 
                 enabled: true,
-                formatter: function (val, opts) {
-                    const series = opts.w.config.series;
-                    const sum = series.reduce((a, b) => a + b, 0);
-                    const percent = sum > 0 ? (val / sum * 100).toFixed(1) : 0;
-                    return `${val} (${percent}%)`;
+                formatter: function (val) {
+                    return val; // DISPLAY NUMBER ONLY
+                },
+                style: {
+                    fontSize: '14px',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontWeight: 'bold',
+                },
+                dropShadow: { enabled: false }
+            },
+            tooltip: {
+                y: {
+                    formatter: function(val) {
+                        return val + " site";
+                    }
                 }
             }
         };
@@ -899,7 +883,7 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             ...commonOptions,
             series: [{ name: 'Jumlah', data: series02 }],
             chart: { type: 'bar', height: '100%', animations: { enabled: false } },
-            plotOptions: { bar: { horizontal: true, borderRadius: 4, distributed: true } },
+            plotOptions: { bar: { horizontal: true, borderRadius: 6, distributed: true, barHeight: '60%' } },
             xaxis: { categories: labels02 },
             colors: colors02,
             legend: { show: false }
@@ -915,8 +899,8 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             ...commonOptions,
             series: series03,
             chart: { type: 'bar', height: '100%', stacked: true, animations: { enabled: false } },
-            plotOptions: { bar: { horizontal: false, columnWidth: '55%' } },
-            xaxis: { categories: projects03 },
+            plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 } },
+            xaxis: { categories: projects03, labels: { style: { fontSize: '10px' } } },
             fill: { opacity: 1 },
             colors: colors03,
             legend: { position: 'bottom', offsetY: 5 }
@@ -952,12 +936,14 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
             card.className = "card bottom-card";
             card.innerHTML = `
                 <div class="bottom-card-header">
-                    <div class="icon-box" style="background: ${cfg.color}">
-                        ${cfg.icon.includes('fa-') ? `<i class="${cfg.icon}"></i>` : cfg.icon}
-                    </div>
-                    <div class="bottom-text">
-                        <h4>Carta ${index + 4}</h4>
-                        <h3>${cfg.label} (${totalCount})</h3>
+                    <div class="bottom-text" style="display:flex; align-items:center; gap:10px;">
+                         <div class="icon-box" style="background: ${cfg.color}; display:flex; align-items:center; justify-content:center; color:white;">
+                             ${cfg.icon.includes('fa-') ? `<i class="${cfg.icon}"></i>` : cfg.icon}
+                         </div>
+                         <div>
+                            <h4>Carta ${index + 4}</h4>
+                            <h3>${cfg.label} (${totalCount})</h3>
+                         </div>
                     </div>
                 </div>
                 <div class="bottom-card-body" id="bottom-chart-${index}"></div>
@@ -969,7 +955,8 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
                 chart: { 
                     type: 'bar', height: '100%', 
                     toolbar: { show: false },
-                    animations: { enabled: false }
+                    animations: { enabled: false },
+                    fontFamily: 'Plus Jakarta Sans, sans-serif'
                 },
                 plotOptions: { 
                     bar: { horizontal: false, columnWidth: '60%', borderRadius: 3, distributed: true } 
@@ -1164,16 +1151,18 @@ footer { text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px; }
       { id: "db_bwa", sheetId: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU", type: "BWA" },
       { id: "db_pim", sheetId: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU", type: "NADI" },
       { id: "db_pop", sheetId: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8", type: "POP" },
-      { id: "tower", sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", type: "TOWER", filter: { col: "PROJECT_TYPE", val: "USP" } }
-    
+      { id: "tower", sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", type: "TOWER", filter: { col: "PROJECT_TYPE", val: "USP" } },
+      { id: "db_vsat", sheetId: "1KhD9LopT0thjVPhZuCI7IulNsItW9ipQ_M6Ob0V8j0o", type: "VSAT" },
+      { id: "db_telefon", sheetId: "1OMOyrS34mAYtg-UxlE4xs0iyMoSdqc3WFbhgMlHsgqo", type: "TELEFON" }
     ];
 
     const TYPE_CFG = {
       BWA: { color: "#51cf66", icon: "📶", label: "WiFi" },
       NADI: { color: "#4dabf7", icon: "📡", label: "NADI" },
       POP: { color: "#fcc419", icon: "🌐", label: "POP" },
-      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" }
- 
+      TOWER: { color: "#ff6b6b", icon: "🗼", label: "Menara" },
+      VSAT: { color: "#9c27b0", icon: "🛰️", label: "VSAT" },
+      TELEFON: { color: "#ff922b", icon: "📞", label: "Telefon" }
     };
 
     // ---------- STATE ----------
