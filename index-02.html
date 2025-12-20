@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.6 - Fixed Layout</title>
+  <title>Web GIS Projek Sabah v5.6 - Updated Report</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -375,8 +375,15 @@ body {
     text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 .header-title h2 { 
-    font-size: 2.2rem; color: #fff; font-weight: 800; margin: 5px 0 0 0; line-height: 1.1;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    font-size: 2.2rem;
+    font-weight: 800; 
+    margin: 5px 0 0 0; 
+    line-height: 1.1;
+    /* UPDATE: RGB Gradient Text */
+    background: linear-gradient(90deg, #ff0000 0%, #00ff00 50%, #0000ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 .header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-right: 40px; }
 .btn-download-pdf {
@@ -453,21 +460,24 @@ body {
 .sub-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #4b5563; font-weight: 600; }
 .sub-track { flex-grow: 1; height: 4px; background: rgba(0,0,0,0.05); margin: 0 10px; border-radius: 2px; overflow: hidden; }
 
-/* Bottom Grid - Fixed for Auto Height */
+/* Bottom Grid - UPDATE: Flex layout inside fixed height card */
 .bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; padding-bottom: 20px; }
 .bottom-card { 
-    height: auto; /* Changed from fixed 260px to auto */
-    min-height: 300px;
+    height: 260px; /* Fixed Height */
     padding: 20px; 
     background: rgba(255, 255, 255, 0.65);
-    display: flex; flex-direction: column; 
+    display: flex; /* Flexbox */
+    flex-direction: column;
 }
-.bottom-card-header { margin-bottom: 15px; height: auto; }
-.bottom-card-body { 
-    width: 100%; 
-    height: 250px; /* Fixed height for the chart container */
-    flex: 1; 
-    min-height: 0; 
+.bottom-card-header { 
+    margin-bottom: 15px; 
+    height: auto; 
+    flex: 0 0 auto; /* Header doesn't shrink */
+}
+.bottom-card-body {
+    flex: 1; /* Chart takes remaining space */
+    min-height: 0; /* Prevents overflow */
+    width: 100%;
 }
 .bottom-text h4 { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; margin: 0 0 2px 0; font-weight: 600; }
 .bottom-text h3 { font-size: 1rem; font-weight: 800; color: #1f2937; margin: 0; }
@@ -632,7 +642,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                   <div class="card status-container">
                       <div class="status-header-fixed">STATUS KEMAJUAN TERPERINCI</div>
                       <div class="status-scroll-area" id="dynamic-status-container">
-                         <!-- Status Content -->
+                          <!-- Status Content -->
                       </div>
                   </div>
               </div>
@@ -811,7 +821,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
     let reportMarkerLayer = null;
     let reportMap = null; // Declare reportMap globally
 
-    // UPDATED: Charts now use STATUS_COLOR_CONFIG & Formatter Fix
+    // UPDATED: Charts now use STATUS_COLOR_CONFIG & Formatter Fix & Static Options
     function renderReportCharts(data) {
         // Data Chart 01
         const typeCounts = {};
@@ -846,39 +856,40 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             };
         });
 
-        // Common Config
+        // Common Config - UPDATED FOR STATIC IMAGES
         const commonOptions = {
             chart: { 
                 animations: { enabled: false },
                 fontFamily: 'Plus Jakarta Sans, sans-serif',
                 toolbar: { show: false },
-                parentHeightOffset: 0
+                parentHeightOffset: 0,
+                selection: { enabled: false },
+                zoom: { enabled: false }
+            },
+            tooltip: { enabled: false }, // Disable tooltips
+            states: {
+                hover: { filter: { type: 'none' } },
+                active: { filter: { type: 'none' } }
             },
             grid: { padding: { top: 0, bottom: 20, left: 10, right: 10 } }
         };
 
-        // CHART 01: Gradient Donut (UPDATED)
+        // CHART 01: Gradient Donut (Uses Type Colors) & Custom Label Formatter
         const typePalette = labels01.map(l => (TYPE_CFG[l] ? TYPE_CFG[l].color : '#ccc'));
         const options01 = {
             ...commonOptions,
             series: series01,
             labels: labels01,
             chart: { type: 'donut', height: '100%', animations: { enabled: false } },
-            legend: { position: 'bottom', offsetY: 0, fontSize: '12px' },
-            fill: { 
-                type: 'gradient',
-                gradient: {
-                    shade: 'dark',
-                    type: 'horizontal',
-                    shadeIntensity: 0.5,
-                    inverseColors: true,
-                    opacityFrom: 1,
-                    opacityTo: 1,
-                    stops: [0, 50, 100]
-                }
+            legend: { 
+                position: 'bottom', offsetY: 0, fontSize: '12px',
+                onItemClick: { toggleDataSeries: false }, // Disable legend click
+                onItemHover: { highlightDataSeries: false }
             },
+            fill: { type: 'gradient' }, // UPDATE: Gradient Fill
             plotOptions: { 
                 pie: { 
+                    expandOnClick: false, // Disable expand
                     donut: { 
                         size: '65%', 
                         labels: { 
@@ -891,8 +902,8 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             colors: typePalette,
             dataLabels: { 
                 enabled: true,
-                formatter: function (val) {
-                    return val; // DISPLAY NUMBER ONLY
+                formatter: function (val, opts) {
+                    return opts.w.globals.series[opts.seriesIndex]; // DISPLAY NUMBER ONLY
                 },
                 style: {
                     fontSize: '14px',
@@ -900,13 +911,6 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                     fontWeight: 'bold',
                 },
                 dropShadow: { enabled: false }
-            },
-            tooltip: {
-                y: {
-                    formatter: function(val) {
-                        return val + " site";
-                    }
-                }
             }
         };
 
@@ -944,7 +948,11 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
             xaxis: { categories: projects03, labels: { style: { fontSize: '10px' } } },
             fill: { opacity: 1 },
             colors: colors03,
-            legend: { position: 'bottom', offsetY: 5 }
+            legend: { 
+                position: 'bottom', offsetY: 5,
+                onItemClick: { toggleDataSeries: false },
+                onItemHover: { highlightDataSeries: false }
+            }
         };
 
         if (chart03) chart03.destroy();
@@ -952,7 +960,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
         chart03.render();
     }
 
-    // UPDATED: Bottom Charts - Better Fit & Colors
+    // UPDATED: Bottom Charts - Fixed Height, Fit Content, Static
     function renderBottomGridCharts(data) {
         const container = document.getElementById("dynamic-bottom-grid");
         container.innerHTML = ""; 
@@ -997,7 +1005,14 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                     type: 'bar', height: '100%', 
                     toolbar: { show: false },
                     animations: { enabled: false },
-                    fontFamily: 'Plus Jakarta Sans, sans-serif'
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    selection: { enabled: false },
+                    zoom: { enabled: false }
+                },
+                tooltip: { enabled: false }, // Static
+                states: {
+                    hover: { filter: { type: 'none' } },
+                    active: { filter: { type: 'none' } }
                 },
                 plotOptions: { 
                     bar: { horizontal: false, columnWidth: '60%', borderRadius: 3, distributed: true } 
@@ -1656,7 +1671,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
                 </div>
               </div>
               <div class="status-details ${isSelected ? 'show' : ''}">
-                 ${detailsHtml}
+                  ${detailsHtml}
               </div>`;
         statusEl.appendChild(itemContainer);
       });
@@ -1760,33 +1775,4 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
       // Standard Satellite
       const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
       satellite.addTo(map);
-      L.control.layers({ "Satelit (Esri)": satellite, "Peta (OSM)": osm }, null, { position: 'topright' }).addTo(map);
-      markersLayerGroup = L.layerGroup().addTo(map);
-
-      showLoading(true);
-      try {
-        const projects = await loadAllSheetsAndNormalize();
-        renderMarkersInBatches(projects, () => {
-          filterAndDisplayMarkers();
-        });
-        
-        // Load GeoJSONs gracefully
-        const pDistrict = loadGeoJsonLayer("district", URLs.district);
-        const pDun = loadGeoJsonLayer("dun", URLs.dun);
-        const pPar = loadGeoJsonLayer("parliament", URLs.parliament);
-        await Promise.all([pDistrict, pDun, pPar]);
-        
-        if (dataLayers['district'] && dataLayers['district'].getLayers().length > 0) { 
-            dataLayers['district'].addTo(map); 
-            currentBoundaryKey = 'district'; 
-        }
-        
-        setupToggles(); 
-        filterAndDisplayMarkers();
-        setInterval(() => autoRefreshLoop(), refreshIntervalMs);
-      } catch (e) { console.error("Init Error", e); } finally { showLoading(false); }
-    }
-    window.onload = initMap;
-  </script>
-</body>
-</html>
+      L.control.layers({ "Satelit (Esri)": satellite, "Peta (OSM)": osm }, null, { position: 'topright' }).addTo
