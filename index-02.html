@@ -925,7 +925,7 @@ footer { text-align: right; font-size: 0.75rem; color: rgba(255,255,255,0.8); ma
     formatter: function (val, opts) {
         const label = opts.w.config.labels[opts.seriesIndex];
         const value = opts.w.config.series[opts.seriesIndex];
-        return `${label}\n${value}`;
+        return `${value}\n${label}`;
     },
     style: { fontSize: '11px', lineHeight: '1.2' },
     dropShadow: { enabled: true }
