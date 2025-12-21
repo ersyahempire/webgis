@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.1 - Stable & Debugged</title>
+  <title>Web GIS Projek Sabah v6.2 - Status Update</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -533,6 +533,10 @@ const APP_CONFIG = {
         { id: "tower", sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", type: "TOWER", label: "Menara", color: "#ff6b6b", icon: "🗼", filter: { col: "PROJECT_TYPE", val: "USP" } }
     ],
     
+    // Status wajib yang MESTI dipaparkan walaupun tiada data (nilai 0)
+    // Pastikan ejaan sama dengan data dalam Excel jika ada
+    MANDATORY_STATUSES: ["SIAP", "DALAM PELAKSANAAN", "PERANCANGAN"],
+
     // Status keywords for coloring ONLY. Actual categories are dynamic.
     COLOR_PALETTE: {
         GREEN: "#86efac",  // Siap, Komited, etc.
@@ -1048,30 +1052,55 @@ const UI = {
         };
         window.requestAnimationFrame(step);
     },
-    // Updated: Render Status List dynamically based on actual content
+    // Updated: Render Status List dynamically based on actual content AND Mandatory Statuses
     renderStatusList(data) {
         const container = document.getElementById('status-list');
         container.innerHTML = "";
         
         const stats = {};
+
+        // 1. Initialize Mandatory Statuses with 0
+        APP_CONFIG.MANDATORY_STATUSES.forEach(status => {
+            stats[status] = {
+                count: 0,
+                color: Utils.getStatusColor(status),
+                details: {}
+            };
+            APP_CONFIG.PROJECT_TYPES.forEach(t => stats[status].details[t.type] = 0);
+        });
+
+        // 2. Process Actual Data
         data.forEach(p => {
             const cat = Utils.getStatusCategory(p.STATUS); // Actual status
             if(!stats[cat]) {
+                // If found a new status not in mandatory list
                 stats[cat] = { 
                     count: 0, 
-                    color: Utils.getStatusColor(cat), // Keywords based color
+                    color: Utils.getStatusColor(cat), 
                     details: {} 
                 };
+                APP_CONFIG.PROJECT_TYPES.forEach(t => stats[cat].details[t.type] = 0);
             }
             stats[cat].count++;
-            if(!stats[cat].details[p._type]) stats[cat].details[p._type] = 0;
             stats[cat].details[p._type]++;
         });
         
         const totalCount = data.length;
         
-        // Sort by count desc
-        const sortedCats = Object.keys(stats).sort((a,b) => stats[b].count - stats[a].count);
+        // 3. Sort: Count Descending, but handle ties or 0s gracefully
+        const sortedCats = Object.keys(stats).sort((a,b) => {
+            // Priority 1: Higher count first
+            const diff = stats[b].count - stats[a].count;
+            if (diff !== 0) return diff;
+            
+            // Priority 2: Follow Mandatory Order if both are 0 (or equal)
+            const idxA = APP_CONFIG.MANDATORY_STATUSES.indexOf(a);
+            const idxB = APP_CONFIG.MANDATORY_STATUSES.indexOf(b);
+            if (idxA > -1 && idxB > -1) return idxA - idxB;
+            
+            // Priority 3: Alphabetical
+            return a.localeCompare(b);
+        });
 
         sortedCats.forEach(cat => {
             const itemData = stats[cat];
@@ -1081,7 +1110,14 @@ const UI = {
             let subHtml = "";
             Object.entries(itemData.details).forEach(([type, tCount]) => {
                 const tConfig = Utils.getTypeConfig(type);
-                const tPercent = Math.round((tCount / itemData.count) * 100);
+                // Percent relative to category count (avoid div by zero)
+                const tPercent = itemData.count > 0 ? Math.round((tCount / itemData.count) * 100) : 0;
+                
+                // Show bars even if count is 0 if needed, but usually hides 0-sub-stats
+                // For sub-stats, we keep showing if count > 0 OR if it's the only way to see structure
+                // But generally cleaner to hide empty sub-rows unless total is 0.
+                // Let's show all project types if the category is 0 to show "completeness" of the UI
+                
                 subHtml += `
                     <div class="sub-stat-row">
                          <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
@@ -1136,30 +1172,45 @@ const UI = {
             this.initReportMap(data);
         }, 300);
         
-        // --- 1. Status Section (Fixed: Sorting by Count Descending) ---
+        // --- 1. Status Section (Fixed: Show All Categories including 0) ---
         const modalStatus = document.getElementById('dynamic-status-container');
         modalStatus.innerHTML = "";
         
-        // a. Calculate counts & details FIRST
+        // a. Initialize Mandatory Statuses
         const currentCounts = {};
         const currentDetails = {}; 
         
+        APP_CONFIG.MANDATORY_STATUSES.forEach(status => {
+            currentCounts[status] = 0;
+            currentDetails[status] = {};
+            APP_CONFIG.PROJECT_TYPES.forEach(t => currentDetails[status][t.type] = 0);
+        });
+        
+        // b. Calculate Actual Data
         data.forEach(p => {
             const s = Utils.getStatusCategory(p.STATUS);
-            currentCounts[s] = (currentCounts[s] || 0) + 1;
-            
-            if(!currentDetails[s]) currentDetails[s] = {};
-            if(!currentDetails[s][p._type]) currentDetails[s][p._type] = 0;
+            if (!currentCounts.hasOwnProperty(s)) {
+                currentCounts[s] = 0;
+                currentDetails[s] = {};
+                APP_CONFIG.PROJECT_TYPES.forEach(t => currentDetails[s][t.type] = 0);
+            }
+            currentCounts[s]++;
             currentDetails[s][p._type]++;
         });
 
-        // b. Get unique statuses and SORT by Count (Descending)
+        // c. Sort
         const allUniqueStatuses = Object.keys(currentCounts);
         const sortedStatusList = allUniqueStatuses.sort((a, b) => {
-            return (currentCounts[b] || 0) - (currentCounts[a] || 0);
+            const diff = currentCounts[b] - currentCounts[a];
+            if (diff !== 0) return diff;
+            
+            const idxA = APP_CONFIG.MANDATORY_STATUSES.indexOf(a);
+            const idxB = APP_CONFIG.MANDATORY_STATUSES.indexOf(b);
+            if (idxA > -1 && idxB > -1) return idxA - idxB;
+            return a.localeCompare(b);
         });
 
-        // c. Render Status List
+        // d. Render Status List
         sortedStatusList.forEach(cat => {
              const count = currentCounts[cat] || 0;
              const percentage = data.length > 0 ? ((count / data.length) * 100).toFixed(1) : "0.0";
@@ -1169,20 +1220,19 @@ const UI = {
              if (currentDetails[cat]) {
                  APP_CONFIG.PROJECT_TYPES.forEach(t => {
                      const tCount = currentDetails[cat][t.type] || 0;
-                     if(tCount > 0) {
-                         const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
-                         const tConfig = Utils.getTypeConfig(t.type);
-                         subHtml += `
-                            <div class="sub-stat-row">
-                                 <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
-                                 <span>${tCount}</span>
-                            </div>
-                            <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
-                         `;
-                     }
+                     // Always show breakdown even if 0 for report card completeness
+                     const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
+                     const tConfig = Utils.getTypeConfig(t.type);
+                     subHtml += `
+                        <div class="sub-stat-row">
+                             <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
+                             <span>${tCount}</span>
+                        </div>
+                        <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
+                     `;
                  });
              }
-             if(!subHtml) subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic;">Tiada data untuk lokasi ini.</div>`;
+             if(!subHtml) subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic;">Tiada data.</div>`;
 
              modalStatus.innerHTML += `
                 <div class="status-wrapper" style="margin-bottom:15px;">
