@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.2 - Status Update</title>
+  <title>Web GIS Projek Sabah v6.3 - Data Sebenar Status</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -533,10 +533,6 @@ const APP_CONFIG = {
         { id: "tower", sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", type: "TOWER", label: "Menara", color: "#ff6b6b", icon: "🗼", filter: { col: "PROJECT_TYPE", val: "USP" } }
     ],
     
-    // Status wajib yang MESTI dipaparkan walaupun tiada data (nilai 0)
-    // Pastikan ejaan sama dengan data dalam Excel jika ada
-    MANDATORY_STATUSES: ["SIAP", "DALAM PELAKSANAAN", "PERANCANGAN"],
-
     // Status keywords for coloring ONLY. Actual categories are dynamic.
     COLOR_PALETTE: {
         GREEN: "#86efac",  // Siap, Komited, etc.
@@ -1052,28 +1048,17 @@ const UI = {
         };
         window.requestAnimationFrame(step);
     },
-    // Updated: Render Status List dynamically based on actual content AND Mandatory Statuses
+    // Updated: Render Status List dynamically based on Actual Data ONLY
     renderStatusList(data) {
         const container = document.getElementById('status-list');
         container.innerHTML = "";
         
         const stats = {};
 
-        // 1. Initialize Mandatory Statuses with 0
-        APP_CONFIG.MANDATORY_STATUSES.forEach(status => {
-            stats[status] = {
-                count: 0,
-                color: Utils.getStatusColor(status),
-                details: {}
-            };
-            APP_CONFIG.PROJECT_TYPES.forEach(t => stats[status].details[t.type] = 0);
-        });
-
-        // 2. Process Actual Data
+        // Process Actual Data ONLY - No presets
         data.forEach(p => {
-            const cat = Utils.getStatusCategory(p.STATUS); // Actual status
+            const cat = Utils.getStatusCategory(p.STATUS); // Actual status from sheet
             if(!stats[cat]) {
-                // If found a new status not in mandatory list
                 stats[cat] = { 
                     count: 0, 
                     color: Utils.getStatusColor(cat), 
@@ -1087,20 +1072,17 @@ const UI = {
         
         const totalCount = data.length;
         
-        // 3. Sort: Count Descending, but handle ties or 0s gracefully
+        // Sort: Count Descending
         const sortedCats = Object.keys(stats).sort((a,b) => {
-            // Priority 1: Higher count first
             const diff = stats[b].count - stats[a].count;
             if (diff !== 0) return diff;
-            
-            // Priority 2: Follow Mandatory Order if both are 0 (or equal)
-            const idxA = APP_CONFIG.MANDATORY_STATUSES.indexOf(a);
-            const idxB = APP_CONFIG.MANDATORY_STATUSES.indexOf(b);
-            if (idxA > -1 && idxB > -1) return idxA - idxB;
-            
-            // Priority 3: Alphabetical
             return a.localeCompare(b);
         });
+
+        if (sortedCats.length === 0) {
+            container.innerHTML = `<div style="text-align:center; color:#aaa; font-style:italic; padding:10px;">Tiada data status</div>`;
+            return;
+        }
 
         sortedCats.forEach(cat => {
             const itemData = stats[cat];
@@ -1110,14 +1092,10 @@ const UI = {
             let subHtml = "";
             Object.entries(itemData.details).forEach(([type, tCount]) => {
                 const tConfig = Utils.getTypeConfig(type);
-                // Percent relative to category count (avoid div by zero)
                 const tPercent = itemData.count > 0 ? Math.round((tCount / itemData.count) * 100) : 0;
                 
-                // Show bars even if count is 0 if needed, but usually hides 0-sub-stats
-                // For sub-stats, we keep showing if count > 0 OR if it's the only way to see structure
-                // But generally cleaner to hide empty sub-rows unless total is 0.
-                // Let's show all project types if the category is 0 to show "completeness" of the UI
-                
+                // Only show sub-bars if there is data, or if you prefer to show 0s to maintain structure
+                // Here we show all types to maintain structure within existing status
                 subHtml += `
                     <div class="sub-stat-row">
                          <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
@@ -1172,21 +1150,14 @@ const UI = {
             this.initReportMap(data);
         }, 300);
         
-        // --- 1. Status Section (Fixed: Show All Categories including 0) ---
+        // --- 1. Status Section (Dynamic - Actual Data Only) ---
         const modalStatus = document.getElementById('dynamic-status-container');
         modalStatus.innerHTML = "";
         
-        // a. Initialize Mandatory Statuses
         const currentCounts = {};
         const currentDetails = {}; 
         
-        APP_CONFIG.MANDATORY_STATUSES.forEach(status => {
-            currentCounts[status] = 0;
-            currentDetails[status] = {};
-            APP_CONFIG.PROJECT_TYPES.forEach(t => currentDetails[status][t.type] = 0);
-        });
-        
-        // b. Calculate Actual Data
+        // Calculate Actual Data Only
         data.forEach(p => {
             const s = Utils.getStatusCategory(p.STATUS);
             if (!currentCounts.hasOwnProperty(s)) {
@@ -1198,19 +1169,19 @@ const UI = {
             currentDetails[s][p._type]++;
         });
 
-        // c. Sort
+        // Sort
         const allUniqueStatuses = Object.keys(currentCounts);
         const sortedStatusList = allUniqueStatuses.sort((a, b) => {
             const diff = currentCounts[b] - currentCounts[a];
             if (diff !== 0) return diff;
-            
-            const idxA = APP_CONFIG.MANDATORY_STATUSES.indexOf(a);
-            const idxB = APP_CONFIG.MANDATORY_STATUSES.indexOf(b);
-            if (idxA > -1 && idxB > -1) return idxA - idxB;
             return a.localeCompare(b);
         });
 
-        // d. Render Status List
+        if (sortedStatusList.length === 0) {
+             modalStatus.innerHTML = `<div style="text-align:center; color:#aaa; font-style:italic; padding:20px;">Tiada data status untuk lokasi ini.</div>`;
+        }
+
+        // Render Status List
         sortedStatusList.forEach(cat => {
              const count = currentCounts[cat] || 0;
              const percentage = data.length > 0 ? ((count / data.length) * 100).toFixed(1) : "0.0";
@@ -1220,7 +1191,6 @@ const UI = {
              if (currentDetails[cat]) {
                  APP_CONFIG.PROJECT_TYPES.forEach(t => {
                      const tCount = currentDetails[cat][t.type] || 0;
-                     // Always show breakdown even if 0 for report card completeness
                      const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
                      const tConfig = Utils.getTypeConfig(t.type);
                      subHtml += `
