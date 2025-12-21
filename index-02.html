@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.6 - Fixed & Debugged</title>
+  <title>Web GIS Projek Sabah v6.7 - Status Filter Updated</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1286,17 +1286,20 @@ const UI = {
                 subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic; padding: 8px 0;">Tiada projek dalam kategori ini.</div>`;
             } else {
                 Object.entries(itemData.details).forEach(([type, tCount]) => {
-                    const tConfig = Utils.getTypeConfig(type);
-                    // Percent relative to category count (avoid div by zero)
-                    const tPercent = itemData.count > 0 ? Math.round((tCount / itemData.count) * 100) : 0;
-                    
-                    subHtml += `
-                        <div class="sub-stat-row">
-                             <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
-                             <span>${tCount}</span>
-                        </div>
-                        <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
-                    `;
+                    // *** UPDATED LOGIC: ONLY SHOW IF COUNT > 0 ***
+                    if (tCount > 0) {
+                        const tConfig = Utils.getTypeConfig(type);
+                        // Percent relative to category count (avoid div by zero)
+                        const tPercent = itemData.count > 0 ? Math.round((tCount / itemData.count) * 100) : 0;
+                        
+                        subHtml += `
+                            <div class="sub-stat-row">
+                                <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
+                                <span>${tCount}</span>
+                            </div>
+                            <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
+                        `;
+                    }
                 });
             }
 
@@ -1411,15 +1414,18 @@ const UI = {
                  // Render breakdown
                  APP_CONFIG.PROJECT_TYPES.forEach(t => {
                      const tCount = itemData.details[t.type] || 0;
-                     const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
-                     const tConfig = Utils.getTypeConfig(t.type);
-                     subHtml += `
-                        <div class="sub-stat-row">
-                             <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
-                             <span>${tCount}</span>
-                        </div>
-                        <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
-                     `;
+                     // *** UPDATED LOGIC: ONLY SHOW IF COUNT > 0 ***
+                     if (tCount > 0) {
+                         const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
+                         const tConfig = Utils.getTypeConfig(t.type);
+                         subHtml += `
+                            <div class="sub-stat-row">
+                                 <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
+                                 <span>${tCount}</span>
+                            </div>
+                            <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
+                         `;
+                     }
                  });
              }
 
