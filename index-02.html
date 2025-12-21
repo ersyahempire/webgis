@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.0 - Report Map Fixed</title>
+  <title>Web GIS Projek Sabah v6.1 - Stable & Debugged</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,12 +28,12 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);        
+  --glass-border: rgba(255, 255, 255, 0.8);       
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
-  --glass-blur: 20px;                         
+  --glass-blur: 20px;                          
   --text-main: #111827;       /* Gray 900 */
   --text-sub: #6b7280;        /* Gray 500 */
-  --radius: 20px;            
+  --radius: 20px;             
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -53,17 +53,19 @@ body {
   width: 100%; height: 100%;
   z-index: 0;
   background: #ddd; 
+  transition: width 0.3s ease;
 }
 
 /* TOOLTIP FIXES */
 .leaflet-tooltip {
     pointer-events: none !important;
-    background: rgba(255,255,255,0.8);
-    border: none;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--primary);
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     font-weight: 700;
     font-size: 11px;
     color: var(--primary-dark);
+    border-radius: 4px;
 }
 .leaflet-interactive { cursor: pointer; }
 
@@ -229,7 +231,7 @@ body {
 /* ----- REPORT MODAL ----- */
 .report-overlay {
     position: fixed; inset: 0; z-index: 5000;
-    background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(6px);
+    background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(8px);
     display: none; align-items: center; justify-content: center;
     opacity: 0; transition: opacity 0.3s ease;
 }
@@ -274,9 +276,9 @@ body {
 .btn-download-pdf {
     background: rgba(255, 255, 255, 0.9); padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; 
     cursor: pointer; border: none; color: #4f46e5; font-weight: 700; text-transform: uppercase;
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 8px; transition: all 0.2s;
 }
-.btn-download-pdf:hover { background: #fff; }
+.btn-download-pdf:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 .current-time { font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 600; background: rgba(0,0,0,0.1); padding: 5px 12px; border-radius: 6px; }
 
 /* Report Layout */
@@ -294,7 +296,7 @@ body {
 .mini-card span { font-size: 0.75rem; font-weight: 700; color: #4b5563; text-transform: uppercase; }
 
 .charts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.chart-card { height: 480px; padding: 20px; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.65); }
+.chart-card { height: 480px; padding: 20px; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.65); overflow: hidden; }
 .chart-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; color: #111827; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
 /* --- MAIN CONTENT FIXES (MAP & STATUS AUTO HEIGHT) --- */
@@ -302,7 +304,6 @@ body {
     display: grid; 
     grid-template-columns: 2fr 1fr; 
     gap: 20px; 
-    /* REMOVED FIXED HEIGHTS to allow growing */
     height: auto; 
     align-items: stretch; /* Ensure both columns stretch to the height of the tallest */
 }
@@ -312,7 +313,6 @@ body {
     overflow: hidden; 
     border-radius: 16px; 
     position: relative; 
-    /* Ensures map has at least some height, but grows if status list is long */
     min-height: 550px; 
     height: auto; 
     display: flex;
@@ -321,7 +321,7 @@ body {
 
 #report-map { 
     width: 100%; 
-    min-height: 550px; /* Ensure leafet sees a height */
+    min-height: 550px; 
     flex: 1; /* Grow to fill container */
     background: #e5e7eb; 
     z-index: 1;
@@ -334,7 +334,6 @@ body {
     padding: 0; 
     display: flex; 
     flex-direction: column; 
-    /* REMOVED MAX-HEIGHT & OVERFLOW to allow auto expand */
     height: 100%; 
 }
 
@@ -349,7 +348,6 @@ body {
 .status-scroll-area { 
     padding: 20px; 
     flex: 1; 
-    /* REMOVED OVERFLOW-Y to remove scrollbar */
     overflow: visible; 
 }
 
@@ -466,7 +464,9 @@ body {
                       <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
                   <div class="header-info">
-                      <button class="btn-download-pdf" onclick="generatePDF()">Muat Turun PDF</button>
+                      <button class="btn-download-pdf" onclick="generatePDF()">
+                          <i class="fas fa-download"></i> Muat Turun PDF
+                      </button>
                       <div class="current-time" id="clock">Loading...</div>
                   </div>
               </header>
@@ -512,7 +512,7 @@ body {
               <div class="bottom-grid" id="dynamic-bottom-grid"></div>
 
               <footer>
-                  Sistem Maklumat Geografi (GIS) Projek Sabah | Dijana secara automatik pada 21/12/2025, 4:42:55 PTG | © MCMC Tawau
+                  Sistem Maklumat Geografi (GIS) Projek Sabah | Dijana secara automatik pada <span id="footer-date"></span> | © MCMC Tawau
               </footer>
           </div>
       </div>
@@ -623,7 +623,7 @@ const AppState = {
     activeStatusFilter: null,
     
     // Decoupled Filters
-    activeCategory: null,      // Left Dashboard (Single Focus)
+    activeCategory: null,       // Left Dashboard (Single Focus)
     activeTypeToggles: new Set(), // Right Controls (Multiple Select)
     
     // Charts
@@ -643,7 +643,9 @@ const DataManager = {
             const results = await Promise.all(promises);
             AppState.allProjects = results.flat();
             
-            if (AppState.allProjects.length === 0) alert("Tiada data ditemui.");
+            if (AppState.allProjects.length === 0) {
+                 console.warn("Tiada data ditemui dalam Google Sheets.");
+            }
             
             MapManager.renderMarkersInBatches(AppState.allProjects, () => {
                 FilterManager.applyFilters();
@@ -652,22 +654,28 @@ const DataManager = {
         } catch (error) {
             console.error("Critical Data Load Error:", error);
             UI.showLoading(false);
-            alert("Ralat memuatkan data.");
+            alert("Ralat memuatkan data. Sila pastikan Google Sheets 'Published to Web'.");
         }
     },
     async fetchSingleSheet(config) {
+        // Use tqx=out:json explicitly to avoid callback wrapper if possible
         const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:json&tq=`;
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
             const text = await res.text();
+            
+            // ROBUST PARSING: Google sometimes wraps JSON in weird prefixes
             const jsonStart = text.indexOf('{');
             const jsonEnd = text.lastIndexOf('}');
             if (jsonStart === -1 || jsonEnd === -1) return [];
-            const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+            
+            const jsonString = text.substring(jsonStart, jsonEnd + 1);
+            const json = JSON.parse(jsonString);
+            
             return (json.table && json.table.rows) ? this.processSheetData(json.table, config) : [];
         } catch (e) {
-            console.warn(`Gagal memuatkan sheet: ${config.label}`, e);
+            console.warn(`Gagal memuatkan sheet: ${config.label}. ID: ${config.sheetId}`, e);
             return [];
         }
     },
@@ -917,7 +925,6 @@ const FilterManager = {
         }
 
         if (AppState.activeStatusFilter) {
-            // Updated: Exact match filtering for status
             mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === AppState.activeStatusFilter);
         }
 
@@ -1110,6 +1117,7 @@ const UI = {
         document.getElementById('report-badge-area').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-total-count').textContent = data.length;
         this.updateClock();
+        document.getElementById('footer-date').textContent = new Date().toLocaleString();
         
         // Mini Stats (Top)
         const miniContainer = document.getElementById('report-mini-stats');
@@ -1122,7 +1130,11 @@ const UI = {
                 </div>`;
         });
         
-        ChartManager.renderCharts(data);
+        // Important: Wait for transition to expand element before rendering charts/maps
+        setTimeout(() => {
+            ChartManager.renderCharts(data);
+            this.initReportMap(data);
+        }, 300);
         
         // --- 1. Status Section (Fixed: Sorting by Count Descending) ---
         const modalStatus = document.getElementById('dynamic-status-container');
@@ -1184,111 +1196,108 @@ const UI = {
                     <div class="status-details show" style="display:block;">${subHtml}</div>
                 </div>`;
         });
+    },
+    // Extracted initReportMap for cleaner logic
+    initReportMap(data) {
+        // A. Clean up existing map instance and DOM
+        if (AppState.reportMap) {
+            AppState.reportMap.off();
+            AppState.reportMap.remove();
+            AppState.reportMap = null;
+        }
+        
+        const mapContainer = document.getElementById('report-map');
+        if (!mapContainer) return;
+        mapContainer.innerHTML = ""; // Force clean DOM
 
-        // --- 2. Map Section (COMPLETE REWRITE for Lifecycle Safety) ---
-        const initReportMap = () => {
-            // A. Clean up existing map instance and DOM
-            if (AppState.reportMap) {
-                AppState.reportMap.off();
-                AppState.reportMap.remove();
-                AppState.reportMap = null;
-            }
+        // B. Initialize Map
+        AppState.reportMap = L.map('report-map', { 
+            zoomControl: false, 
+            attributionControl: false,
+            preferCanvas: true // Optimization
+        });
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
+        
+        // C. Create Panes for z-indexing
+        AppState.reportMap.createPane('boundaryPane');
+        AppState.reportMap.getPane('boundaryPane').style.zIndex = 300;
+        AppState.reportMap.createPane('markerPane');
+        AppState.reportMap.getPane('markerPane').style.zIndex = 400;
+
+        const boundaryGroup = L.featureGroup().addTo(AppState.reportMap);
+        const markerGroup = L.featureGroup({pane: 'markerPane'}).addTo(AppState.reportMap);
+        
+        // D. Add Boundary Layer (Safe Check)
+        let boundaryAdded = false;
+        if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
+            const layerObj = AppState.dataLayers[AppState.activeBoundaryKey];
             
-            const mapContainer = document.getElementById('report-map');
-            if (!mapContainer) return;
-            mapContainer.innerHTML = ""; // Force clean DOM
+            // SAFETY CHECK: Ensure layer has toGeoJSON method
+            if (typeof layerObj.toGeoJSON === 'function') {
+                const geoJson = layerObj.toGeoJSON();
+                const boundaryLayer = L.geoJSON(geoJson, {
+                      pane: 'boundaryPane',
+                      style: (feature) => {
+                          const name = Utils.normalize(feature.properties.NAME || feature.properties.name || feature.properties.DISTRICT || feature.properties.DAERAH || feature.properties.DUN || feature.properties.PARLIAMENT || "Sabah");
+                          const isActive = name === AppState.activeFeatureName;
+                          return { 
+                              color: isActive ? '#DC2626' : '#94a3b8', 
+                              weight: isActive ? 2 : 1,
+                              fillColor: isActive ? '#EF4444' : 'transparent',
+                              fillOpacity: isActive ? 0.2 : 0
+                          };
+                      }
+                }).addTo(boundaryGroup);
+                boundaryAdded = true;
+            }
+        }
 
-            // B. Initialize Map
-            AppState.reportMap = L.map('report-map', { 
-                zoomControl: false, 
-                attributionControl: false,
-                preferCanvas: true // Optimization
+        // E. Add Markers
+        data.forEach(p => {
+            if(p._validCoord) {
+                const config = Utils.getTypeConfig(p._type);
+                L.circleMarker([p.LATITUDE, p.LONGITUDE], { 
+                    pane: 'markerPane',
+                    radius: 4, 
+                    color: '#fff', 
+                    weight: 1,
+                    fillColor: config.color, 
+                    fillOpacity: 0.8 
+                }).addTo(markerGroup);
+            }
+        });
+
+        // F. Final Rendering & Zoom
+        // Must invalidate size AFTER map is visible and initialized
+        AppState.reportMap.invalidateSize();
+
+        // Smart Zoom Logic
+        if (AppState.activeFeatureName && boundaryAdded) {
+            // Find bounds of the specific active feature
+            let boundsToFit = null;
+            boundaryGroup.eachLayer(l => {
+                 // Check specifically inside the added GeoJSON layer
+                 if (l.eachLayer) { // It's a group/geoJSON
+                     l.eachLayer(featLayer => {
+                         const name = Utils.normalize(featLayer.feature.properties.NAME || featLayer.feature.properties.name || featLayer.feature.properties.DISTRICT || featLayer.feature.properties.DAERAH || featLayer.feature.properties.DUN || featLayer.feature.properties.PARLIAMENT);
+                         if (name === AppState.activeFeatureName) {
+                             boundsToFit = featLayer.getBounds();
+                         }
+                     });
+                 }
             });
             
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
-            
-            // C. Create Panes for z-indexing
-            AppState.reportMap.createPane('boundaryPane');
-            AppState.reportMap.getPane('boundaryPane').style.zIndex = 300;
-            AppState.reportMap.createPane('markerPane');
-            AppState.reportMap.getPane('markerPane').style.zIndex = 400;
-
-            const boundaryGroup = L.featureGroup().addTo(AppState.reportMap);
-            const markerGroup = L.featureGroup({pane: 'markerPane'}).addTo(AppState.reportMap);
-            
-            // D. Add Boundary Layer (Safe Check)
-            let boundaryAdded = false;
-            if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
-                const layerObj = AppState.dataLayers[AppState.activeBoundaryKey];
-                
-                // SAFETY CHECK: Ensure layer has toGeoJSON method
-                if (typeof layerObj.toGeoJSON === 'function') {
-                    const geoJson = layerObj.toGeoJSON();
-                    const boundaryLayer = L.geoJSON(geoJson, {
-                          pane: 'boundaryPane',
-                          style: (feature) => {
-                              const name = Utils.extractGeoName(feature);
-                              const isActive = name === AppState.activeFeatureName;
-                              return { 
-                                  color: isActive ? '#DC2626' : '#94a3b8', 
-                                  weight: isActive ? 2 : 1,
-                                  fillColor: isActive ? '#EF4444' : 'transparent',
-                                  fillOpacity: isActive ? 0.2 : 0
-                              };
-                          }
-                    }).addTo(boundaryGroup);
-                    boundaryAdded = true;
-                }
-            }
-
-            // E. Add Markers
-            data.forEach(p => {
-                if(p._validCoord) {
-                    const config = Utils.getTypeConfig(p._type);
-                    L.circleMarker([p.LATITUDE, p.LONGITUDE], { 
-                        pane: 'markerPane',
-                        radius: 4, 
-                        color: '#fff', 
-                        weight: 1,
-                        fillColor: config.color, 
-                        fillOpacity: 0.8 
-                    }).addTo(markerGroup);
-                }
-            });
-
-            // F. Final Rendering & Zoom
-            // Must invalidate size AFTER map is visible and initialized
-            AppState.reportMap.invalidateSize();
-
-            // Smart Zoom Logic
-            if (AppState.activeFeatureName && boundaryAdded) {
-                // Find bounds of the specific active feature
-                let boundsToFit = null;
-                boundaryGroup.eachLayer(l => {
-                     // Check specifically inside the added GeoJSON layer
-                     if (l.eachLayer) { // It's a group/geoJSON
-                         l.eachLayer(featLayer => {
-                             if (Utils.extractGeoName(featLayer.feature) === AppState.activeFeatureName) {
-                                 boundsToFit = featLayer.getBounds();
-                             }
-                         });
-                     }
-                });
-                
-                if (boundsToFit && boundsToFit.isValid()) {
-                    AppState.reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
-                } else {
-                    AppState.reportMap.fitBounds(boundaryGroup.getBounds(), { padding: [20, 20] });
-                }
-            } else if (markerGroup.getLayers().length > 0) {
-                 AppState.reportMap.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
+            if (boundsToFit && boundsToFit.isValid()) {
+                AppState.reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
             } else {
-                AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
+                AppState.reportMap.fitBounds(boundaryGroup.getBounds(), { padding: [20, 20] });
             }
-        };
-
-        // Trigger initialization after modal transition is likely complete
-        setTimeout(initReportMap, 300);
+        } else if (markerGroup.getLayers().length > 0) {
+             AppState.reportMap.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
+        } else {
+            AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
+        }
     },
     updateClock() {
         const now = new Date();
@@ -1323,12 +1332,7 @@ const UI = {
         ].join("\n");
 
         // 4. Bina Nama Fail Automatik
-        // Format: data_gis_{layer}_{project}_{status}_{datetime}.csv
-        
-        // a. Layer Name
         let fLayer = AppState.activeFeatureName ? AppState.activeFeatureName.replace(/\s+/g, '_') : "Seluruh_Sabah";
-        
-        // b. Project Name
         let fProject = "Semua_Projek";
         if (AppState.activeCategory) {
             fProject = AppState.activeCategory;
@@ -1337,13 +1341,10 @@ const UI = {
                 Array.from(AppState.activeTypeToggles)[0] : "Gabungan";
         }
         
-        // c. Status Name
         let fStatus = AppState.activeStatusFilter ? AppState.activeStatusFilter.replace(/\s+/g, '_') : "Semua_Status";
-        
-        // d. Date Time
         const now = new Date();
-        const fDate = now.toISOString().slice(0,10).replace(/-/g, ''); // YYYYMMDD
-        const fTime = now.toTimeString().slice(0,5).replace(/:/g, ''); // HHMM
+        const fDate = now.toISOString().slice(0,10).replace(/-/g, ''); 
+        const fTime = now.toTimeString().slice(0,5).replace(/:/g, ''); 
         
         const fileName = `data_gis_${fLayer}_${fProject}_${fStatus}_${fDate}_${fTime}.csv`;
 
@@ -1469,6 +1470,10 @@ function toggleDashboard() {
     const btn = document.getElementById('sidebar-toggle');
     panel.classList.toggle('closed');
     btn.innerHTML = panel.classList.contains('closed') ? '<i class="fas fa-chart-pie"></i>' : '<i class="fas fa-times"></i>';
+    // Fix: Trigger map resize when sidebar toggles to avoid grey areas
+    setTimeout(() => {
+        if(AppState.map) AppState.map.invalidateSize();
+    }, 300);
 }
 
 function closeReport() {
@@ -1484,27 +1489,71 @@ function closeReport() {
 function generatePDF() {
     const element = document.querySelector('.report-container');
     const modal = document.querySelector('.report-modal');
+    
+    // Simpan style asal
     const origOverflow = modal.style.overflow;
     const origContOverflow = element.style.overflowY;
+    const origHeight = element.style.height;
+
+    // Paksa visible supaya html2canvas boleh tangkap semua content
     modal.style.overflow = "visible";
     element.style.overflowY = "visible";
+    element.style.height = "auto"; // Biarkan ia memanjang ke bawah
+    
     document.querySelector('.modal-close-btn').style.display = 'none';
     document.querySelector('.btn-download-pdf').style.visibility = 'hidden';
-    html2canvas(element, { scale: 1.5, useCORS: true }).then(canvas => {
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3');
+
+    // Tambah tetingkap loading
+    UI.showLoading(true, "MENJANA PDF...");
+
+    html2canvas(element, { 
+        scale: 1.5, 
+        useCORS: true,
+        scrollY: -window.scrollY, // Fix scroll offset issues
+        windowHeight: element.scrollHeight + 100 // Ensure full height capture
+    }).then(canvas => {
+        const imgData = canvas.toDataURL('image/jpeg', 0.90); // Compress slightly
+        const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); // Landscape, A3 for dashboard view
+        
         const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = (canvas.height * pdfW) / canvas.width;
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH);
-        pdf.save(`Laporan_GIS_${APP_CONFIG.PROJECT_TYPES[0].type}_${new Date().toISOString().slice(0,10)}.pdf`);
+        const pdfH = pdf.internal.pageSize.getHeight();
+        
+        // Calculate aspect ratio to fit width
+        const imgRatio = canvas.height / canvas.width;
+        const printH = pdfW * imgRatio;
+
+        // If print height > pdf height, we might need multiple pages, but for dashboard one page is preferred
+        // We will scale to fit nicely
+        if (printH > pdfH) {
+             // If too tall, fit to height instead
+             const scaleFactor = pdfH / printH;
+             const finalW = pdfW * scaleFactor;
+             const finalH = pdfH; 
+             // Center it
+             const x = (pdfW - finalW) / 2;
+             pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
+        } else {
+             pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
+        }
+
+        const fileName = `Laporan_GIS_Sabah_${new Date().toISOString().slice(0,10)}.pdf`;
+        pdf.save(fileName);
+    }).catch(err => {
+        console.error("PDF Error:", err);
+        alert("Ralat menjana PDF.");
     }).finally(() => {
+        // Restore styles
         modal.style.overflow = origOverflow;
         element.style.overflowY = origContOverflow;
+        element.style.height = origHeight;
+        
         document.querySelector('.modal-close-btn').style.display = 'flex';
         document.querySelector('.btn-download-pdf').style.visibility = 'visible';
+        UI.showLoading(false);
     });
 }
 
+// Bind functions to window
 window.toggleDashboard = toggleDashboard;
 window.closeReport = closeReport;
 window.generatePDF = generatePDF;
@@ -1515,6 +1564,7 @@ window.onload = () => {
     UI.init();
     MapManager.init();
     DataManager.loadAllData();
+    // Auto refresh every 15 mins
     setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS);
 };
 </script>
