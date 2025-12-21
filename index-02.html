@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.7 - Status Filter Updated</title>
+  <title>Web GIS Projek Sabah v6.8 - Debugged</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,9 +28,9 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);       
+  --glass-border: rgba(255, 255, 255, 0.8);        
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
-  --glass-blur: 20px;                         
+  --glass-blur: 20px;                          
   --text-main: #111827;       /* Gray 900 */
   --text-sub: #6b7280;        /* Gray 500 */
   --radius: 20px;             
@@ -538,9 +538,6 @@ const APP_CONFIG = {
     // ===============================================================
     // KONFIGURASI STATUS SECARA MANUAL (STATUS_MAPPING)
     // ===============================================================
-    // Masukkan "Keyword" STATUS mengikut data sebenar pada column "STATUS" di Google Sheet.
-    // Susunan dalam array ini akan menentukan susunan paparan di Dashboard & Report.
-    // Jika data mengandungi status yang TIDAK tersenarai di sini, ia akan guna warna default.
     STATUS_MAPPING: [
         { keywords: ["SIAP"], color: "#86efac" }, // Hijau
         { keywords: ["PEMBINAAN"], color: "#fde047" }, // Kuning
@@ -605,8 +602,6 @@ const Utils = {
         const s = Utils.normalize(statusKey);
         // Find matching config
         const found = APP_CONFIG.STATUS_MAPPING.find(config => {
-            // Check if any keyword in the config array matches the status key (partial or exact)
-            // Using includes for exact word match in the list of keywords provided in config
             return config.keywords.some(k => s.includes(k) || s === k);
         });
         
@@ -689,7 +684,7 @@ const DataManager = {
             if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
             const text = await res.text();
             
-            // ROBUST PARSING: Google sometimes wraps JSON in weird prefixes
+            // ROBUST PARSING: Google sometimes wraps JSON in weird prefixes (/*O_o*/)
             const jsonStart = text.indexOf('{');
             const jsonEnd = text.lastIndexOf('}');
             if (jsonStart === -1 || jsonEnd === -1) return [];
@@ -810,8 +805,8 @@ const MapManager = {
                 });
                 AppState.dataLayers[key] = layer;
             } catch (e) {
-                console.warn(`GeoJSON ${key} gagal dimuatkan.`);
-                AppState.dataLayers[key] = L.layerGroup();
+                console.warn(`GeoJSON ${key} gagal dimuatkan (Mungkin fail tidak wujud).`, e);
+                AppState.dataLayers[key] = L.layerGroup(); // Initialize Empty Group to prevent errors
             }
         };
         await Promise.all([
@@ -912,7 +907,7 @@ const MapManager = {
 
 /**
  * =============================================================================
- * 6. CHART MANAGEMENT (MISSING IN ORIGINAL CODE)
+ * 6. CHART MANAGEMENT
  * =============================================================================
  */
 const ChartManager = {
@@ -1323,7 +1318,9 @@ const UI = {
         FilterManager.applyFilters();
     },
     openReport() {
-        const data = AppState.currentFilteredList.length > 0 ? AppState.currentFilteredList : AppState.allProjects;
+        // Fallback to all projects if filter is empty (e.g., initialization)
+        const data = (AppState.currentFilteredList && AppState.currentFilteredList.length > 0) ? AppState.currentFilteredList : AppState.allProjects;
+        
         document.getElementById('report-overlay').classList.add('open');
         document.getElementById('report-layer-name').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-badge-area').textContent = AppState.activeFeatureName || "SELURUH SABAH";
@@ -1459,7 +1456,7 @@ const UI = {
         AppState.reportMap = L.map('report-map', { 
             zoomControl: false, 
             attributionControl: false,
-            preferCanvas: true // Optimization
+            preferCanvas: true // Optimization for PDF generation
         });
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
@@ -1571,7 +1568,8 @@ const UI = {
                     
                     // Mapping extra columns
                     const extra = p._extra_details.find(d => d.label === h);
-                    return extra ? `"${String(extra.value).replace(/"/g, '""')}"` : "";
+                    const extraVal = extra ? extra.value : "";
+                    return `"${String(extraVal).replace(/"/g, '""')}"`;
                 }).join(",");
             })
         ].join("\n");
@@ -1648,51 +1646,50 @@ function generatePDF() {
     // Tambah tetingkap loading
     UI.showLoading(true, "MENJANA PDF...");
 
-    html2canvas(element, { 
-        scale: 1.5, 
-        useCORS: true,
-        scrollY: -window.scrollY, // Fix scroll offset issues
-        windowHeight: element.scrollHeight + 100 // Ensure full height capture
-    }).then(canvas => {
-        const imgData = canvas.toDataURL('image/jpeg', 0.90); // Compress slightly
-        const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); // Landscape, A3 for dashboard view
-        
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = pdf.internal.pageSize.getHeight();
-        
-        // Calculate aspect ratio to fit width
-        const imgRatio = canvas.height / canvas.width;
-        const printH = pdfW * imgRatio;
+    // Wait briefly for map tiles to be ready after style change
+    setTimeout(() => {
+        html2canvas(element, { 
+            scale: 1.5, 
+            useCORS: true,
+            allowTaint: true,
+            scrollY: -window.scrollY, 
+            windowHeight: element.scrollHeight + 100 
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/jpeg', 0.90);
+            const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); // Landscape, A3
+            
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            
+            const imgRatio = canvas.height / canvas.width;
+            const printH = pdfW * imgRatio;
 
-        // If print height > pdf height, we might need multiple pages, but for dashboard one page is preferred
-        // We will scale to fit nicely
-        if (printH > pdfH) {
-             // If too tall, fit to height instead
-             const scaleFactor = pdfH / printH;
-             const finalW = pdfW * scaleFactor;
-             const finalH = pdfH; 
-             // Center it
-             const x = (pdfW - finalW) / 2;
-             pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
-        } else {
-             pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
-        }
+            if (printH > pdfH) {
+                 const scaleFactor = pdfH / printH;
+                 const finalW = pdfW * scaleFactor;
+                 const finalH = pdfH; 
+                 const x = (pdfW - finalW) / 2;
+                 pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
+            } else {
+                 pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
+            }
 
-        const fileName = `Laporan_GIS_Sabah_${new Date().toISOString().slice(0,10)}.pdf`;
-        pdf.save(fileName);
-    }).catch(err => {
-        console.error("PDF Error:", err);
-        alert("Ralat menjana PDF.");
-    }).finally(() => {
-        // Restore styles
-        modal.style.overflow = origOverflow;
-        element.style.overflowY = origContOverflow;
-        element.style.height = origHeight;
-        
-        document.querySelector('.modal-close-btn').style.display = 'flex';
-        document.querySelector('.btn-download-pdf').style.visibility = 'visible';
-        UI.showLoading(false);
-    });
+            const fileName = `Laporan_GIS_Sabah_${new Date().toISOString().slice(0,10)}.pdf`;
+            pdf.save(fileName);
+        }).catch(err => {
+            console.error("PDF Error:", err);
+            alert("Ralat menjana PDF. Sila cuba lagi.");
+        }).finally(() => {
+            // Restore styles
+            modal.style.overflow = origOverflow;
+            element.style.overflowY = origContOverflow;
+            element.style.height = origHeight;
+            
+            document.querySelector('.modal-close-btn').style.display = 'flex';
+            document.querySelector('.btn-download-pdf').style.visibility = 'visible';
+            UI.showLoading(false);
+        });
+    }, 500); // 500ms delay for map rendering
 }
 
 // Bind functions to window
