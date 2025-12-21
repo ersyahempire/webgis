@@ -467,9 +467,6 @@ body {
  * =============================================================================
  */
 const APP_CONFIG = {
-    // 1.1 SENARAI GOOGLE SHEETS
-    // Tambah sheet baru di sini. 'type' mestilah unik.
-    // 'sheetId': ID dari URL Google Sheet.
     PROJECT_TYPES: [
         { id: "db_bwa", sheetId: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU", type: "BWA", label: "WiFi", color: "#51cf66", icon: "📶" },
         { id: "db_pim", sheetId: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU", type: "NADI", label: "NADI", color: "#4dabf7", icon: "📡" },
@@ -477,24 +474,20 @@ const APP_CONFIG = {
         { id: "tower", sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", type: "TOWER", label: "Menara", color: "#ff6b6b", icon: "🗼", filter: { col: "PROJECT_TYPE", val: "USP" } }
     ],
 
-    // 1.2 KONFIGURASI WARNA STATUS
-    // Tukar kod warna hex di sini. Kunci (key) mesti HURUF BESAR.
     STATUS_COLORS: {
-        "SIAP": { color: "#86efac", label: "SIAP" },        // Hijau
-        "PEMBINAAN": { color: "#fde047", label: "PEMBINAAN" }, // Kuning
-        "PERANCANGAN": { color: "#fca5a5", label: "PERANCANGAN" }, // Merah
-        "LAIN-LAIN": { color: "#cbd5e1", label: "LAIN-LAIN" } // Kelabu
+        "SIAP": { color: "#86efac", label: "SIAP" },
+        "PEMBINAAN": { color: "#fde047", label: "PEMBINAAN" },
+        "PERANCANGAN": { color: "#fca5a5", label: "PERANCANGAN" },
+        "LAIN-LAIN": { color: "#cbd5e1", label: "LAIN-LAIN" }
     },
 
-    // 1.3 TETAPAN UMUM & GEOJSON
     SETTINGS: {
-        MAX_EXTRA_INFO_COLUMNS: 15, // Jumlah lajur tambahan yang diambil dari sheet untuk popup
-        REFRESH_INTERVAL_MS: 60000, // Auto refresh setiap 60 saat
+        MAX_EXTRA_INFO_COLUMNS: 15,
+        REFRESH_INTERVAL_MS: 60000,
         DEFAULT_MAP_CENTER: [5.9804, 116.0735],
         DEFAULT_ZOOM: 8
     },
     
-    // URL fail GeoJSON untuk sempadan
     GEOJSON_URLS: {
         district: "district.json",
         dun: "dun.json",
@@ -508,17 +501,8 @@ const APP_CONFIG = {
  * =============================================================================
  */
 const Utils = {
-    // Bersihkan rentetan teks (HTML Escaping untuk keselamatan)
-    escapeHtml: (str) => {
-        return String(str || "").replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    },
-    
-    // Normalkan teks untuk perbandingan (Trim & Uppercase)
-    normalize: (str) => {
-        return String(str || "").trim().toUpperCase();
-    },
-
-    // Bersihkan nilai nombor/koordinat
+    escapeHtml: (str) => String(str || "").replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
+    normalize: (str) => String(str || "").trim().toUpperCase(),
     cleanFloat: (val) => {
         if (typeof val === 'number') return val;
         if (!val) return 0;
@@ -526,29 +510,21 @@ const Utils = {
         const floatVal = parseFloat(str);
         return isNaN(floatVal) ? 0 : floatVal;
     },
-
-    // Hasilkan ID unik untuk setiap marker
     generateId: (rowObj, type) => {
         const name = Utils.normalize(rowObj.SITE_NAME || "UNKNOWN");
         const dist = Utils.normalize(rowObj.DISTRICT || "SABAH");
         return `${type}_${name.replace(/\s+/g, '_')}_${dist.replace(/\s+/g, '_')}`;
     },
-
-    // Debounce untuk prestasi UI
     debounce: (fn, wait = 250) => {
         let t;
         return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
     },
-
-    // Warna rawak untuk highlight peta
     getRandomColor: () => {
         const letters = '0123456789ABCDEF';
         let color = '#';
         for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
         return color;
     },
-
-    // Kategorikan status mentah kepada kumpulan standard (SIAP/PEMBINAAN/PERANCANGAN)
     getStatusCategory: (rawStatus) => {
         const s = Utils.normalize(rawStatus);
         if (s.match(/SIAP|KOMITED|OPERASI|SELESAI|COMPLETE/)) return "SIAP";
@@ -556,13 +532,7 @@ const Utils = {
         if (s.match(/RANCANG|BARU|PLAN/)) return "PERANCANGAN";
         return "LAIN-LAIN";
     },
-
-    // Dapatkan konfigurasi projek berdasarkan jenis
-    getTypeConfig: (typeKey) => {
-        return APP_CONFIG.PROJECT_TYPES.find(t => t.type === typeKey) || { color: "#666", icon: "❓", label: typeKey };
-    },
-
-    // Dapatkan warna status
+    getTypeConfig: (typeKey) => APP_CONFIG.PROJECT_TYPES.find(t => t.type === typeKey) || { color: "#666", icon: "❓", label: typeKey },
     getStatusColor: (statusKey) => {
         const cat = Utils.getStatusCategory(statusKey);
         return APP_CONFIG.STATUS_COLORS[cat] ? APP_CONFIG.STATUS_COLORS[cat].color : APP_CONFIG.STATUS_COLORS["LAIN-LAIN"].color;
@@ -571,7 +541,7 @@ const Utils = {
 
 /**
  * =============================================================================
- * 3. STATE MANAGEMENT (GLOBAL VARIABLES)
+ * 3. STATE MANAGEMENT
  * =============================================================================
  */
 const AppState = {
@@ -579,8 +549,8 @@ const AppState = {
     reportMap: null,
     markersLayerGroup: null,
     reportMarkerLayer: null,
-    allProjects: [],        // Semua data mentah
-    currentFilteredList: [], // Data selepas tapisan
+    allProjects: [],
+    currentFilteredList: [],
     markersBySite: new Map(),
     dataLayers: { district: null, dun: null, parliament: null },
     
@@ -588,9 +558,8 @@ const AppState = {
     activeBoundaryKey: null,
     activeFeatureName: null,
     searchTerm: "",
-    activeDashboardCategory: null,
     activeStatusFilter: null,
-    activeTypeToggles: new Set(),
+    activeTypeToggles: new Set(), // Mula kosong (Semua marker off)
     
     // Charts
     charts: { c1: null, c2: null, c3: null, bottom: [] }
@@ -598,66 +567,48 @@ const AppState = {
 
 /**
  * =============================================================================
- * 4. DATA FETCHING & PROCESSING (GOOGLE SHEETS)
+ * 4. DATA FETCHING & PROCESSING
  * =============================================================================
  */
 const DataManager = {
-    // Fungsi Utama Memuatkan Data
     async loadAllData() {
         UI.showLoading(true, "MENGHUBUNGI GOOGLE SHEETS...");
-        
         try {
             const promises = APP_CONFIG.PROJECT_TYPES.map(config => this.fetchSingleSheet(config));
             const results = await Promise.all(promises);
             AppState.allProjects = results.flat();
             
-            if (AppState.allProjects.length === 0) {
-                alert("Tiada data ditemui. Sila semak ID Google Sheet dalam CONFIGURATION.");
-            }
+            if (AppState.allProjects.length === 0) alert("Tiada data ditemui.");
             
-            // Render Peta
             MapManager.renderMarkersInBatches(AppState.allProjects, () => {
                 FilterManager.applyFilters();
                 UI.showLoading(false);
             });
-            
         } catch (error) {
             console.error("Critical Data Load Error:", error);
             UI.showLoading(false);
-            alert("Ralat memuatkan data. Sila semak konsol.");
+            alert("Ralat memuatkan data.");
         }
     },
-
-    // Fetch satu sheet menggunakan GViz API
     async fetchSingleSheet(config) {
         const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:json&tq=`;
-        
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-            
             const text = await res.text();
-            // Parse GViz response (remove function wrapper)
             const jsonStart = text.indexOf('{');
             const jsonEnd = text.lastIndexOf('}');
             if (jsonStart === -1 || jsonEnd === -1) return [];
-            
             const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
-            if (!json.table || !json.table.rows) return [];
-
-            return this.processSheetData(json.table, config);
+            return (json.table && json.table.rows) ? this.processSheetData(json.table, config) : [];
         } catch (e) {
-            console.warn(`Gagal memuatkan sheet: ${config.label} (${config.sheetId})`, e);
+            console.warn(`Gagal memuatkan sheet: ${config.label}`, e);
             return [];
         }
     },
-
-    // Proses Data Mentah kepada Format Standard (DYNAMIC COLUMN MAPPING)
     processSheetData(table, config) {
         const cols = table.cols.map(c => c ? Utils.normalize(c.label) : "");
         const rows = table.rows;
-        
-        // Header Standard yang WAJIB dipetakan
         const STD_HEADERS = {
             SITE_NAME: ["SITE_NAME", "SITE NAME", "SITE", "NAMA_TAPAK"],
             DISTRICT: ["DISTRICT", "DAERAH"],
@@ -667,12 +618,9 @@ const DataManager = {
             LNG: ["LONGITUDE", "LON", "LNG", "LONG"],
             STATUS: ["STATUS", "STATUS_1", "KEMAJUAN"]
         };
-
         return rows.map(r => {
             const rowData = {};
             const extraDetails = [];
-            
-            // Helper untuk cari nilai dalam row berdasarkan senarai header yang mungkin
             const getValue = (headerKeys) => {
                 for (let key of headerKeys) {
                     const idx = cols.indexOf(key);
@@ -680,8 +628,6 @@ const DataManager = {
                 }
                 return "";
             };
-
-            // Filter peringkat Sheet (Contoh: Ambil 'USP' sahaja)
             if (config.filter) {
                 const filterColIdx = cols.indexOf(Utils.normalize(config.filter.col));
                 if (filterColIdx > -1) {
@@ -689,8 +635,6 @@ const DataManager = {
                     if (Utils.normalize(val) !== Utils.normalize(config.filter.val)) return null;
                 }
             }
-
-            // Pemetaan Data Utama
             rowData.SITE_NAME = String(getValue(STD_HEADERS.SITE_NAME) || "N/A").trim();
             rowData.DISTRICT = String(getValue(STD_HEADERS.DISTRICT)).trim();
             rowData.DUN = String(getValue(STD_HEADERS.DUN)).trim();
@@ -700,28 +644,20 @@ const DataManager = {
             rowData.LONGITUDE = Utils.cleanFloat(getValue(STD_HEADERS.LNG));
             rowData._type = config.type;
             rowData._validCoord = (rowData.LATITUDE !== 0 && rowData.LONGITUDE !== 0);
-
-            // Skip jika tiada nama site
             if (rowData.SITE_NAME === "N/A") return null;
-
-            // Tangkap Data Tambahan (Dynamic Extra Columns)
             let count = 0;
             const usedKeys = Object.values(STD_HEADERS).flat();
-            
             cols.forEach((colName, idx) => {
                 if (count >= APP_CONFIG.SETTINGS.MAX_EXTRA_INFO_COLUMNS) return;
-                if (!colName || usedKeys.includes(colName)) return; // Skip standard headers
-                
+                if (!colName || usedKeys.includes(colName)) return;
                 const val = r.c[idx]?.v;
                 if (val !== null && val !== undefined && val !== "") {
                     extraDetails.push({ label: colName, value: String(val).trim() });
                     count++;
                 }
             });
-            
             rowData._extra_details = extraDetails;
             rowData._id = Utils.generateId(rowData, config.type);
-
             return rowData;
         }).filter(item => item !== null);
     }
@@ -735,51 +671,48 @@ const DataManager = {
 const MapManager = {
     init() {
         AppState.map = L.map('map', { zoomControl: false }).setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, APP_CONFIG.SETTINGS.DEFAULT_ZOOM);
-        
-        // Base Layers
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
-            attribution: 'Tiles &copy; Esri' 
-        });
-        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-            maxZoom: 19, attribution: '© OpenStreetMap' 
-        });
-        
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
         satellite.addTo(AppState.map);
         L.control.layers({ "Satelit (Esri)": satellite, "Peta (OSM)": osm }, null, { position: 'topright' }).addTo(AppState.map);
         L.control.zoom({ position: 'bottomright' }).addTo(AppState.map);
-
         AppState.markersLayerGroup = L.layerGroup().addTo(AppState.map);
-
-        // Load GeoJSON Boundaries (Async)
         this.loadBoundaries();
     },
-
     async loadBoundaries() {
         const loadLayer = async (key, url) => {
             try {
                 const res = await fetch(url);
                 if (!res.ok) throw new Error("File Missing");
                 const data = await res.json();
-                
                 const layer = L.geoJSON(data, {
                     style: { color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' },
                     onEachFeature: (feature, layer) => {
                         const name = this.extractGeoName(feature);
                         layer.bindTooltip(name, { sticky: true, interactive: false, direction: 'center', className: 'leaflet-tooltip' });
-                        
                         layer.on('click', (e) => {
                             L.DomEvent.stopPropagation(e);
                             this.highlightBoundary(key, layer, name);
+                        });
+                        // HOVER EFFECT - RAWAK COLOR
+                        layer.on('mouseover', (e) => {
+                            if (AppState.activeFeatureName !== name) {
+                                e.target.setStyle({ fillColor: Utils.getRandomColor(), fillOpacity: 0.5, weight: 2, color: '#333' });
+                            }
+                        });
+                        layer.on('mouseout', (e) => {
+                            if (AppState.activeFeatureName !== name) {
+                                AppState.dataLayers[key].resetStyle(e.target);
+                            }
                         });
                     }
                 });
                 AppState.dataLayers[key] = layer;
             } catch (e) {
-                console.warn(`GeoJSON ${key} gagal dimuatkan (Mungkin tiada fail).`);
-                AppState.dataLayers[key] = L.layerGroup(); // Empty fallback
+                console.warn(`GeoJSON ${key} gagal dimuatkan.`);
+                AppState.dataLayers[key] = L.layerGroup();
             }
         };
-
         await Promise.all([
             loadLayer('district', APP_CONFIG.GEOJSON_URLS.district),
             loadLayer('dun', APP_CONFIG.GEOJSON_URLS.dun),
@@ -790,65 +723,49 @@ const MapManager = {
         document.getElementById('toggle-daerah').onclick = () => this.switchBoundary('district', 'toggle-daerah');
         document.getElementById('toggle-dun').onclick = () => this.switchBoundary('dun', 'toggle-dun');
         document.getElementById('toggle-parliament').onclick = () => this.switchBoundary('parliament', 'toggle-parliament');
+        
+        // DEFAULT LOAD: ACTIVE DISTRICT
+        setTimeout(() => this.switchBoundary('district', 'toggle-daerah'), 500);
     },
-
     extractGeoName(feature) {
         const props = feature.properties || {};
         return Utils.normalize(props.NAME || props.name || props.DISTRICT || props.DAERAH || props.DUN || props.PARLIAMENT || "Sabah");
     },
-
     switchBoundary(key, btnId) {
-        // Clear existing boundaries
         Object.values(AppState.dataLayers).forEach(l => { if(l && AppState.map.hasLayer(l)) AppState.map.removeLayer(l); });
-        
-        // Add new boundary if exists
         if (AppState.dataLayers[key] && AppState.dataLayers[key].getLayers().length > 0) {
             AppState.map.addLayer(AppState.dataLayers[key]);
             AppState.activeBoundaryKey = key;
         } else {
             AppState.activeBoundaryKey = null;
         }
-
         AppState.activeFeatureName = null;
         document.getElementById('selected-area').textContent = "SELURUH SABAH";
         document.querySelectorAll('#layer-card .toggle-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(btnId).classList.add('active');
-        
         AppState.map.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, APP_CONFIG.SETTINGS.DEFAULT_ZOOM);
         FilterManager.applyFilters();
     },
-
     highlightBoundary(key, layer, name) {
-        // Reset styles
         AppState.dataLayers[key].eachLayer(l => {
             AppState.dataLayers[key].resetStyle(l);
             if(l.isTooltipOpen()) l.closeTooltip();
         });
-
-        // Highlight selected
         const color = Utils.getRandomColor();
         layer.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: color });
-        
         AppState.activeFeatureName = name;
         document.getElementById('selected-area').textContent = name;
         AppState.map.fitBounds(layer.getBounds());
-        
         FilterManager.applyFilters();
     },
-
     createMarker(project) {
         if (!project._validCoord) return null;
-        
         const config = Utils.getTypeConfig(project._type);
         const statusColor = Utils.getStatusColor(project.STATUS);
-        
-        // Bina HTML Popup
         let extraHtml = project._extra_details.map(d => 
             `<div class="sub-stat-row"><span class="sub-stat-label">${Utils.escapeHtml(d.label)}</span><span class="sub-stat-val">${Utils.escapeHtml(d.value)}</span></div>`
         ).join('');
-        
         if (extraHtml) extraHtml = `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed #ccc; font-weight:700; font-size:11px;">MAKLUMAT TERPERINCI</div>` + extraHtml;
-
         const popupContent = `
             <div style="font-family:'Plus Jakarta Sans'; min-width:200px;">
                 <div style="font-weight:800; font-size:14px; margin-bottom:5px; color:var(--primary);">${config.icon} ${Utils.escapeHtml(project.SITE_NAME)}</div>
@@ -859,20 +776,16 @@ const MapManager = {
                     ${extraHtml}
                 </div>
             </div>`;
-
         const marker = L.circleMarker([project.LATITUDE, project.LONGITUDE], {
             radius: 6, fillColor: config.color, color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
         }).bindPopup(popupContent);
-        
         marker._meta = project;
         return marker;
     },
-
     renderMarkersInBatches(projects, onComplete) {
         const total = projects.length; 
         let i = 0;
         const batchSize = 500;
-        
         const runChunk = () => {
             const end = Math.min(i + batchSize, total);
             for (; i < end; i++) {
@@ -900,7 +813,7 @@ const FilterManager = {
 
         // 1. Boundary Filter
         if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
-            const boundaryName = AppState.activeFeatureName; // Already normalized
+            const boundaryName = AppState.activeFeatureName;
             list = list.filter(p => {
                 if (AppState.activeBoundaryKey === 'district') return Utils.normalize(p.DISTRICT) === boundaryName;
                 if (AppState.activeBoundaryKey === 'dun') return Utils.normalize(p.DUN) === boundaryName;
@@ -919,23 +832,11 @@ const FilterManager = {
             );
         }
 
-        // 3. Category Filter (Dashboard Click)
-        if (AppState.activeDashboardCategory) {
-            list = list.filter(p => p._type === AppState.activeDashboardCategory);
-        }
-
         AppState.currentFilteredList = list;
         UI.updateDashboard(list);
 
-        // 4. Map Display Filter (Includes Toggles & Status Click)
-        // Check Toggle Buttons
-        const activeToggles = new Set();
-        APP_CONFIG.PROJECT_TYPES.forEach(t => {
-            const btn = document.getElementById(`toggle-${t.type}`);
-            if (btn && btn.classList.contains('active')) activeToggles.add(t.type);
-        });
-
-        let mapList = list.filter(p => activeToggles.has(p._type));
+        // 3. Map Marker Visibility (Based on Active Toggles)
+        let mapList = list.filter(p => AppState.activeTypeToggles.has(p._type));
         
         if (AppState.activeStatusFilter) {
             mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === Utils.getStatusCategory(AppState.activeStatusFilter));
@@ -943,11 +844,9 @@ const FilterManager = {
 
         this.updateMapMarkers(mapList);
     },
-
     updateMapMarkers(displayList) {
         AppState.markersLayerGroup.clearLayers();
         const visibleIds = new Set(displayList.map(p => p._id));
-        
         AppState.markersBySite.forEach((marker, id) => {
             if (visibleIds.has(id)) AppState.markersLayerGroup.addLayer(marker);
         });
@@ -962,33 +861,28 @@ const FilterManager = {
 const UI = {
     init() {
         this.generateDynamicControls();
-        
-        // Search Listener
         document.getElementById('search-input').addEventListener('input', Utils.debounce((e) => {
             AppState.searchTerm = e.target.value;
             FilterManager.applyFilters();
         }));
     },
-
     showLoading(show, msg) {
         const el = document.getElementById('loading');
         if(show) el.classList.remove('hide');
         else el.classList.add('hide');
         if(msg) document.getElementById('loading-msg').textContent = msg;
     },
-
     generateDynamicControls() {
         const grid = document.getElementById('dynamic-grid-stats');
         const legend = document.getElementById('dynamic-legend');
         const filters = document.getElementById('dynamic-filter-btns');
-
+        
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
             // Dashboard Mini Stat
             const stat = document.createElement('div');
-            stat.className = 'mini-stat';
+            stat.className = 'mini-stat'; // Remove 'selected' initially
             stat.id = `stat-card-${t.type}`;
-            stat.onclick = () => this.handleCategoryClick(t.type);
-            // Dynamic CSS variable for pseudo element
+            stat.onclick = () => this.handleCategoryToggle(t.type);
             stat.setAttribute('style', `--stat-color: ${t.color}`);
             stat.innerHTML = `
                 <style>#stat-card-${t.type}::before { background: ${t.color}; }</style>
@@ -1000,53 +894,41 @@ const UI = {
             // Legend
             legend.innerHTML += `<div class="legend-row"><span class="dot" style="background:${t.color}"></span> ${t.label}</div>`;
 
-            // Filter Button
+            // Filter Button (Right Side) - Start Disabled
             const btn = document.createElement('button');
-            btn.className = "toggle-btn active"; // Default active
+            btn.className = "toggle-btn"; 
             btn.id = `toggle-${t.type}`;
             btn.innerHTML = `<span class="icon-slot">${t.icon}</span><span class="text-slot">${t.label}</span>`;
-            btn.onclick = function() {
-                this.classList.toggle('active');
-                FilterManager.applyFilters();
-            };
+            btn.onclick = () => this.handleCategoryToggle(t.type);
             filters.appendChild(btn);
         });
     },
-
-    handleCategoryClick(type) {
-        if (AppState.activeDashboardCategory === type) {
-            AppState.activeDashboardCategory = null; // Toggle off
-            document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+    handleCategoryToggle(type) {
+        // Toggle Logic
+        if (AppState.activeTypeToggles.has(type)) {
+            AppState.activeTypeToggles.delete(type);
+            document.getElementById(`stat-card-${type}`).classList.remove('selected');
+            document.getElementById(`toggle-${type}`).classList.remove('active');
         } else {
-            AppState.activeDashboardCategory = type;
-            document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+            AppState.activeTypeToggles.add(type);
             document.getElementById(`stat-card-${type}`).classList.add('selected');
+            document.getElementById(`toggle-${type}`).classList.add('active');
         }
         FilterManager.applyFilters();
     },
-
     updateDashboard(data) {
-        // Update Total
         document.getElementById('total-projects').textContent = data.length;
-
-        // Update Counts by Type
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
             const count = data.filter(p => p._type === t.type).length;
             document.getElementById(`count-${t.type}`).textContent = count;
         });
-
-        // Update Status List
         this.renderStatusList(data);
     },
-
     renderStatusList(data) {
         const container = document.getElementById('status-list');
         container.innerHTML = "";
-        
-        // Group by Normalized Category
         const stats = { "SIAP": 0, "PEMBINAAN": 0, "PERANCANGAN": 0, "LAIN-LAIN": 0 };
-        const details = {}; // Nested breakdown by Project Type
-
+        const details = {};
         data.forEach(p => {
             const cat = Utils.getStatusCategory(p.STATUS);
             stats[cat]++;
@@ -1054,16 +936,12 @@ const UI = {
             if(!details[cat][p._type]) details[cat][p._type] = 0;
             details[cat][p._type]++;
         });
-
         Object.keys(APP_CONFIG.STATUS_COLORS).forEach(cat => {
             const count = stats[cat] || 0;
             if (count === 0 && cat === "LAIN-LAIN") return;
-
             const colorCfg = APP_CONFIG.STATUS_COLORS[cat];
             const percent = data.length > 0 ? Math.round((count / data.length) * 100) : 0;
             const isSelected = (AppState.activeStatusFilter === cat) ? "selected" : "";
-            
-            // Sub-details HTML
             let subHtml = "";
             if (details[cat]) {
                 Object.entries(details[cat]).forEach(([type, tCount]) => {
@@ -1078,7 +956,6 @@ const UI = {
                     `;
                 });
             }
-
             const item = document.createElement('div');
             item.className = "status-wrapper";
             item.innerHTML = `
@@ -1094,24 +971,17 @@ const UI = {
             container.appendChild(item);
         });
     },
-
     toggleStatusFilter(status) {
         AppState.activeStatusFilter = (AppState.activeStatusFilter === status) ? null : status;
         FilterManager.applyFilters();
     },
-
-    // Report / PDF Logic
     openReport() {
         const data = AppState.currentFilteredList.length > 0 ? AppState.currentFilteredList : AppState.allProjects;
         document.getElementById('report-overlay').classList.add('open');
-        
-        // Populate Header
         document.getElementById('report-layer-name').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-badge-area').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-total-count').textContent = data.length;
         this.updateClock();
-
-        // Populate Mini Stats
         const miniContainer = document.getElementById('report-mini-stats');
         miniContainer.innerHTML = "";
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
@@ -1121,15 +991,9 @@ const UI = {
                     <h3 style="color:${t.color}">${count}</h3><span>${t.label}</span>
                 </div>`;
         });
-
-        // Charts
         ChartManager.renderCharts(data);
-
-        // Status List (Detailed) in Modal
         const modalStatus = document.getElementById('dynamic-status-container');
         modalStatus.innerHTML = "";
-        // Re-use logic for simple list listing specific status counts (Similar to Dashboard but expanded)
-        // Simplified for brevity:
         const statusCounts = {};
         data.forEach(p => { const s = p.STATUS; statusCounts[s] = (statusCounts[s] || 0) + 1; });
         Object.entries(statusCounts).sort((a,b) => b[1] - a[1]).forEach(([s, c]) => {
@@ -1141,8 +1005,6 @@ const UI = {
                     <div class="progress-track"><div class="progress-fill" style="width:${(c/data.length)*100}%; background:${col}"></div></div>
                 </div>`;
         });
-
-        // Init Report Map
         setTimeout(() => {
             if(!AppState.reportMap) {
                 AppState.reportMap = L.map('report-map', { zoomControl: false, attributionControl: false }).setView([5.9804, 116.0735], 7);
@@ -1151,8 +1013,6 @@ const UI = {
             }
             AppState.reportMap.invalidateSize();
             AppState.reportMarkerLayer.clearLayers();
-            
-            // Add current boundary
             if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
                 const boundary = L.geoJSON(AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON(), {
                      style: (f) => ({ color: (Utils.extractGeoName(f) === AppState.activeFeatureName) ? '#EF4444' : '#ccc', weight: 1 })
@@ -1160,41 +1020,33 @@ const UI = {
                 const activeLayer = boundary.getLayers().find(l => Utils.extractGeoName(l.feature) === AppState.activeFeatureName);
                 if(activeLayer) AppState.reportMap.fitBounds(activeLayer.getBounds());
             }
-
-            // Add Markers (Limit 2000 for perf)
             data.slice(0, 2000).forEach(p => {
                 L.circleMarker([p.LATITUDE, p.LONGITUDE], { radius: 3, color: Utils.getTypeConfig(p._type).color, fillOpacity: 0.8 }).addTo(AppState.reportMarkerLayer);
             });
         }, 300);
     },
-
     updateClock() {
         const now = new Date();
         document.getElementById('clock').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
     },
-
     downloadCSV() {
         const data = AppState.currentFilteredList.length > 0 ? AppState.currentFilteredList : AppState.allProjects;
         if(data.length === 0) return alert("Tiada data.");
-
-        // Dynamic Headers: Standard + All unique extra keys found in current set
         const stdHeaders = ["SITE_NAME", "DISTRICT", "DUN", "PARLIAMENT", "LATITUDE", "LONGITUDE", "STATUS", "PROJECT_TYPE"];
         const extraKeys = new Set();
         data.forEach(p => p._extra_details.forEach(d => extraKeys.add(d.label)));
         const allHeaders = [...stdHeaders, ...Array.from(extraKeys)];
-
         const csvContent = [
             allHeaders.join(","),
             ...data.map(p => {
                 return allHeaders.map(h => {
                     if (h === "PROJECT_TYPE") return p._type;
-                    if (p[h] !== undefined) return `"${String(p[h]).replace(/"/g, '""')}"`; // Direct property
+                    if (p[h] !== undefined) return `"${String(p[h]).replace(/"/g, '""')}"`;
                     const extra = p._extra_details.find(d => d.label === h);
                     return extra ? `"${String(extra.value).replace(/"/g, '""')}"` : "";
                 }).join(",");
             })
         ].join("\n");
-
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
@@ -1215,8 +1067,6 @@ const ChartManager = {
             legend: { show: true, position: 'bottom' },
             dataLabels: { enabled: true }
         };
-
-        // Chart 1: Donut (Type)
         const countsByType = {};
         APP_CONFIG.PROJECT_TYPES.forEach(t => countsByType[t.label] = data.filter(p => p._type === t.type).length);
         if(AppState.charts.c1) AppState.charts.c1.destroy();
@@ -1227,8 +1077,6 @@ const ChartManager = {
             colors: APP_CONFIG.PROJECT_TYPES.map(t => t.color)
         });
         AppState.charts.c1.render();
-
-        // Chart 2: Bar (Status)
         const countsByStatus = {};
         const cats = Object.keys(APP_CONFIG.STATUS_COLORS);
         cats.forEach(c => countsByStatus[c] = 0);
@@ -1245,8 +1093,6 @@ const ChartManager = {
             plotOptions: { bar: { distributed: true } }
         });
         AppState.charts.c2.render();
-
-        // Chart 3: Stacked (Type vs Status)
         const series = cats.map(status => {
             return {
                 name: status,
@@ -1261,23 +1107,19 @@ const ChartManager = {
             colors: cats.map(c => APP_CONFIG.STATUS_COLORS[c].color)
         });
         AppState.charts.c3.render();
-
-        // Bottom Grid Charts (One per Project Type)
         const bottomContainer = document.getElementById('dynamic-bottom-grid');
         bottomContainer.innerHTML = "";
         AppState.charts.bottom.forEach(c => c.destroy());
         AppState.charts.bottom = [];
-
         APP_CONFIG.PROJECT_TYPES.forEach((t, idx) => {
             const tData = data.filter(p => p._type === t.type);
-            const tStats = [0, 0, 0]; // Siap, Bina, Rancang
+            const tStats = [0, 0, 0];
             tData.forEach(p => {
                 const s = Utils.getStatusCategory(p.STATUS);
                 if(s === "SIAP") tStats[0]++;
                 else if(s === "PEMBINAAN") tStats[1]++;
                 else if(s === "PERANCANGAN") tStats[2]++;
             });
-
             const divId = `bottom-chart-${idx}`;
             bottomContainer.innerHTML += `
                 <div class="card bottom-card">
@@ -1289,7 +1131,6 @@ const ChartManager = {
                     </div>
                     <div class="bottom-card-body" id="${divId}"></div>
                 </div>`;
-            
             setTimeout(() => {
                 const c = new ApexCharts(document.querySelector(`#${divId}`), {
                     chart: { type: 'bar', height: '100%', toolbar: { show: false } },
@@ -1325,15 +1166,12 @@ function closeReport() {
 function generatePDF() {
     const element = document.querySelector('.report-container');
     const modal = document.querySelector('.report-modal');
-    
-    // Hack for html2canvas scrolling
     const origOverflow = modal.style.overflow;
     const origContOverflow = element.style.overflowY;
     modal.style.overflow = "visible";
     element.style.overflowY = "visible";
     document.querySelector('.modal-close-btn').style.display = 'none';
     document.querySelector('.btn-download-pdf').style.visibility = 'hidden';
-
     html2canvas(element, { scale: 1.5, useCORS: true }).then(canvas => {
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3');
@@ -1349,21 +1187,18 @@ function generatePDF() {
     });
 }
 
-// Global functions for HTML access
 window.toggleDashboard = toggleDashboard;
 window.closeReport = closeReport;
 window.generatePDF = generatePDF;
 window.downloadCSV = UI.downloadCSV;
 window.openReport = UI.openReport.bind(UI);
 
-// Init
 window.onload = () => {
     UI.init();
     MapManager.init();
     DataManager.loadAllData();
     setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS);
 };
-
 </script>
 </body>
 </html>
