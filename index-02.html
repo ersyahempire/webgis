@@ -475,7 +475,7 @@ const APP_CONFIG = {
         { id: "db_pim", sheetId: "1WyZiw72LOVytssXAuymJS_TIgckLCUqY56pB0QhawZU", type: "NADI", label: "NADI", color: "#4dabf7", icon: "📡" },
         { id: "db_pop", sheetId: "1JLqLtZPa4Kd6hEbRA2wgMgADX2h2-tdsXnG-YivSgU8", type: "POP", label: "POP", color: "#fcc419", icon: "🌐" },
         { id: "tower", sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", type: "TOWER", label: "Menara", color: "#ff6b6b", icon: "🗼", filter: { col: "PROJECT_TYPE", val: "USP" } }
-        ],
+    ],
     
     // Status keywords for coloring ONLY. Actual categories are dynamic.
     COLOR_PALETTE: {
@@ -556,6 +556,7 @@ const AppState = {
     reportMarkerLayer: null,
     allProjects: [],
     currentFilteredList: [],
+    visibleProjects: [], // Tracks projects currently shown on map for CSV download
     markersBySite: new Map(),
     dataLayers: { district: null, dun: null, parliament: null },
     
@@ -868,6 +869,9 @@ const FilterManager = {
     },
     updateMapMarkers(displayList) {
         AppState.markersLayerGroup.clearLayers();
+        // IMPORTANT: Simpan senarai projek yang dipaparkan untuk CSV
+        AppState.visibleProjects = displayList;
+
         const visibleIds = new Set(displayList.map(p => p._id));
         AppState.markersBySite.forEach((marker, id) => {
             if (visibleIds.has(id)) AppState.markersLayerGroup.addLayer(marker);
@@ -1103,27 +1107,63 @@ const UI = {
         document.getElementById('clock').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
     },
     downloadCSV() {
-        const data = AppState.currentFilteredList.length > 0 ? AppState.currentFilteredList : AppState.allProjects;
-        if(data.length === 0) return alert("Tiada data.");
+        // 1. Sumber Data: Hanya projek yang dipaparkan di peta (visibleProjects)
+        const data = AppState.visibleProjects; 
+        if (!data || data.length === 0) return alert("Tiada data pada peta untuk dimuat turun.");
+
+        // 2. Kumpulkan semua header unik (Standard + Extra)
         const stdHeaders = ["SITE_NAME", "DISTRICT", "DUN", "PARLIAMENT", "LATITUDE", "LONGITUDE", "STATUS", "PROJECT_TYPE"];
         const extraKeys = new Set();
         data.forEach(p => p._extra_details.forEach(d => extraKeys.add(d.label)));
         const allHeaders = [...stdHeaders, ...Array.from(extraKeys)];
+
+        // 3. Bina kandungan CSV
         const csvContent = [
             allHeaders.join(","),
             ...data.map(p => {
                 return allHeaders.map(h => {
+                    // Mapping standard columns
                     if (h === "PROJECT_TYPE") return p._type;
+                    if (h === "LATITUDE" || h === "LONGITUDE") return p[h]; // Keep numbers
                     if (p[h] !== undefined) return `"${String(p[h]).replace(/"/g, '""')}"`;
+                    
+                    // Mapping extra columns
                     const extra = p._extra_details.find(d => d.label === h);
                     return extra ? `"${String(extra.value).replace(/"/g, '""')}"` : "";
                 }).join(",");
             })
         ].join("\n");
+
+        // 4. Bina Nama Fail Automatik
+        // Format: data_gis_{layer}_{project}_{status}_{datetime}.csv
+        
+        // a. Layer Name
+        let fLayer = AppState.activeFeatureName ? AppState.activeFeatureName.replace(/\s+/g, '_') : "Seluruh_Sabah";
+        
+        // b. Project Name
+        let fProject = "Semua_Projek";
+        if (AppState.activeCategory) {
+            fProject = AppState.activeCategory;
+        } else if (AppState.activeTypeToggles.size > 0) {
+            fProject = (AppState.activeTypeToggles.size === 1) ? 
+                Array.from(AppState.activeTypeToggles)[0] : "Gabungan";
+        }
+        
+        // c. Status Name
+        let fStatus = AppState.activeStatusFilter ? AppState.activeStatusFilter.replace(/\s+/g, '_') : "Semua_Status";
+        
+        // d. Date Time
+        const now = new Date();
+        const fDate = now.toISOString().slice(0,10).replace(/-/g, ''); // YYYYMMDD
+        const fTime = now.toTimeString().slice(0,5).replace(/:/g, ''); // HHMM
+        
+        const fileName = `data_gis_${fLayer}_${fProject}_${fStatus}_${fDate}_${fTime}.csv`;
+
+        // 5. Muat Turun
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `Data_GIS_${new Date().toISOString().slice(0,10)}.csv`;
+        link.download = fileName;
         link.click();
     }
 };
