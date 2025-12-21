@@ -376,7 +376,7 @@ body {
     </div>
     <!-- Layer Toggle -->
     <div class="control-card" id="layer-card">
-      <div class="control-group-title">Sempadan</div>
+      <div class="control-group-title">Penapis Sempadan</div>
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
         <span class="icon-slot"><i class="fas fa-map-marked-alt"></i></span> <span class="text-slot">Daerah</span>
       </button>
@@ -483,7 +483,7 @@ const APP_CONFIG = {
 
     SETTINGS: {
         MAX_EXTRA_INFO_COLUMNS: 15,
-        REFRESH_INTERVAL_MS: 60000,
+        REFRESH_INTERVAL_MS: 900000, // 15 Minit
         DEFAULT_MAP_CENTER: [5.9804, 116.0735],
         DEFAULT_ZOOM: 8
     },
@@ -559,7 +559,10 @@ const AppState = {
     activeFeatureName: null,
     searchTerm: "",
     activeStatusFilter: null,
-    activeCategory: null, // Single Active Category (String or Null)
+    
+    // Decoupled Filters
+    activeCategory: null,     // Left Dashboard (Single Select) - Controls Statistics Only
+    activeTypeToggles: new Set(), // Right Controls (Multiple Select) - Controls Map Markers Only
     
     // Charts
     charts: { c1: null, c2: null, c3: null, bottom: [] }
@@ -747,12 +750,25 @@ const MapManager = {
         FilterManager.applyFilters();
     },
     highlightBoundary(key, layer, name) {
+        // Reset styles and tooltips for ALL layers in this group
         AppState.dataLayers[key].eachLayer(l => {
             AppState.dataLayers[key].resetStyle(l);
-            if(l.isTooltipOpen()) l.closeTooltip();
+            // Re-bind tooltip if it was unbound
+            if (!l.getTooltip()) {
+                 const lName = this.extractGeoName(l.feature);
+                 l.bindTooltip(lName, { sticky: true, interactive: false, direction: 'center', className: 'leaflet-tooltip' });
+            }
+            l.closeTooltip();
         });
+
+        // Highlight Selected Layer
         const color = Utils.getRandomColor();
         layer.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: color });
+        
+        // Hide tooltip for the selected layer to avoid obstruction
+        layer.unbindTooltip(); 
+        layer.closeTooltip();
+
         AppState.activeFeatureName = name;
         document.getElementById('selected-area').textContent = name;
         AppState.map.fitBounds(layer.getBounds());
@@ -835,14 +851,18 @@ const FilterManager = {
         AppState.currentFilteredList = list;
         UI.updateDashboard(list);
 
-        // 3. Map Marker Visibility (Based on Active Category Only)
+        // 3. Map Marker Visibility (Based on Right Side Multiple Select)
         let mapList = [];
-        if (AppState.activeCategory) {
-            mapList = list.filter(p => p._type === AppState.activeCategory);
-            
-            if (AppState.activeStatusFilter) {
-                mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === Utils.getStatusCategory(AppState.activeStatusFilter));
-            }
+        
+        // Filter based on active toggles from Right Menu
+        if (AppState.activeTypeToggles.size > 0) {
+             mapList = list.filter(p => AppState.activeTypeToggles.has(p._type));
+        } else {
+             mapList = []; // Default empty markers if none selected
+        }
+
+        if (AppState.activeStatusFilter) {
+            mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === Utils.getStatusCategory(AppState.activeStatusFilter));
         }
 
         this.updateMapMarkers(mapList);
@@ -881,11 +901,11 @@ const UI = {
         const filters = document.getElementById('dynamic-filter-btns');
         
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
-            // Dashboard Mini Stat
+            // Dashboard Mini Stat (Left Side - Single Select for Stats)
             const stat = document.createElement('div');
             stat.className = 'mini-stat'; 
             stat.id = `stat-card-${t.type}`;
-            stat.onclick = () => this.handleCategoryToggle(t.type);
+            stat.onclick = () => this.handleCategoryClick(t.type); // Left Click Action
             stat.setAttribute('style', `--stat-color: ${t.color}`);
             stat.innerHTML = `
                 <style>#stat-card-${t.type}::before { background: ${t.color}; }</style>
@@ -897,33 +917,37 @@ const UI = {
             // Legend
             legend.innerHTML += `<div class="legend-row"><span class="dot" style="background:${t.color}"></span> ${t.label}</div>`;
 
-            // Filter Button (Right Side)
+            // Filter Button (Right Side - Multiple Select for Map)
             const btn = document.createElement('button');
             btn.className = "toggle-btn"; 
             btn.id = `toggle-${t.type}`;
             btn.innerHTML = `<span class="icon-slot">${t.icon}</span><span class="text-slot">${t.label}</span>`;
-            btn.onclick = () => this.handleCategoryToggle(t.type);
+            btn.onclick = () => this.handleTypeToggle(t.type); // Right Click Action
             filters.appendChild(btn);
         });
     },
-    handleCategoryToggle(type) {
-        // Single Selection Logic
+    // Handler for Left Dashboard Cards (Statistics Only)
+    handleCategoryClick(type) {
         if (AppState.activeCategory === type) {
-            // Deselect
             AppState.activeCategory = null;
             document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
-            document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
         } else {
-            // Select New
             AppState.activeCategory = type;
-            // UI Cleanup
             document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
-            document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
-            // Activate Current
             document.getElementById(`stat-card-${type}`).classList.add('selected');
+        }
+        FilterManager.applyFilters(); // Re-apply to update Status List
+    },
+    // Handler for Right Filter Buttons (Map Markers Only)
+    handleTypeToggle(type) {
+        if (AppState.activeTypeToggles.has(type)) {
+            AppState.activeTypeToggles.delete(type);
+            document.getElementById(`toggle-${type}`).classList.remove('active');
+        } else {
+            AppState.activeTypeToggles.add(type);
             document.getElementById(`toggle-${type}`).classList.add('active');
         }
-        FilterManager.applyFilters();
+        FilterManager.applyFilters(); // Re-apply to update Map
     },
     updateDashboard(data) {
         document.getElementById('total-projects').textContent = data.length;
@@ -934,7 +958,7 @@ const UI = {
             document.getElementById(`count-${t.type}`).textContent = count;
         });
 
-        // Filter Status List based on Active Category
+        // Filter Status List based on Active Category (Left Dashboard)
         let statusData = data;
         if (AppState.activeCategory) {
             statusData = data.filter(p => p._type === AppState.activeCategory);
