@@ -483,7 +483,7 @@ const APP_CONFIG = {
 
     SETTINGS: {
         MAX_EXTRA_INFO_COLUMNS: 15,
-        REFRESH_INTERVAL_MS: 60000,
+        // REFRESH_INTERVAL_MS: 60000,
         DEFAULT_MAP_CENTER: [5.9804, 116.0735],
         DEFAULT_ZOOM: 8
     },
@@ -559,7 +559,7 @@ const AppState = {
     activeFeatureName: null,
     searchTerm: "",
     activeStatusFilter: null,
-    activeTypeToggles: new Set(), // Mula kosong (Semua marker off)
+    activeCategory: null, // Single Active Category (String or Null)
     
     // Charts
     charts: { c1: null, c2: null, c3: null, bottom: [] }
@@ -835,11 +835,14 @@ const FilterManager = {
         AppState.currentFilteredList = list;
         UI.updateDashboard(list);
 
-        // 3. Map Marker Visibility (Based on Active Toggles)
-        let mapList = list.filter(p => AppState.activeTypeToggles.has(p._type));
-        
-        if (AppState.activeStatusFilter) {
-            mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === Utils.getStatusCategory(AppState.activeStatusFilter));
+        // 3. Map Marker Visibility (Based on Active Category Only)
+        let mapList = [];
+        if (AppState.activeCategory) {
+            mapList = list.filter(p => p._type === AppState.activeCategory);
+            
+            if (AppState.activeStatusFilter) {
+                mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === Utils.getStatusCategory(AppState.activeStatusFilter));
+            }
         }
 
         this.updateMapMarkers(mapList);
@@ -880,7 +883,7 @@ const UI = {
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
             // Dashboard Mini Stat
             const stat = document.createElement('div');
-            stat.className = 'mini-stat'; // Remove 'selected' initially
+            stat.className = 'mini-stat'; 
             stat.id = `stat-card-${t.type}`;
             stat.onclick = () => this.handleCategoryToggle(t.type);
             stat.setAttribute('style', `--stat-color: ${t.color}`);
@@ -894,7 +897,7 @@ const UI = {
             // Legend
             legend.innerHTML += `<div class="legend-row"><span class="dot" style="background:${t.color}"></span> ${t.label}</div>`;
 
-            // Filter Button (Right Side) - Start Disabled
+            // Filter Button (Right Side)
             const btn = document.createElement('button');
             btn.className = "toggle-btn"; 
             btn.id = `toggle-${t.type}`;
@@ -904,13 +907,19 @@ const UI = {
         });
     },
     handleCategoryToggle(type) {
-        // Toggle Logic
-        if (AppState.activeTypeToggles.has(type)) {
-            AppState.activeTypeToggles.delete(type);
-            document.getElementById(`stat-card-${type}`).classList.remove('selected');
-            document.getElementById(`toggle-${type}`).classList.remove('active');
+        // Single Selection Logic
+        if (AppState.activeCategory === type) {
+            // Deselect
+            AppState.activeCategory = null;
+            document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
         } else {
-            AppState.activeTypeToggles.add(type);
+            // Select New
+            AppState.activeCategory = type;
+            // UI Cleanup
+            document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
+            // Activate Current
             document.getElementById(`stat-card-${type}`).classList.add('selected');
             document.getElementById(`toggle-${type}`).classList.add('active');
         }
@@ -918,15 +927,24 @@ const UI = {
     },
     updateDashboard(data) {
         document.getElementById('total-projects').textContent = data.length;
+        
+        // Update Card Counts
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
             const count = data.filter(p => p._type === t.type).length;
             document.getElementById(`count-${t.type}`).textContent = count;
         });
-        this.renderStatusList(data);
+
+        // Filter Status List based on Active Category
+        let statusData = data;
+        if (AppState.activeCategory) {
+            statusData = data.filter(p => p._type === AppState.activeCategory);
+        }
+        this.renderStatusList(statusData, AppState.activeCategory ? true : false);
     },
-    renderStatusList(data) {
+    renderStatusList(data, isFiltered) {
         const container = document.getElementById('status-list');
         container.innerHTML = "";
+        
         const stats = { "SIAP": 0, "PEMBINAAN": 0, "PERANCANGAN": 0, "LAIN-LAIN": 0 };
         const details = {};
         data.forEach(p => {
@@ -936,11 +954,14 @@ const UI = {
             if(!details[cat][p._type]) details[cat][p._type] = 0;
             details[cat][p._type]++;
         });
+        
+        const totalCount = data.length;
+
         Object.keys(APP_CONFIG.STATUS_COLORS).forEach(cat => {
             const count = stats[cat] || 0;
             if (count === 0 && cat === "LAIN-LAIN") return;
             const colorCfg = APP_CONFIG.STATUS_COLORS[cat];
-            const percent = data.length > 0 ? Math.round((count / data.length) * 100) : 0;
+            const percent = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
             const isSelected = (AppState.activeStatusFilter === cat) ? "selected" : "";
             let subHtml = "";
             if (details[cat]) {
@@ -962,7 +983,7 @@ const UI = {
                 <div class="status-item ${isSelected}" onclick="UI.toggleStatusFilter('${cat}')">
                     <div class="status-header">
                         <span class="status-name">${colorCfg.label}</span>
-                        <span style="color:${colorCfg.color}; font-weight:800;">${count}</span>
+                        <span style="color:${colorCfg.color}; font-weight:800;">${count} (${percent}%)</span>
                     </div>
                     <div class="progress-bg"><div class="progress-fill" style="width:${percent}%; background:${colorCfg.color}"></div></div>
                 </div>
