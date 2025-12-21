@@ -243,7 +243,7 @@ body {
     color: #1f2937; border: 1px solid rgba(255,255,255,0.3); position: relative;
 }
 .report-overlay.open .report-modal { transform: scale(1); }
-.report-container { padding: 30px; display: flex; flex-direction: column; gap: 25px; height: 100%; overflow-y: auto; }
+.report-container { padding: 30px; display: flex; flex-direction: column; gap: 25px; height: auto; overflow-y: visible; }
 .modal-close-btn {
     position: absolute; top: 15px; right: 20px; z-index: 5002;
     background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px);
@@ -289,7 +289,7 @@ body {
 .chart-card { height: 480px; padding: 20px; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.65); }
 .chart-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; color: #111827; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
-.main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; min-height: 450px;, align-items: start;}
+.main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; min-height: 450px;, align-items: start;, grid-auto-rows: auto; }
 .map-container { padding: 0; overflow: hidden; border-radius: 16px; position: relative; }
 #report-map { width: 100%; height: 100%; }
 .status-container { background: rgba(255, 255, 255, 0.6); padding: 0; overflow: visible; display: block; flex-direction: column; }
