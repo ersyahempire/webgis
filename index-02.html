@@ -282,7 +282,7 @@ body {
     background: rgba(255, 255, 255, 0.5); border-radius: 16px; padding: 15px;
     border: 1px solid rgba(255,255,255,0.5); border-top-width: 4px;
 }
-.mini-card h3 { font-size: 2.4rem;   /* asal 1.8rem */ color: #1f2937; margin: 0 0 5px 0; }
+.mini-card h3 { font-size: 1.8rem; color: #1f2937; margin: 0 0 5px 0; }
 .mini-card span { font-size: 0.75rem; font-weight: 700; color: #4b5563; text-transform: uppercase; }
 
 .charts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
@@ -290,7 +290,7 @@ body {
 .chart-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; color: #111827; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
 .main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; min-height: 450px; }
-.map-container { padding: 0; overflow: hidden; border-radius: 16px; }
+.map-container { padding: 0; overflow: hidden; border-radius: 16px; position: relative; }
 #report-map { width: 100%; height: 100%; }
 .status-container { background: rgba(255, 255, 255, 0.6); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 .status-header-fixed { padding: 15px 20px; background: rgba(255,255,255,0.4); border-bottom: 1px solid rgba(255,255,255,0.5); font-weight: 800; color: #374151; }
@@ -298,6 +298,11 @@ body {
 .status-group { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed rgba(0,0,0,0.1); }
 .status-label-row { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
 .progress-track { background: rgba(0,0,0,0.05); height: 8px; border-radius: 4px; width: 100%; overflow: hidden; margin-bottom: 10px; }
+
+/* Expanded Status Styles for Report */
+.status-expanded-item { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+.status-expanded-header { display: flex; justify-content: space-between; font-weight: 800; font-size: 14px; margin-bottom: 5px; color: #1f2937; }
+.status-expanded-sub { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px; color: #4b5563; padding-left: 10px; border-left: 2px solid rgba(0,0,0,0.1); }
 
 .bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; padding-bottom: 20px; }
 .bottom-card { height: 480px; padding: 20px; background: rgba(255, 255, 255, 0.65); display: flex; flex-direction: column; overflow: hidden; }
@@ -1054,6 +1059,8 @@ const UI = {
         document.getElementById('report-badge-area').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-total-count').textContent = data.length;
         this.updateClock();
+        
+        // Mini Stats (Top)
         const miniContainer = document.getElementById('report-mini-stats');
         miniContainer.innerHTML = "";
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
@@ -1063,43 +1070,128 @@ const UI = {
                     <h3 style="color:${t.color}">${count}</h3><span>${t.label}</span>
                 </div>`;
         });
+        
         ChartManager.renderCharts(data);
+        
+        // --- 1. Status Section (Dynamic, Expanded, All Categories) ---
         const modalStatus = document.getElementById('dynamic-status-container');
         modalStatus.innerHTML = "";
         
-        // Report Status List - also dynamic
-        const statusCounts = {};
-        data.forEach(p => { 
-            const s = Utils.getStatusCategory(p.STATUS); 
-            statusCounts[s] = (statusCounts[s] || 0) + 1; 
-        });
+        // a. Get ALL unique statuses from ENTIRE database (not just filtered)
+        const allUniqueStatuses = new Set(AppState.allProjects.map(p => Utils.getStatusCategory(p.STATUS)));
+        const allStatusList = Array.from(allUniqueStatuses).sort(); // Sort alphabetically or by importance if custom logic added
+
+        // b. Calculate counts for CURRENTLY FILTERED data
+        const currentCounts = {};
+        const currentDetails = {}; // For expanding breakdown
         
-        Object.entries(statusCounts).sort((a,b) => b[1] - a[1]).forEach(([s, c]) => {
+        data.forEach(p => {
+            const s = Utils.getStatusCategory(p.STATUS);
+            currentCounts[s] = (currentCounts[s] || 0) + 1;
+            
+            if(!currentDetails[s]) currentDetails[s] = {};
+            if(!currentDetails[s][p._type]) currentDetails[s][p._type] = 0;
+            currentDetails[s][p._type]++;
+        });
+
+        // c. Render All Categories (Expanded)
+        allStatusList.forEach(s => {
+             const count = currentCounts[s] || 0;
+             const percentage = data.length > 0 ? ((count / data.length) * 100).toFixed(1) : "0.0";
              const col = Utils.getStatusColor(s);
+             
+             // Prepare Expanded Sub-details
+             let subDetailsHtml = "";
+             if (currentDetails[s]) {
+                 APP_CONFIG.PROJECT_TYPES.forEach(t => {
+                     const tCount = currentDetails[s][t.type] || 0;
+                     if(tCount > 0) {
+                         subDetailsHtml += `
+                            <div class="status-expanded-sub">
+                                <span>${t.icon} ${t.label}</span>
+                                <strong>${tCount}</strong>
+                            </div>
+                         `;
+                     }
+                 });
+             } else {
+                 subDetailsHtml = `<div class="status-expanded-sub" style="font-style:italic; border:none; padding-left:0;">Tiada Data</div>`;
+             }
+
              modalStatus.innerHTML += `
-                <div class="status-group">
-                    <div class="status-label-row"><span>${s}</span><span>${c}</span></div>
-                    <div class="progress-track"><div class="progress-fill" style="width:${(c/data.length)*100}%; background:${col}"></div></div>
+                <div class="status-expanded-item">
+                    <div class="status-expanded-header">
+                        <span style="color:${col}">${s}</span>
+                        <span>${count} <small style="color:#6b7280; font-weight:500;">(${percentage}%)</small></span>
+                    </div>
+                    <div class="progress-track" style="height:6px; margin-bottom:8px;">
+                        <div class="progress-fill" style="width:${percentage}%; background:${col}"></div>
+                    </div>
+                    <div>${subDetailsHtml}</div>
                 </div>`;
         });
+
+        // --- 2. Map Section (Zoomed Layer + Markers) ---
         setTimeout(() => {
             if(!AppState.reportMap) {
-                AppState.reportMap = L.map('report-map', { zoomControl: false, attributionControl: false }).setView([5.9804, 116.0735], 7);
+                AppState.reportMap = L.map('report-map', { 
+                    zoomControl: false, 
+                    attributionControl: false,
+                    dragging: false, // Make it static-like for report feel
+                    scrollWheelZoom: false,
+                    doubleClickZoom: false,
+                    boxZoom: false
+                });
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
                 AppState.reportMarkerLayer = L.layerGroup().addTo(AppState.reportMap);
             }
+            
             AppState.reportMap.invalidateSize();
             AppState.reportMarkerLayer.clearLayers();
+            
+            // Add Boundary Layer
+            let boundaryBounds = null;
             if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
                 const boundary = L.geoJSON(AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON(), {
-                      style: (f) => ({ color: (Utils.extractGeoName(f) === AppState.activeFeatureName) ? '#EF4444' : '#ccc', weight: 1 })
+                      style: (f) => {
+                          const isTarget = (Utils.extractGeoName(f) === AppState.activeFeatureName);
+                          return { 
+                              color: isTarget ? '#EF4444' : '#ccc', 
+                              weight: isTarget ? 3 : 1,
+                              fillOpacity: isTarget ? 0.1 : 0.05,
+                              fillColor: isTarget ? '#EF4444' : 'transparent'
+                          };
+                      }
                 }).addTo(AppState.reportMap);
+                
+                // Find bounds of the specific active feature
                 const activeLayer = boundary.getLayers().find(l => Utils.extractGeoName(l.feature) === AppState.activeFeatureName);
-                if(activeLayer) AppState.reportMap.fitBounds(activeLayer.getBounds());
+                if(activeLayer) {
+                    boundaryBounds = activeLayer.getBounds();
+                } else {
+                    boundaryBounds = boundary.getBounds(); // Fallback to whole file
+                }
+            } else {
+                // If no boundary selected (Seluruh Sabah), set default view
+                boundaryBounds = L.latLngBounds([4.0, 114.0], [7.5, 119.5]);
             }
+
+            // Add Markers
             data.slice(0, 2000).forEach(p => {
-                L.circleMarker([p.LATITUDE, p.LONGITUDE], { radius: 3, color: Utils.getTypeConfig(p._type).color, fillOpacity: 0.8 }).addTo(AppState.reportMarkerLayer);
+                L.circleMarker([p.LATITUDE, p.LONGITUDE], { 
+                    radius: 4, // Slightly larger for report
+                    color: '#fff', 
+                    weight: 1,
+                    fillColor: Utils.getTypeConfig(p._type).color, 
+                    fillOpacity: 0.9 
+                }).addTo(AppState.reportMarkerLayer);
             });
+
+            // Fit Bounds
+            if(boundaryBounds) {
+                AppState.reportMap.fitBounds(boundaryBounds, { padding: [20, 20] });
+            }
+
         }, 300);
     },
     updateClock() {
