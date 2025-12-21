@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.8 - Official (Fixed)</title>
+  <title>Web GIS Projek Sabah v5.9 - Official (Final Fix)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -316,6 +316,7 @@ body {
     min-height: 550px; 
     height: auto; 
     display: flex;
+    flex-direction: column;
 }
 
 #report-map { 
@@ -324,6 +325,8 @@ body {
     flex: 1; /* Grow to fill container */
     background: #e5e7eb; 
     z-index: 1;
+    position: relative;
+    display: block;
 }
 
 .status-container { 
@@ -1121,15 +1124,11 @@ const UI = {
         
         ChartManager.renderCharts(data);
         
-        // --- 1. Status Section (Style like Dashboard, All Categories, Expanded) ---
+        // --- 1. Status Section (Fixed: Sorting by Count Descending) ---
         const modalStatus = document.getElementById('dynamic-status-container');
         modalStatus.innerHTML = "";
         
-        // a. Get ALL unique statuses from ENTIRE database
-        const allUniqueStatuses = new Set(AppState.allProjects.map(p => Utils.getStatusCategory(p.STATUS)));
-        const allStatusList = Array.from(allUniqueStatuses).sort(); 
-
-        // b. Calculate counts for CURRENTLY FILTERED data
+        // a. Calculate counts & details FIRST
         const currentCounts = {};
         const currentDetails = {}; 
         
@@ -1142,13 +1141,18 @@ const UI = {
             currentDetails[s][p._type]++;
         });
 
-        // c. Render All Categories using Dashboard Style Structure
-        allStatusList.forEach(cat => {
+        // b. Get unique statuses and SORT by Count (Descending)
+        const allUniqueStatuses = Object.keys(currentCounts);
+        const sortedStatusList = allUniqueStatuses.sort((a, b) => {
+            return (currentCounts[b] || 0) - (currentCounts[a] || 0);
+        });
+
+        // c. Render Status List
+        sortedStatusList.forEach(cat => {
              const count = currentCounts[cat] || 0;
              const percentage = data.length > 0 ? ((count / data.length) * 100).toFixed(1) : "0.0";
              const col = Utils.getStatusColor(cat);
              
-             // Sub details (Expanded by default)
              let subHtml = "";
              if (currentDetails[cat]) {
                  APP_CONFIG.PROJECT_TYPES.forEach(t => {
@@ -1181,36 +1185,47 @@ const UI = {
                 </div>`;
         });
 
-        // --- 2. Map Section (Zoomed Layer + Markers + Fixed Initialization) ---
+        // --- 2. Map Section (Fixed: Blank Map Issue) ---
         setTimeout(() => {
-            // Remove existing map instance if it exists to avoid conflicts
+            // A. Clean up existing map properly
             if(AppState.reportMap) {
+                AppState.reportMap.off(); // Remove listeners
                 AppState.reportMap.remove();
                 AppState.reportMap = null;
             }
 
-            // Create new map instance
+            // B. Force clear the container HTML to prevent DOM conflicts
+            const mapContainer = document.getElementById('report-map');
+            if(mapContainer) mapContainer.innerHTML = "";
+
+            // C. Create new map instance
             AppState.reportMap = L.map('report-map', { 
                 zoomControl: false, 
                 attributionControl: false,
                 dragging: true,
                 scrollWheelZoom: true,
                 doubleClickZoom: true,
-                boxZoom: true
+                boxZoom: true,
+                preferCanvas: true // Performance boost
             });
             
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
-            AppState.reportMarkerLayer = L.layerGroup().addTo(AppState.reportMap);
             
-            // Critical: Invalidate size after modal animation
-            AppState.reportMap.invalidateSize();
-            
-            let boundsToFit = null;
+            // D. Create separate panes/groups for correct z-indexing (Boundary below Markers)
+            AppState.reportMap.createPane('boundaryPane');
+            AppState.reportMap.getPane('boundaryPane').style.zIndex = 300;
+            AppState.reportMap.createPane('markerPane');
+            AppState.reportMap.getPane('markerPane').style.zIndex = 400;
 
-            // Add Boundary Layer
+            const boundaryGroup = L.featureGroup().addTo(AppState.reportMap);
+            AppState.reportMarkerLayer = L.layerGroup({pane: 'markerPane'}).addTo(AppState.reportMap);
+            
+            // E. Add Boundary Layer
+            let boundsToFit = null;
             if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
-                const geoJsonData = AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON();
-                const boundaryLayer = L.geoJSON(geoJsonData, {
+                const rawGeoJson = AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON();
+                const boundaryLayer = L.geoJSON(rawGeoJson, {
+                      pane: 'boundaryPane',
                       style: (feature) => {
                           const name = Utils.extractGeoName(feature);
                           const isActive = name === AppState.activeFeatureName;
@@ -1221,7 +1236,7 @@ const UI = {
                               fillOpacity: isActive ? 0.2 : 0
                           };
                       }
-                }).addTo(AppState.reportMap);
+                }).addTo(boundaryGroup);
                 
                 // Find bounds of the specific active feature
                 if (AppState.activeFeatureName) {
@@ -1229,18 +1244,19 @@ const UI = {
                         if (Utils.extractGeoName(l.feature) === AppState.activeFeatureName) boundsToFit = l.getBounds();
                     });
                 } else {
-                    boundsToFit = boundaryLayer.getBounds(); // Fallback to whole file
+                    boundsToFit = boundaryLayer.getBounds(); 
                 }
             } else {
-                // If no boundary selected, use default bounds
+                // Default bounds
                 boundsToFit = L.latLngBounds([4.0, 114.0], [7.5, 119.5]);
             }
 
-            // Add Markers based on current FILTERED data only
+            // F. Add Markers
             data.forEach(p => {
                 if(p._validCoord) {
                     const config = Utils.getTypeConfig(p._type);
                     L.circleMarker([p.LATITUDE, p.LONGITUDE], { 
+                        pane: 'markerPane',
                         radius: 4, 
                         color: '#fff', 
                         weight: 1,
@@ -1250,13 +1266,12 @@ const UI = {
                 }
             });
 
-            // Fit Bounds logic
-            // 1. If active feature (district/parlimen) is selected, fit to that boundary
+            // G. Final Rendering Fixes
+            AppState.reportMap.invalidateSize(); // Critical step
+
             if(boundsToFit && boundsToFit.isValid()) {
                 AppState.reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
-            } 
-            // 2. If no boundary but we have markers, fit to markers
-            else if (data.length > 0) {
+            } else if (data.length > 0) {
                  const group = L.featureGroup(AppState.reportMarkerLayer.getLayers());
                  if(group.getLayers().length > 0) AppState.reportMap.fitBounds(group.getBounds(), { padding: [20, 20] });
                  else AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
@@ -1264,7 +1279,7 @@ const UI = {
                 AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
             }
 
-        }, 400); // Increased timeout slightly to ensure modal animation is done
+        }, 500); // Slight delay ensures modal is fully visible (display:block)
     },
     updateClock() {
         const now = new Date();
