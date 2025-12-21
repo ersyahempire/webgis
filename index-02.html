@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.8 - Official 0.2</title>
+  <title>Web GIS Projek Sabah v5.8 - Official</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -376,7 +376,7 @@ body {
     </div>
     <!-- Layer Toggle -->
     <div class="control-card" id="layer-card">
-      <div class="control-group-title">Penapis Sempadan</div>
+      <div class="control-group-title">Penapis Data</div>
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
         <span class="icon-slot"><i class="fas fa-map-marked-alt"></i></span> <span class="text-slot">Daerah</span>
       </button>
@@ -851,16 +851,17 @@ const FilterManager = {
         AppState.currentFilteredList = list;
         UI.updateDashboard(list);
 
-        // 3. Map Marker Visibility (Based on Right Side Multiple Select)
+        // 3. Map Marker Visibility
         let mapList = [];
         
-        // Filter based on active toggles from Right Menu
+        // Filter based on active toggles from Right Menu (which are synced with Left Menu)
         if (AppState.activeTypeToggles.size > 0) {
              mapList = list.filter(p => AppState.activeTypeToggles.has(p._type));
         } else {
              mapList = []; // Default empty markers if none selected
         }
 
+        // Apply Status Filter if active
         if (AppState.activeStatusFilter) {
             mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === Utils.getStatusCategory(AppState.activeStatusFilter));
         }
@@ -926,8 +927,9 @@ const UI = {
             filters.appendChild(btn);
         });
     },
-    // Handler for Left Dashboard Cards (Statistics Only)
+    // Handler for Left Dashboard Cards
     handleCategoryClick(type) {
+        // Step 1: Update Dashboard State
         if (AppState.activeCategory === type) {
             AppState.activeCategory = null;
             document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
@@ -936,9 +938,20 @@ const UI = {
             document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
             document.getElementById(`stat-card-${type}`).classList.add('selected');
         }
-        FilterManager.applyFilters(); // Re-apply to update Status List
+
+        // Step 2: Sync to Map Filters (Exclusive Selection for Dashboard Click)
+        // Clear all existing toggles and set only the clicked one (if active)
+        AppState.activeTypeToggles.clear();
+        document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
+        
+        if (AppState.activeCategory) {
+            AppState.activeTypeToggles.add(type);
+            document.getElementById(`toggle-${type}`).classList.add('active');
+        }
+
+        FilterManager.applyFilters(); 
     },
-    // Handler for Right Filter Buttons (Map Markers Only)
+    // Handler for Right Filter Buttons
     handleTypeToggle(type) {
         if (AppState.activeTypeToggles.has(type)) {
             AppState.activeTypeToggles.delete(type);
@@ -947,7 +960,13 @@ const UI = {
             AppState.activeTypeToggles.add(type);
             document.getElementById(`toggle-${type}`).classList.add('active');
         }
-        FilterManager.applyFilters(); // Re-apply to update Map
+        
+        // If user manually toggles right buttons, we clear the "Exclusive" dashboard selection
+        // because the view is now custom/mixed.
+        AppState.activeCategory = null;
+        document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+
+        FilterManager.applyFilters();
     },
     updateDashboard(data) {
         document.getElementById('total-projects').textContent = data.length;
