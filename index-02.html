@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v5.9 - Official (Final Fix)</title>
+  <title>Web GIS Projek Sabah v6.0 - Report Map Fixed</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1185,73 +1185,63 @@ const UI = {
                 </div>`;
         });
 
-        // --- 2. Map Section (Fixed: Blank Map Issue) ---
-        setTimeout(() => {
-            // A. Clean up existing map properly
-            if(AppState.reportMap) {
-                AppState.reportMap.off(); // Remove listeners
+        // --- 2. Map Section (COMPLETE REWRITE for Lifecycle Safety) ---
+        const initReportMap = () => {
+            // A. Clean up existing map instance and DOM
+            if (AppState.reportMap) {
+                AppState.reportMap.off();
                 AppState.reportMap.remove();
                 AppState.reportMap = null;
             }
-
-            // B. Force clear the container HTML to prevent DOM conflicts
+            
             const mapContainer = document.getElementById('report-map');
-            if(mapContainer) mapContainer.innerHTML = "";
+            if (!mapContainer) return;
+            mapContainer.innerHTML = ""; // Force clean DOM
 
-            // C. Create new map instance
+            // B. Initialize Map
             AppState.reportMap = L.map('report-map', { 
                 zoomControl: false, 
                 attributionControl: false,
-                dragging: true,
-                scrollWheelZoom: true,
-                doubleClickZoom: true,
-                boxZoom: true,
-                preferCanvas: true // Performance boost
+                preferCanvas: true // Optimization
             });
             
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
             
-            // D. Create separate panes/groups for correct z-indexing (Boundary below Markers)
+            // C. Create Panes for z-indexing
             AppState.reportMap.createPane('boundaryPane');
             AppState.reportMap.getPane('boundaryPane').style.zIndex = 300;
             AppState.reportMap.createPane('markerPane');
             AppState.reportMap.getPane('markerPane').style.zIndex = 400;
 
             const boundaryGroup = L.featureGroup().addTo(AppState.reportMap);
-            AppState.reportMarkerLayer = L.layerGroup({pane: 'markerPane'}).addTo(AppState.reportMap);
+            const markerGroup = L.featureGroup({pane: 'markerPane'}).addTo(AppState.reportMap);
             
-            // E. Add Boundary Layer
-            let boundsToFit = null;
+            // D. Add Boundary Layer (Safe Check)
+            let boundaryAdded = false;
             if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
-                const rawGeoJson = AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON();
-                const boundaryLayer = L.geoJSON(rawGeoJson, {
-                      pane: 'boundaryPane',
-                      style: (feature) => {
-                          const name = Utils.extractGeoName(feature);
-                          const isActive = name === AppState.activeFeatureName;
-                          return { 
-                              color: isActive ? '#DC2626' : '#94a3b8', 
-                              weight: isActive ? 2 : 1,
-                              fillColor: isActive ? '#EF4444' : 'transparent',
-                              fillOpacity: isActive ? 0.2 : 0
-                          };
-                      }
-                }).addTo(boundaryGroup);
+                const layerObj = AppState.dataLayers[AppState.activeBoundaryKey];
                 
-                // Find bounds of the specific active feature
-                if (AppState.activeFeatureName) {
-                    boundaryLayer.eachLayer(l => {
-                        if (Utils.extractGeoName(l.feature) === AppState.activeFeatureName) boundsToFit = l.getBounds();
-                    });
-                } else {
-                    boundsToFit = boundaryLayer.getBounds(); 
+                // SAFETY CHECK: Ensure layer has toGeoJSON method
+                if (typeof layerObj.toGeoJSON === 'function') {
+                    const geoJson = layerObj.toGeoJSON();
+                    const boundaryLayer = L.geoJSON(geoJson, {
+                          pane: 'boundaryPane',
+                          style: (feature) => {
+                              const name = Utils.extractGeoName(feature);
+                              const isActive = name === AppState.activeFeatureName;
+                              return { 
+                                  color: isActive ? '#DC2626' : '#94a3b8', 
+                                  weight: isActive ? 2 : 1,
+                                  fillColor: isActive ? '#EF4444' : 'transparent',
+                                  fillOpacity: isActive ? 0.2 : 0
+                              };
+                          }
+                    }).addTo(boundaryGroup);
+                    boundaryAdded = true;
                 }
-            } else {
-                // Default bounds
-                boundsToFit = L.latLngBounds([4.0, 114.0], [7.5, 119.5]);
             }
 
-            // F. Add Markers
+            // E. Add Markers
             data.forEach(p => {
                 if(p._validCoord) {
                     const config = Utils.getTypeConfig(p._type);
@@ -1262,24 +1252,43 @@ const UI = {
                         weight: 1,
                         fillColor: config.color, 
                         fillOpacity: 0.8 
-                    }).addTo(AppState.reportMarkerLayer);
+                    }).addTo(markerGroup);
                 }
             });
 
-            // G. Final Rendering Fixes
-            AppState.reportMap.invalidateSize(); // Critical step
+            // F. Final Rendering & Zoom
+            // Must invalidate size AFTER map is visible and initialized
+            AppState.reportMap.invalidateSize();
 
-            if(boundsToFit && boundsToFit.isValid()) {
-                AppState.reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
-            } else if (data.length > 0) {
-                 const group = L.featureGroup(AppState.reportMarkerLayer.getLayers());
-                 if(group.getLayers().length > 0) AppState.reportMap.fitBounds(group.getBounds(), { padding: [20, 20] });
-                 else AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
+            // Smart Zoom Logic
+            if (AppState.activeFeatureName && boundaryAdded) {
+                // Find bounds of the specific active feature
+                let boundsToFit = null;
+                boundaryGroup.eachLayer(l => {
+                     // Check specifically inside the added GeoJSON layer
+                     if (l.eachLayer) { // It's a group/geoJSON
+                         l.eachLayer(featLayer => {
+                             if (Utils.extractGeoName(featLayer.feature) === AppState.activeFeatureName) {
+                                 boundsToFit = featLayer.getBounds();
+                             }
+                         });
+                     }
+                });
+                
+                if (boundsToFit && boundsToFit.isValid()) {
+                    AppState.reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
+                } else {
+                    AppState.reportMap.fitBounds(boundaryGroup.getBounds(), { padding: [20, 20] });
+                }
+            } else if (markerGroup.getLayers().length > 0) {
+                 AppState.reportMap.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
             } else {
                 AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
             }
+        };
 
-        }, 500); // Slight delay ensures modal is fully visible (display:block)
+        // Trigger initialization after modal transition is likely complete
+        setTimeout(initReportMap, 300);
     },
     updateClock() {
         const now = new Date();
@@ -1464,6 +1473,12 @@ function toggleDashboard() {
 
 function closeReport() {
     document.getElementById('report-overlay').classList.remove('open');
+    // CLEANUP: Destroy map immediately to free memory
+    if (AppState.reportMap) {
+        AppState.reportMap.off();
+        AppState.reportMap.remove();
+        AppState.reportMap = null;
+    }
 }
 
 function generatePDF() {
