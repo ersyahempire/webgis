@@ -374,9 +374,9 @@ body {
             <span class="text-slot">Report Kad</span>
         </button>
     </div>
-    <!-- Layer Toggle -->
+    <!-- Layer Toggle (Updated Title) -->
     <div class="control-card" id="layer-card">
-      <div class="control-group-title">Penapis Data</div>
+      <div class="control-group-title">Penapis Sempadan</div>
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
         <span class="icon-slot"><i class="fas fa-map-marked-alt"></i></span> <span class="text-slot">Daerah</span>
       </button>
@@ -387,7 +387,7 @@ body {
         <span class="icon-slot"><i class="fas fa-building"></i></span> <span class="text-slot">Parlimen</span>
       </button>
     </div>
-    <!-- Category Filters -->
+    <!-- Category Filters (Updated Title) -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
       <div id="dynamic-filter-btns"></div>
@@ -561,8 +561,8 @@ const AppState = {
     activeStatusFilter: null,
     
     // Decoupled Filters
-    activeCategory: null,     // Left Dashboard (Single Select) - Controls Statistics Only
-    activeTypeToggles: new Set(), // Right Controls (Multiple Select) - Controls Map Markers Only
+    activeCategory: null,     // Left Dashboard (Single Focus) - Filters Map but doesn't sync right buttons
+    activeTypeToggles: new Set(), // Right Controls (Multiple Select) - Default Map Filter
     
     // Charts
     charts: { c1: null, c2: null, c3: null, bottom: [] }
@@ -820,7 +820,7 @@ const MapManager = {
 
 /**
  * =============================================================================
- * 6. DATA PROCESSING & FILTERING
+ * 6. DATA PROCESSING & FILTERING (UPDATED LOGIC)
  * =============================================================================
  */
 const FilterManager = {
@@ -851,19 +851,29 @@ const FilterManager = {
         AppState.currentFilteredList = list;
         UI.updateDashboard(list);
 
-        // 3. Map Marker Visibility
+        // 3. Map Marker Visibility (NEW LOGIC)
+        // If Left Dashboard is focused (activeCategory), use that. 
+        // Else use Right Side toggles (activeTypeToggles).
         let mapList = [];
-        
-        // Filter based on active toggles from Right Menu (which are synced with Left Menu)
-        if (AppState.activeTypeToggles.size > 0) {
-             mapList = list.filter(p => AppState.activeTypeToggles.has(p._type));
+        let typesToShow = new Set();
+
+        if (AppState.activeCategory) {
+            // Priority 1: Left Dashboard Selection (Single Focus)
+            typesToShow.add(AppState.activeCategory);
         } else {
-             mapList = []; // Default empty markers if none selected
+            // Priority 2: Right Control Selection (Multi Select)
+            typesToShow = AppState.activeTypeToggles;
         }
 
-        // Apply Status Filter if active
+        if (typesToShow.size > 0) {
+             mapList = list.filter(p => typesToShow.has(p._type));
+        } else {
+             mapList = []; // Default empty markers if nothing selected
+        }
+
+        // Apply Status Filter if active (From Left Dashboard)
         if (AppState.activeStatusFilter) {
-            mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === Utils.getStatusCategory(AppState.activeStatusFilter));
+            mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === AppState.activeStatusFilter);
         }
 
         this.updateMapMarkers(mapList);
@@ -902,7 +912,7 @@ const UI = {
         const filters = document.getElementById('dynamic-filter-btns');
         
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
-            // Dashboard Mini Stat (Left Side - Single Select for Stats)
+            // Dashboard Mini Stat (Left Side - Focus Mode)
             const stat = document.createElement('div');
             stat.className = 'mini-stat'; 
             stat.id = `stat-card-${t.type}`;
@@ -918,7 +928,7 @@ const UI = {
             // Legend
             legend.innerHTML += `<div class="legend-row"><span class="dot" style="background:${t.color}"></span> ${t.label}</div>`;
 
-            // Filter Button (Right Side - Multiple Select for Map)
+            // Filter Button (Right Side - Multiple Select)
             const btn = document.createElement('button');
             btn.className = "toggle-btn"; 
             btn.id = `toggle-${t.type}`;
@@ -927,32 +937,31 @@ const UI = {
             filters.appendChild(btn);
         });
     },
-    // Handler for Left Dashboard Cards
+    // Handler for Left Dashboard Cards (Focus Mode)
     handleCategoryClick(type) {
-        // Step 1: Update Dashboard State
+        // Toggle Logic for Focus Mode
         if (AppState.activeCategory === type) {
-            AppState.activeCategory = null;
+            AppState.activeCategory = null; // Turn off focus
             document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
         } else {
-            AppState.activeCategory = type;
+            AppState.activeCategory = type; // Turn on focus
             document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
             document.getElementById(`stat-card-${type}`).classList.add('selected');
         }
-
-        // Step 2: Sync to Map Filters (Exclusive Selection for Dashboard Click)
-        // Clear all existing toggles and set only the clicked one (if active)
-        AppState.activeTypeToggles.clear();
-        document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
         
-        if (AppState.activeCategory) {
-            AppState.activeTypeToggles.add(type);
-            document.getElementById(`toggle-${type}`).classList.add('active');
-        }
-
+        // IMPORTANT: We do NOT touch activeTypeToggles here. 
+        // FilterManager will prioritize activeCategory if it exists.
         FilterManager.applyFilters(); 
     },
-    // Handler for Right Filter Buttons
+    // Handler for Right Filter Buttons (Multiselect)
     handleTypeToggle(type) {
+        // If user interacts with Right Controls, we reset Left Dashboard Focus to avoid confusion
+        if (AppState.activeCategory) {
+            AppState.activeCategory = null;
+            document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+        }
+
+        // Standard Multiselect Logic
         if (AppState.activeTypeToggles.has(type)) {
             AppState.activeTypeToggles.delete(type);
             document.getElementById(`toggle-${type}`).classList.remove('active');
@@ -961,11 +970,6 @@ const UI = {
             document.getElementById(`toggle-${type}`).classList.add('active');
         }
         
-        // If user manually toggles right buttons, we clear the "Exclusive" dashboard selection
-        // because the view is now custom/mixed.
-        AppState.activeCategory = null;
-        document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
-
         FilterManager.applyFilters();
     },
     updateDashboard(data) {
@@ -977,14 +981,14 @@ const UI = {
             document.getElementById(`count-${t.type}`).textContent = count;
         });
 
-        // Filter Status List based on Active Category (Left Dashboard)
+        // Filter Status List based on Active Category (Left Dashboard) if active
         let statusData = data;
         if (AppState.activeCategory) {
             statusData = data.filter(p => p._type === AppState.activeCategory);
         }
-        this.renderStatusList(statusData, AppState.activeCategory ? true : false);
+        this.renderStatusList(statusData);
     },
-    renderStatusList(data, isFiltered) {
+    renderStatusList(data) {
         const container = document.getElementById('status-list');
         container.innerHTML = "";
         
@@ -1036,6 +1040,7 @@ const UI = {
         });
     },
     toggleStatusFilter(status) {
+        // Toggle Status Filter
         AppState.activeStatusFilter = (AppState.activeStatusFilter === status) ? null : status;
         FilterManager.applyFilters();
     },
@@ -1079,7 +1084,7 @@ const UI = {
             AppState.reportMarkerLayer.clearLayers();
             if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
                 const boundary = L.geoJSON(AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON(), {
-                     style: (f) => ({ color: (Utils.extractGeoName(f) === AppState.activeFeatureName) ? '#EF4444' : '#ccc', weight: 1 })
+                      style: (f) => ({ color: (Utils.extractGeoName(f) === AppState.activeFeatureName) ? '#EF4444' : '#ccc', weight: 1 })
                 }).addTo(AppState.reportMap);
                 const activeLayer = boundary.getLayers().find(l => Utils.extractGeoName(l.feature) === AppState.activeFeatureName);
                 if(activeLayer) AppState.reportMap.fitBounds(activeLayer.getBounds());
