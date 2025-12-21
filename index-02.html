@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.5 - Status Logic Fixed</title>
+  <title>Web GIS Projek Sabah v6.6 - Configured Status Order</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -533,13 +533,20 @@ const APP_CONFIG = {
         { id: "tower", sheetId: "1b0Aipp0MQvP8HWc-z28dugkGn5sWdNAx6ZE5-Mu13-0", type: "TOWER", label: "Menara", color: "#ff6b6b", icon: "🗼", filter: { col: "PROJECT_TYPE", val: "USP" } }
     ],
     
-    // Status keywords for coloring ONLY. Actual categories are dynamic.
-    COLOR_PALETTE: {
-        GREEN: "#86efac",  // Siap, Komited, etc.
-        YELLOW: "#fde047", // Bina, Implementasi, etc.
-        RED: "#fca5a5",    // Rancang, Baru, etc.
-        GRAY: "#cbd5e1"    // Others
-    },
+    // ===============================================================
+    // KONFIGURASI STATUS SECARA MANUAL (STATUS_MAPPING)
+    // ===============================================================
+    // Masukkan "Keyword" STATUS mengikut data sebenar pada column "STATUS" di Google Sheet.
+    // Susunan dalam array ini akan menentukan susunan paparan di Dashboard & Report.
+    // Jika data mengandungi status yang TIDAK tersenarai di sini, ia akan guna warna default.
+    STATUS_MAPPING: [
+        { keywords: ["SIAP"], color: "#86efac" }, // Hijau
+        { keywords: ["PEMBINAAN"], color: "#fde047" }, // Kuning
+        { keywords: ["PERANCANGAN"], color: "#fca5a5" }, // Merah
+        { keywords: ["TIADA STATUS", "UNKNOWN"], color: "#cbd5e1" } // Kelabu
+    ],
+    
+    DEFAULT_STATUS_COLOR: "#cbd5e1", // Warna jika status tidak ditemui dalam mapping di atas
 
     SETTINGS: {
         MAX_EXTRA_INFO_COLUMNS: 15,
@@ -590,13 +597,28 @@ const Utils = {
         return Utils.normalize(rawStatus) || "TIADA STATUS";
     },
     getTypeConfig: (typeKey) => APP_CONFIG.PROJECT_TYPES.find(t => t.type === typeKey) || { color: "#666", icon: "❓", label: typeKey },
-    // Updated: Determines color based on keywords
+    
+    // Updated: Determines color based on STATUS_MAPPING configuration
     getStatusColor: (statusKey) => {
         const s = Utils.normalize(statusKey);
-        if (s.match(/SIAP|KOMITED|OPERASI|SELESAI|COMPLETE/)) return APP_CONFIG.COLOR_PALETTE.GREEN;
-        if (s.match(/BINA|IMPLEMENTASI|PROGRESS|PELAKSANAAN/)) return APP_CONFIG.COLOR_PALETTE.YELLOW;
-        if (s.match(/RANCANG|BARU|PLAN/)) return APP_CONFIG.COLOR_PALETTE.RED;
-        return APP_CONFIG.COLOR_PALETTE.GRAY;
+        // Find matching config
+        const found = APP_CONFIG.STATUS_MAPPING.find(config => {
+            // Check if any keyword in the config array matches the status key (partial or exact)
+            // Using includes for exact word match in the list of keywords provided in config
+            return config.keywords.some(k => s.includes(k) || s === k);
+        });
+        
+        return found ? found.color : APP_CONFIG.DEFAULT_STATUS_COLOR;
+    },
+    
+    // New Helper: Get Sort Index based on STATUS_MAPPING
+    getStatusSortIndex: (statusKey) => {
+        const s = Utils.normalize(statusKey);
+        const idx = APP_CONFIG.STATUS_MAPPING.findIndex(config => {
+            return config.keywords.some(k => s.includes(k) || s === k);
+        });
+        // If found, return index. If not found, return a large number to put at bottom.
+        return idx !== -1 ? idx : 999;
     }
 };
 
@@ -1048,7 +1070,7 @@ const UI = {
         };
         window.requestAnimationFrame(step);
     },
-    // Updated: Render Status List dynamically based on MASTER Data (shows all statuses even if 0 in view)
+    // Updated: Render Status List dynamically based on MASTER Data and new Config
     renderStatusList(data) {
         const container = document.getElementById('status-list');
         container.innerHTML = "";
@@ -1084,10 +1106,19 @@ const UI = {
         
         const totalCount = data.length;
         
-        // 4. Susun: Count Descending (untuk view semasa), kemudian Alphabetical
+        // 4. Susun: Gunakan Priority Index dari Config, kemudian Count
         const sortedCats = Object.keys(stats).sort((a,b) => {
+            const indexA = Utils.getStatusSortIndex(a);
+            const indexB = Utils.getStatusSortIndex(b);
+            
+            // Priority 1: Config Order
+            if (indexA !== indexB) return indexA - indexB;
+            
+            // Priority 2: Count Descending (untuk status yang tiada dalam config)
             const diff = stats[b].count - stats[a].count;
             if (diff !== 0) return diff;
+            
+            // Priority 3: Alphabetical
             return a.localeCompare(b);
         });
 
@@ -1198,10 +1229,18 @@ const UI = {
             }
         });
 
-        // d. Sort
+        // d. Sort: Gunakan Priority Index dari Config, kemudian Count
         const sortedStatusList = Object.keys(reportStats).sort((a, b) => {
+            const indexA = Utils.getStatusSortIndex(a);
+            const indexB = Utils.getStatusSortIndex(b);
+            
+            // Priority 1: Config Order
+            if (indexA !== indexB) return indexA - indexB;
+            
+            // Priority 2: Count Descending (untuk status yang tiada dalam config)
             const diff = reportStats[b].count - reportStats[a].count;
             if (diff !== 0) return diff;
+            
             return a.localeCompare(b);
         });
 
@@ -1407,109 +1446,6 @@ const UI = {
         link.href = URL.createObjectURL(blob);
         link.download = fileName;
         link.click();
-    }
-};
-
-/**
- * =============================================================================
- * 8. CHART RENDERING (APEXCHARTS)
- * =============================================================================
- */
-const ChartManager = {
-    renderCharts(data) {
-        const commonOpt = {
-            chart: { type: 'bar', toolbar: { show: false }, animations: { enabled: false } },
-            legend: { show: true, position: 'bottom' },
-            dataLabels: { enabled: true }
-        };
-        
-        // Chart 1: Project Types
-        const countsByType = {};
-        APP_CONFIG.PROJECT_TYPES.forEach(t => countsByType[t.label] = data.filter(p => p._type === t.type).length);
-        if(AppState.charts.c1) AppState.charts.c1.destroy();
-        AppState.charts.c1 = new ApexCharts(document.querySelector("#chart-01"), {
-            ...commonOpt, chart: { type: 'donut' },
-            series: Object.values(countsByType),
-            labels: Object.keys(countsByType),
-            colors: APP_CONFIG.PROJECT_TYPES.map(t => t.color)
-        });
-        AppState.charts.c1.render();
-        
-        // Chart 2: Dynamic Status Categories
-        const countsByStatus = {};
-        data.forEach(p => {
-            const c = Utils.getStatusCategory(p.STATUS);
-            countsByStatus[c] = (countsByStatus[c] || 0) + 1;
-        });
-        const cats = Object.keys(countsByStatus).sort((a,b) => countsByStatus[b] - countsByStatus[a]);
-        
-        if(AppState.charts.c2) AppState.charts.c2.destroy();
-        AppState.charts.c2 = new ApexCharts(document.querySelector("#chart-02"), {
-            ...commonOpt, chart: { type: 'bar' },
-            series: [{ name: 'Jumlah', data: cats.map(c => countsByStatus[c]) }],
-            xaxis: { categories: cats },
-            colors: cats.map(c => Utils.getStatusColor(c)),
-            plotOptions: { bar: { distributed: true } }
-        });
-        AppState.charts.c2.render();
-        
-        // Chart 3: Project vs Status (Dynamic)
-        const series = cats.map(status => {
-            return {
-                name: status,
-                data: APP_CONFIG.PROJECT_TYPES.map(t => data.filter(p => p._type === t.type && Utils.getStatusCategory(p.STATUS) === status).length)
-            };
-        });
-        if(AppState.charts.c3) AppState.charts.c3.destroy();
-        AppState.charts.c3 = new ApexCharts(document.querySelector("#chart-03"), {
-            ...commonOpt, chart: { type: 'bar', stacked: true },
-            series: series,
-            xaxis: { categories: APP_CONFIG.PROJECT_TYPES.map(t => t.label) },
-            colors: cats.map(c => Utils.getStatusColor(c))
-        });
-        AppState.charts.c3.render();
-        
-        // Bottom Charts
-        const bottomContainer = document.getElementById('dynamic-bottom-grid');
-        bottomContainer.innerHTML = "";
-        AppState.charts.bottom.forEach(c => c.destroy());
-        AppState.charts.bottom = [];
-        
-        APP_CONFIG.PROJECT_TYPES.forEach((t, idx) => {
-            const tData = data.filter(p => p._type === t.type);
-            
-            // Get unique statuses for this project type
-            const tStatusCounts = {};
-            tData.forEach(p => {
-                const s = Utils.getStatusCategory(p.STATUS);
-                tStatusCounts[s] = (tStatusCounts[s] || 0) + 1;
-            });
-            const tCats = Object.keys(tStatusCounts).sort((a,b) => tStatusCounts[b] - tStatusCounts[a]).slice(0, 5); // Top 5
-
-            const divId = `bottom-chart-${idx}`;
-            bottomContainer.innerHTML += `
-                <div class="card bottom-card">
-                    <div class="bottom-card-header">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <div class="icon-box" style="background:${t.color}; display:flex; align-items:center; justify-content:center; color:white;">${t.icon}</div>
-                            <div><h4>${t.label}</h4><h3>${tData.length}</h3></div>
-                        </div>
-                    </div>
-                    <div class="bottom-card-body" id="${divId}"></div>
-                </div>`;
-            setTimeout(() => {
-                const c = new ApexCharts(document.querySelector(`#${divId}`), {
-                    chart: { type: 'bar', height: '100%', toolbar: { show: false } },
-                    series: [{ name: 'Jumlah', data: tCats.map(k => tStatusCounts[k]) }],
-                    xaxis: { categories: tCats },
-                    colors: tCats.map(k => Utils.getStatusColor(k)),
-                    plotOptions: { bar: { distributed: true, borderRadius: 4 } },
-                    legend: { show: false }
-                });
-                c.render();
-                AppState.charts.bottom.push(c);
-            }, 100);
-        });
     }
 };
 
