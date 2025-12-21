@@ -30,7 +30,7 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
   --glass-border: rgba(255, 255, 255, 0.8);        
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
-  --glass-blur: 20px;                            
+  --glass-blur: 20px;                             
   --text-main: #111827;      /* Gray 900 */
   --text-sub: #6b7280;       /* Gray 500 */
   --radius: 20px;            
@@ -226,90 +226,130 @@ body {
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-sub); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255,255,255,0.5); }
 
-/* ----- REPORT MODAL ----- */
+/* =============================================================================
+   REPORT MODAL (STATIC INFOGRAPHIC - UPDATED FOR A3)
+   ============================================================================= */
 .report-overlay {
     position: fixed; inset: 0; z-index: 5000;
-    background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(6px);
+    background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(8px);
     display: none; align-items: center; justify-content: center;
     opacity: 0; transition: opacity 0.3s ease;
 }
 .report-overlay.open { display: flex; opacity: 1; }
+
 .report-modal {
-    width: 95%; max-width: 1400px; height: 90vh; border-radius: 20px;
-    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.5);
+    /* Set Aspect Ratio for A3 Landscape (Approx 1.414 : 1) */
+    width: 90vw; height: 90vh; 
+    max-width: 1600px; aspect-ratio: 297/210; /* A3 Landscape Ratio */
+    border-radius: 20px;
+    box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.6);
     display: flex; flex-direction: column; overflow: hidden;
     transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    background: linear-gradient(135deg, #7F7FD5 0%, #86A8E7 50%, #91EAE4 100%);
-    color: #1f2937; border: 1px solid rgba(255,255,255,0.3); position: relative;
+    background: linear-gradient(135deg, #eef2f5 0%, #e0e7ff 100%);
+    color: #1f2937; border: 8px solid #fff; position: relative;
 }
 .report-overlay.open .report-modal { transform: scale(1); }
-.report-container { padding: 30px; display: flex; flex-direction: column; gap: 25px; height: 100%; overflow-y: auto; }
+
+/* Static Container - No Scrollbars Allowed */
+.report-container { 
+    padding: 30px; 
+    display: flex; flex-direction: column; 
+    height: 100%; width: 100%;
+    overflow: hidden; /* Force Static */
+    gap: 15px;
+}
+
 .modal-close-btn {
     position: absolute; top: 15px; right: 20px; z-index: 5002;
-    background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.4); width: 40px; height: 40px; border-radius: 50%; 
+    background: #ef4444; border: none; width: 40px; height: 40px; border-radius: 50%; 
     cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
 }
-.modal-close-btn:hover { background: rgba(255, 255, 255, 0.8); color: #ef4444; }
+.modal-close-btn:hover { background: #dc2626; transform: rotate(90deg); transition: 0.3s; }
 
-/* Report Cards */
-.card {
-    background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px); border-radius: 16px; padding: 20px;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+/* Report Header */
+.report-header-content { 
+    display: flex; justify-content: space-between; align-items: center; 
+    padding-bottom: 10px; border-bottom: 2px solid #3730a3; flex-shrink: 0;
 }
-.report-header-content { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.4); }
-.header-title h1 { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; margin: 0; color: rgba(255,255,255,0.8); letter-spacing: 1px; }
-.header-title h2 { font-size: 2.2rem; font-weight: 800; margin: 5px 0 0 0; line-height: 1.1; color: #fff; }
-.header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-right: 40px; }
+.header-title h1 { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; margin: 0; color: #6b7280; letter-spacing: 2px; }
+.header-title h2 { font-size: 2.8rem; font-weight: 900; margin: 0; line-height: 1; color: #3730a3; }
+.header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .btn-download-pdf {
-    background: rgba(255, 255, 255, 0.9); padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; 
-    cursor: pointer; border: none; color: #4f46e5; font-weight: 700; text-transform: uppercase;
-    display: flex; align-items: center; gap: 8px;
+    background: #4f46e5; padding: 10px 24px; border-radius: 8px; font-size: 0.9rem; 
+    cursor: pointer; border: none; color: #fff; font-weight: 700; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
 }
-.btn-download-pdf:hover { background: #fff; }
-.current-time { font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 600; background: rgba(0,0,0,0.1); padding: 5px 12px; border-radius: 6px; }
+.btn-download-pdf:hover { background: #4338ca; transform: translateY(-2px); }
+.current-time { font-size: 0.9rem; color: #374151; font-weight: 700; background: #fff; padding: 6px 14px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-/* Report Layout */
-.top-row { display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
-.report-main-stat { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: rgba(255, 255, 255, 0.6); }
-.report-main-stat h1 { font-size: 3.5rem; color: #3730a3; margin: 10px 0; }
-.badge { background: rgba(79, 70, 229, 0.9); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-.mini-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; }
-.mini-card {
+/* Top Section: KPIs & Charts */
+.top-section { display: grid; grid-template-columns: 280px 1fr 1.5fr; gap: 15px; height: 28%; flex-shrink: 0; }
+
+.kpi-card-main {
+    background: #fff; border-radius: 16px; padding: 20px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(255, 255, 255, 0.5); border-radius: 16px; padding: 15px;
-    border: 1px solid rgba(255,255,255,0.5); border-top-width: 4px;
+    text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;
 }
-.mini-card h3 { font-size: 1.8rem; color: #1f2937; margin: 0 0 5px 0; }
-.mini-card span { font-size: 0.75rem; font-weight: 700; color: #4b5563; text-transform: uppercase; }
+.kpi-card-main h1 { font-size: 4.5rem; color: #3730a3; margin: 0; line-height: 1; font-weight: 900; }
+.kpi-card-main p { font-size: 0.8rem; font-weight: 700; color: #6b7280; margin-top: 5px; text-transform: uppercase; }
 
-.charts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.chart-card { height: 480px; padding: 20px; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.65); }
-.chart-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; color: #111827; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.mini-stats-wrapper { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; }
+.report-mini-card {
+    background: #fff; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; 
+    align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    border-top: 4px solid #ccc;
+}
+.report-mini-card h3 { font-size: 1.6rem; margin: 0; color: #111827; }
+.report-mini-card span { font-size: 0.7rem; font-weight: 700; color: #6b7280; text-transform: uppercase; }
 
-/* Main Content: Map & Status */
-.main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; min-height: 550px; }
-.map-container { padding: 0; overflow: hidden; border-radius: 16px; position: relative; height: 100%; min-height: 550px; }
+.chart-wrapper { background: #fff; border-radius: 16px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+.chart-header { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #374151; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 5px; }
+
+/* Main Content: Map & Status (Static Layout) */
+.middle-section { 
+    display: grid; grid-template-columns: 2fr 1fr; gap: 15px; 
+    flex: 1; min-height: 0; /* Important for flex child */
+}
+
+.report-map-box { 
+    background: #fff; border-radius: 16px; overflow: hidden; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 4px solid #fff;
+    position: relative; height: 100%; width: 100%;
+}
 #report-map { width: 100%; height: 100%; background: #e5e7eb; }
-.status-container { background: rgba(255, 255, 255, 0.6); padding: 0; overflow: hidden; display: flex; flex-direction: column; height: 100%; max-height: 550px; }
-.status-header-fixed { padding: 15px 20px; background: rgba(255,255,255,0.4); border-bottom: 1px solid rgba(255,255,255,0.5); font-weight: 800; color: #374151; }
-.status-scroll-area { padding: 20px; overflow-y: auto; flex: 1; }
 
-.bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; padding-bottom: 20px; }
-.bottom-card { height: 480px; padding: 20px; background: rgba(255, 255, 255, 0.65); display: flex; flex-direction: column; overflow: hidden; }
-.bottom-card-header { margin-bottom: 15px; flex-shrink: 0; }
-.bottom-card-body { flex: 1; min-height: 0; width: 100%; }
-.icon-box { width: 36px; height: 36px; border-radius: 8px; }
-
-/* Responsive */
-@media (max-width: 1200px) { .charts-row, .bottom-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px) { 
-    .charts-row, .bottom-grid { grid-template-columns: 1fr; }
-    .top-row, .main-content { grid-template-columns: 1fr; }
-    .header-info { margin-right: 40px; }
+.report-status-box { 
+    background: #fff; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: 100%;
 }
+.report-status-header { 
+    padding: 12px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; 
+    font-weight: 800; color: #3730a3; font-size: 0.9rem; text-transform: uppercase;
+}
+/* Static Status Grid - No Scroll */
+.report-status-content { 
+    padding: 10px; flex: 1; overflow: hidden; 
+    display: grid; grid-template-columns: 1fr; gap: 8px; align-content: start;
+}
+.report-status-row {
+    background: #f9fafb; padding: 8px 12px; border-radius: 8px; border-left: 4px solid #ccc;
+    display: flex; flex-direction: column; justify-content: center;
+}
+.r-status-top { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+.r-status-bar { height: 6px; background: #e5e7eb; border-radius: 4px; overflow: hidden; width: 100%; }
+.r-status-fill { height: 100%; }
+.r-status-details { font-size: 0.65rem; color: #6b7280; margin-top: 4px; display: flex; gap: 8px; }
+
+/* Bottom Section */
+.bottom-section { height: 15%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; flex-shrink: 0; }
+.bottom-stat-card { background: #fff; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+
+footer { 
+    text-align: center; font-size: 0.75rem; color: #6b7280; font-weight: 600; padding-top: 10px; 
+    border-top: 1px solid rgba(0,0,0,0.1); flex-shrink: 0;
+}
+
 </style>
 </head>
 <body>
@@ -370,9 +410,9 @@ body {
     </div>
     <!-- Report -->
     <div class="control-card">
-        <button class="toggle-btn" title="Report Kad" onclick="openReport()">
+        <button class="toggle-btn" title="Infografik A3" onclick="openReport()">
             <span class="icon-slot"><i class="fas fa-file-invoice-dollar" style="color: #F59E0B;"></i></span> 
-            <span class="text-slot">Report Kad</span>
+            <span class="text-slot">Infografik A3</span>
         </button>
     </div>
     <!-- Layer Toggle (Updated Title) -->
@@ -395,7 +435,7 @@ body {
     </div>
   </div>
 
-  <!-- REPORT MODAL -->
+  <!-- REPORT MODAL (INFOGRAPHIC A3 STATIC) -->
   <div class="report-overlay" id="report-overlay">
       <div class="report-modal" id="report-content">
           <button class="modal-close-btn" onclick="closeReport()"><i class="fas fa-times"></i></button>
@@ -404,57 +444,66 @@ body {
               <!-- HEADER -->
               <header class="report-header-content">
                   <div class="header-title">
-                      <h1>Laporan Dashboard Projek</h1>
+                      <h1>Laporan Prestasi Projek</h1>
                       <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
                   <div class="header-info">
-                      <button class="btn-download-pdf" onclick="generatePDF()">Muat Turun PDF</button>
+                      <button class="btn-download-pdf" onclick="generatePDF()">
+                        <i class="fas fa-file-pdf"></i> Muat Turun PDF (A3)
+                      </button>
                       <div class="current-time" id="clock">Loading...</div>
                   </div>
               </header>
 
-              <!-- TOP STATS -->
-              <div class="top-row">
-                  <div class="card report-main-stat">
+              <!-- SECTION 1: KPIs & CHARTS -->
+              <div class="top-section">
+                  <!-- Main Big Number -->
+                  <div class="kpi-card-main">
                       <h1 id="report-total-count">0</h1>
-                      <p>JUMLAH KESELURUHAN PROJEK</p>
-                      <div class="badge" id="report-badge-area">SELURUH SABAH</div>
+                      <p>JUMLAH KESELURUHAN TAPAK PROJEK</p>
+                      <div class="badge" style="background:#e0e7ff; color:#4f46e5; margin-top:10px; padding:5px 15px; border-radius:20px; font-weight:800; font-size:0.75rem;" id="report-badge-area">SABAH</div>
                   </div>
-                  <div class="mini-stats-grid" id="report-mini-stats"></div>
-              </div>
 
-              <!-- CHARTS ROW -->
-              <div class="charts-row">
-                  <div class="card chart-card">
-                      <div class="chart-title">Carta 01: Jumlah Site Mengikut Projek</div>
-                      <div id="chart-01" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
+                  <!-- Mini Stats Grid -->
+                  <div class="mini-stats-wrapper" id="report-mini-stats">
+                    <!-- Injected via JS -->
                   </div>
-                  <div class="card chart-card">
-                      <div class="chart-title">Carta 02: Status Projek</div>
-                      <div id="chart-02" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
-                  </div>
-                  <div class="card chart-card">
-                      <div class="chart-title">Carta 03: Jumlah Projek vs Status</div>
-                      <div id="chart-03" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
+
+                  <!-- Chart: Project Composition -->
+                  <div class="chart-wrapper">
+                      <div class="chart-header">Komposisi Projek</div>
+                      <div id="chart-01" style="flex:1; width:100%; min-height:0;"></div>
                   </div>
               </div>
 
-              <!-- MAIN CONTENT (MAP & STATUS) -->
-              <div class="main-content">
-                  <div class="card map-container">
+              <!-- SECTION 2: MAP & STATUS (STATIC LAYOUT) -->
+              <div class="middle-section">
+                  <!-- Map Container (Zoomed In) -->
+                  <div class="report-map-box">
                       <div id="report-map"></div>
+                      <!-- Map Legend Overlay -->
+                      <div style="position:absolute; bottom:10px; right:10px; background:rgba(255,255,255,0.9); padding:8px; border-radius:8px; z-index:999; font-size:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                        <div style="font-weight:700; margin-bottom:4px;">PETUNJUK:</div>
+                        <div id="report-map-legend"></div>
+                      </div>
                   </div>
-                  <div class="card status-container">
-                      <div class="status-header-fixed">STATUS KEMAJUAN TERPERINCI</div>
-                      <div class="status-scroll-area" id="dynamic-status-container"></div>
+
+                  <!-- Status List (Static Grid) -->
+                  <div class="report-status-box">
+                      <div class="report-status-header">RINGKASAN STATUS KEMAJUAN</div>
+                      <div class="report-status-content" id="report-status-grid">
+                        <!-- Injected JS Grid Items -->
+                      </div>
                   </div>
               </div>
 
-              <!-- BOTTOM GRID -->
-              <div class="bottom-grid" id="dynamic-bottom-grid"></div>
+              <!-- SECTION 3: BOTTOM CHARTS -->
+              <div class="bottom-section" id="report-bottom-charts">
+                  <!-- Injected Charts -->
+              </div>
 
               <footer>
-                  Sistem dibangunkan oleh MCMC Tawau &copy; 2024
+                  Sistem Maklumat Geografi (GIS) Projek Sabah | Dijana secara automatik pada <span id="footer-date"></span> | &copy; MCMC Tawau
               </footer>
           </div>
       </div>
@@ -565,11 +614,11 @@ const AppState = {
     activeStatusFilter: null,
     
     // Decoupled Filters
-    activeCategory: null,     // Left Dashboard (Single Focus)
+    activeCategory: null,      // Left Dashboard (Single Focus)
     activeTypeToggles: new Set(), // Right Controls (Multiple Select)
     
     // Charts
-    charts: { c1: null, c2: null, c3: null, bottom: [] }
+    charts: { c1: null, bottom: [] }
 };
 
 /**
@@ -900,8 +949,10 @@ const UI = {
         const grid = document.getElementById('dynamic-grid-stats');
         const legend = document.getElementById('dynamic-legend');
         const filters = document.getElementById('dynamic-filter-btns');
+        const mapLegend = document.getElementById('report-map-legend');
         
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
+            // Dashboard Mini Stats
             const stat = document.createElement('div');
             stat.className = 'mini-stat'; 
             stat.id = `stat-card-${t.type}`;
@@ -915,6 +966,7 @@ const UI = {
             grid.appendChild(stat);
 
             legend.innerHTML += `<div class="legend-row"><span class="dot" style="background:${t.color}"></span> ${t.label}</div>`;
+            mapLegend.innerHTML += `<div style="display:flex;align-items:center;margin-bottom:2px;"><span style="width:8px;height:8px;border-radius:50%;background:${t.color};margin-right:5px;"></span> ${t.label}</div>`;
 
             const btn = document.createElement('button');
             btn.className = "toggle-btn"; 
@@ -983,18 +1035,17 @@ const UI = {
         };
         window.requestAnimationFrame(step);
     },
-    // Updated: Render Status List dynamically based on actual content
     renderStatusList(data) {
         const container = document.getElementById('status-list');
         container.innerHTML = "";
         
         const stats = {};
         data.forEach(p => {
-            const cat = Utils.getStatusCategory(p.STATUS); // Actual status
+            const cat = Utils.getStatusCategory(p.STATUS); 
             if(!stats[cat]) {
                 stats[cat] = { 
                     count: 0, 
-                    color: Utils.getStatusColor(cat), // Keywords based color
+                    color: Utils.getStatusColor(cat), 
                     details: {} 
                 };
             }
@@ -1005,7 +1056,6 @@ const UI = {
         
         const totalCount = data.length;
         
-        // Sort by count desc
         const sortedCats = Object.keys(stats).sort((a,b) => stats[b].count - stats[a].count);
 
         sortedCats.forEach(cat => {
@@ -1051,103 +1101,68 @@ const UI = {
         document.getElementById('report-layer-name').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-badge-area').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-total-count').textContent = data.length;
+        document.getElementById('footer-date').textContent = new Date().toLocaleString('ms-MY');
         this.updateClock();
         
-        // Mini Stats (Top)
+        // --- 1. Top Section Stats ---
         const miniContainer = document.getElementById('report-mini-stats');
         miniContainer.innerHTML = "";
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
             const count = data.filter(p => p._type === t.type).length;
             miniContainer.innerHTML += `
-                <div class="mini-card" style="border-top-color:${t.color}">
+                <div class="report-mini-card" style="border-top-color:${t.color}">
                     <h3 style="color:${t.color}">${count}</h3><span>${t.label}</span>
                 </div>`;
         });
         
         ChartManager.renderCharts(data);
         
-        // --- 1. Status Section (Style like Dashboard, All Categories, Expanded) ---
-        const modalStatus = document.getElementById('dynamic-status-container');
-        modalStatus.innerHTML = "";
+        // --- 2. Static Status Grid (No Scroll) ---
+        const reportStatusGrid = document.getElementById('report-status-grid');
+        reportStatusGrid.innerHTML = "";
         
-        // a. Get ALL unique statuses from ENTIRE database
-        const allUniqueStatuses = new Set(AppState.allProjects.map(p => Utils.getStatusCategory(p.STATUS)));
-        const allStatusList = Array.from(allUniqueStatuses).sort(); 
-
-        // b. Calculate counts for CURRENTLY FILTERED data
-        const currentCounts = {};
-        const currentDetails = {}; 
-        
+        const counts = {};
         data.forEach(p => {
-            const s = Utils.getStatusCategory(p.STATUS);
-            currentCounts[s] = (currentCounts[s] || 0) + 1;
+             const s = Utils.getStatusCategory(p.STATUS);
+             counts[s] = (counts[s] || 0) + 1;
+        });
+        const sortedStatus = Object.keys(counts).sort((a,b) => counts[b] - counts[a]); // Max top 7 to fit
+
+        sortedStatus.forEach(status => {
+            const count = counts[status];
+            const percent = ((count / data.length) * 100).toFixed(1);
+            const color = Utils.getStatusColor(status);
             
-            if(!currentDetails[s]) currentDetails[s] = {};
-            if(!currentDetails[s][p._type]) currentDetails[s][p._type] = 0;
-            currentDetails[s][p._type]++;
-        });
-
-        // c. Render All Categories using Dashboard Style Structure
-        allStatusList.forEach(cat => {
-             const count = currentCounts[cat] || 0;
-             const percentage = data.length > 0 ? ((count / data.length) * 100).toFixed(1) : "0.0";
-             const col = Utils.getStatusColor(cat);
-             
-             // Sub details (Expanded by default)
-             let subHtml = "";
-             if (currentDetails[cat]) {
-                 APP_CONFIG.PROJECT_TYPES.forEach(t => {
-                     const tCount = currentDetails[cat][t.type] || 0;
-                     if(tCount > 0) {
-                         const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
-                         const tConfig = Utils.getTypeConfig(t.type);
-                         subHtml += `
-                            <div class="sub-stat-row">
-                                 <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
-                                 <span>${tCount}</span>
-                            </div>
-                            <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
-                         `;
-                     }
-                 });
-             }
-             if(!subHtml) subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic;">Tiada data untuk lokasi ini.</div>`;
-
-             modalStatus.innerHTML += `
-                <div class="status-wrapper" style="margin-bottom:15px;">
-                    <div class="status-item selected" style="cursor:default;">
-                        <div class="status-header">
-                            <span class="status-name">${cat}</span>
-                            <span style="color:${col}; font-weight:800;">${count} (${percentage}%)</span>
-                        </div>
-                        <div class="progress-bg"><div class="progress-fill" style="width:${percentage}%; background:${col}"></div></div>
+            reportStatusGrid.innerHTML += `
+                <div class="report-status-row" style="border-left-color:${color}">
+                    <div class="r-status-top">
+                        <span>${status}</span>
+                        <span>${count}</span>
                     </div>
-                    <div class="status-details show" style="display:block;">${subHtml}</div>
-                </div>`;
+                    <div class="r-status-bar"><div class="r-status-fill" style="width:${percent}%; background:${color}"></div></div>
+                    <div class="r-status-details">
+                         <span>${percent}% daripada keseluruhan</span>
+                    </div>
+                </div>
+            `;
         });
 
-        // --- 2. Map Section (Zoomed Layer + Markers + Fixed Initialization) ---
+        // --- 3. Report Map (Zoomed) ---
         setTimeout(() => {
-            // Remove existing map instance if it exists to avoid conflicts
-            if(AppState.reportMap) {
-                AppState.reportMap.remove();
-                AppState.reportMap = null;
-            }
+            if(AppState.reportMap) { AppState.reportMap.remove(); AppState.reportMap = null; }
 
-            // Create new map instance
             AppState.reportMap = L.map('report-map', { 
                 zoomControl: false, 
                 attributionControl: false,
-                dragging: true,
-                scrollWheelZoom: true,
-                doubleClickZoom: true,
-                boxZoom: true
+                dragging: false, // Static map
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false
             });
             
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
             AppState.reportMarkerLayer = L.layerGroup().addTo(AppState.reportMap);
             
-            // Critical: Invalidate size after modal animation
             AppState.reportMap.invalidateSize();
             
             let boundsToFit = null;
@@ -1168,39 +1183,31 @@ const UI = {
                       }
                 }).addTo(AppState.reportMap);
                 
-                // Find bounds of the specific active feature
                 if (AppState.activeFeatureName) {
                     boundaryLayer.eachLayer(l => {
                         if (Utils.extractGeoName(l.feature) === AppState.activeFeatureName) boundsToFit = l.getBounds();
                     });
                 } else {
-                    boundsToFit = boundaryLayer.getBounds(); // Fallback to whole file
+                    boundsToFit = boundaryLayer.getBounds();
                 }
             } else {
-                // If no boundary selected, use default bounds
                 boundsToFit = L.latLngBounds([4.0, 114.0], [7.5, 119.5]);
             }
 
-            // Add Markers
+            // Add Markers (Lighter version for static map)
             data.slice(0, 3000).forEach(p => {
                 const config = Utils.getTypeConfig(p._type);
                 L.circleMarker([p.LATITUDE, p.LONGITUDE], { 
-                    radius: 4, 
+                    radius: 3, 
                     color: '#fff', 
-                    weight: 1,
+                    weight: 0.5,
                     fillColor: config.color, 
-                    fillOpacity: 0.8 
+                    fillOpacity: 1 
                 }).addTo(AppState.reportMarkerLayer);
             });
 
-            // Fit Bounds
             if(boundsToFit && boundsToFit.isValid()) {
                 AppState.reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
-            } else if (data.length > 0) {
-                 // Fallback to marker bounds if boundary bounds fail
-                 const group = L.featureGroup(AppState.reportMarkerLayer.getLayers());
-                 if(group.getLayers().length > 0) AppState.reportMap.fitBounds(group.getBounds());
-                 else AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
             } else {
                 AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
             }
@@ -1209,7 +1216,7 @@ const UI = {
     },
     updateClock() {
         const now = new Date();
-        document.getElementById('clock').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
+        document.getElementById('clock').textContent = now.toLocaleDateString('ms-MY', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
     },
     downloadCSV() {
         // 1. Sumber Data: Hanya projek yang dipaparkan di peta (visibleProjects)
@@ -1282,92 +1289,58 @@ const ChartManager = {
     renderCharts(data) {
         const commonOpt = {
             chart: { type: 'bar', toolbar: { show: false }, animations: { enabled: false } },
-            legend: { show: true, position: 'bottom' },
-            dataLabels: { enabled: true }
+            legend: { show: true, position: 'right' },
+            dataLabels: { enabled: true, style: { fontSize: '10px' } }
         };
         
-        // Chart 1: Project Types
+        // Chart 1: Project Types (Donut)
         const countsByType = {};
         APP_CONFIG.PROJECT_TYPES.forEach(t => countsByType[t.label] = data.filter(p => p._type === t.type).length);
         if(AppState.charts.c1) AppState.charts.c1.destroy();
         AppState.charts.c1 = new ApexCharts(document.querySelector("#chart-01"), {
-            ...commonOpt, chart: { type: 'donut' },
+            ...commonOpt, 
+            chart: { type: 'pie', height: '100%' }, // Use available height
             series: Object.values(countsByType),
             labels: Object.keys(countsByType),
-            colors: APP_CONFIG.PROJECT_TYPES.map(t => t.color)
+            colors: APP_CONFIG.PROJECT_TYPES.map(t => t.color),
+            legend: { position: 'bottom', fontSize: '10px' }
         });
         AppState.charts.c1.render();
         
-        // Chart 2: Dynamic Status Categories
-        const countsByStatus = {};
-        data.forEach(p => {
-            const c = Utils.getStatusCategory(p.STATUS);
-            countsByStatus[c] = (countsByStatus[c] || 0) + 1;
-        });
-        const cats = Object.keys(countsByStatus).sort((a,b) => countsByStatus[b] - countsByStatus[a]);
-        
-        if(AppState.charts.c2) AppState.charts.c2.destroy();
-        AppState.charts.c2 = new ApexCharts(document.querySelector("#chart-02"), {
-            ...commonOpt, chart: { type: 'bar' },
-            series: [{ name: 'Jumlah', data: cats.map(c => countsByStatus[c]) }],
-            xaxis: { categories: cats },
-            colors: cats.map(c => Utils.getStatusColor(c)),
-            plotOptions: { bar: { distributed: true } }
-        });
-        AppState.charts.c2.render();
-        
-        // Chart 3: Project vs Status (Dynamic)
-        const series = cats.map(status => {
-            return {
-                name: status,
-                data: APP_CONFIG.PROJECT_TYPES.map(t => data.filter(p => p._type === t.type && Utils.getStatusCategory(p.STATUS) === status).length)
-            };
-        });
-        if(AppState.charts.c3) AppState.charts.c3.destroy();
-        AppState.charts.c3 = new ApexCharts(document.querySelector("#chart-03"), {
-            ...commonOpt, chart: { type: 'bar', stacked: true },
-            series: series,
-            xaxis: { categories: APP_CONFIG.PROJECT_TYPES.map(t => t.label) },
-            colors: cats.map(c => Utils.getStatusColor(c))
-        });
-        AppState.charts.c3.render();
-        
         // Bottom Charts
-        const bottomContainer = document.getElementById('dynamic-bottom-grid');
+        const bottomContainer = document.getElementById('report-bottom-charts');
         bottomContainer.innerHTML = "";
         AppState.charts.bottom.forEach(c => c.destroy());
         AppState.charts.bottom = [];
         
+        // Display top 3 Categories only if filtered data exists, else display empty msg handled by UI
         APP_CONFIG.PROJECT_TYPES.forEach((t, idx) => {
+            if(idx > 2) return; // Limit to 3 for bottom grid A3 layout
             const tData = data.filter(p => p._type === t.type);
-            
-            // Get unique statuses for this project type
             const tStatusCounts = {};
             tData.forEach(p => {
                 const s = Utils.getStatusCategory(p.STATUS);
                 tStatusCounts[s] = (tStatusCounts[s] || 0) + 1;
             });
-            const tCats = Object.keys(tStatusCounts).sort((a,b) => tStatusCounts[b] - tStatusCounts[a]).slice(0, 5); // Top 5
+            const tCats = Object.keys(tStatusCounts).sort((a,b) => tStatusCounts[b] - tStatusCounts[a]).slice(0, 4);
 
             const divId = `bottom-chart-${idx}`;
             bottomContainer.innerHTML += `
-                <div class="card bottom-card">
-                    <div class="bottom-card-header">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <div class="icon-box" style="background:${t.color}; display:flex; align-items:center; justify-content:center; color:white;">${t.icon}</div>
-                            <div><h4>${t.label}</h4><h3>${tData.length}</h3></div>
-                        </div>
+                <div class="bottom-stat-card">
+                    <div style="width:30%;">
+                        <div style="font-weight:800; font-size:0.8rem; color:#374151;">${t.label}</div>
+                        <div style="font-size:1.5rem; font-weight:900; color:${t.color};">${tData.length}</div>
                     </div>
-                    <div class="bottom-card-body" id="${divId}"></div>
+                    <div id="${divId}" style="width:70%; height:80px;"></div>
                 </div>`;
             setTimeout(() => {
                 const c = new ApexCharts(document.querySelector(`#${divId}`), {
-                    chart: { type: 'bar', height: '100%', toolbar: { show: false } },
+                    chart: { type: 'bar', height: 80, toolbar: { show: false }, sparkline: { enabled: true } },
                     series: [{ name: 'Jumlah', data: tCats.map(k => tStatusCounts[k]) }],
                     xaxis: { categories: tCats },
                     colors: tCats.map(k => Utils.getStatusColor(k)),
-                    plotOptions: { bar: { distributed: true, borderRadius: 4 } },
-                    legend: { show: false }
+                    plotOptions: { bar: { distributed: true, borderRadius: 2, columnWidth: '60%' } },
+                    tooltip: { fixed: { enabled: false }, x: { show: true } }
                 });
                 c.render();
                 AppState.charts.bottom.push(c);
@@ -1395,25 +1368,58 @@ function closeReport() {
 function generatePDF() {
     const element = document.querySelector('.report-container');
     const modal = document.querySelector('.report-modal');
-    const origOverflow = modal.style.overflow;
-    const origContOverflow = element.style.overflowY;
-    modal.style.overflow = "visible";
-    element.style.overflowY = "visible";
+    
+    // Hide UI controls before print
     document.querySelector('.modal-close-btn').style.display = 'none';
     document.querySelector('.btn-download-pdf').style.visibility = 'hidden';
-    html2canvas(element, { scale: 1.5, useCORS: true }).then(canvas => {
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3');
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = (canvas.height * pdfW) / canvas.width;
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH);
-        pdf.save(`Laporan_GIS_${APP_CONFIG.PROJECT_TYPES[0].type}_${new Date().toISOString().slice(0,10)}.pdf`);
-    }).finally(() => {
-        modal.style.overflow = origOverflow;
-        element.style.overflowY = origContOverflow;
-        document.querySelector('.modal-close-btn').style.display = 'flex';
-        document.querySelector('.btn-download-pdf').style.visibility = 'visible';
-    });
+    
+    // Force specific A3 width for capture (High Res)
+    // A3 @ 96 DPI approx 1587px width. Using slightly less to be safe.
+    const originalWidth = modal.style.width;
+    const originalHeight = modal.style.height;
+    const originalTransform = modal.style.transform;
+    
+    // Lock dimensions for screenshot
+    modal.style.width = "1587px";
+    modal.style.height = "1123px";
+    modal.style.transform = "none";
+    modal.style.maxWidth = "none";
+    modal.style.maxHeight = "none";
+    modal.style.borderRadius = "0";
+
+    // Re-trigger map size invalidation to fill new space
+    if(AppState.reportMap) AppState.reportMap.invalidateSize();
+
+    setTimeout(() => {
+        html2canvas(element, { 
+            scale: 2, // 2x scale for crisp text
+            useCORS: true,
+            backgroundColor: "#f3f4f6",
+            width: 1587,
+            height: 1123,
+            windowWidth: 1587,
+            windowHeight: 1123
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            // A3 Landscape: 420mm x 297mm
+            const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); 
+            pdf.addImage(imgData, 'JPEG', 0, 0, 420, 297);
+            pdf.save(`Laporan_GIS_${APP_CONFIG.PROJECT_TYPES[0].type}_${new Date().toISOString().slice(0,10)}.pdf`);
+        }).finally(() => {
+            // Revert Styles
+            modal.style.width = "";
+            modal.style.height = "";
+            modal.style.transform = "";
+            modal.style.maxWidth = "";
+            modal.style.maxHeight = "";
+            modal.style.borderRadius = "";
+            
+            document.querySelector('.modal-close-btn').style.display = 'flex';
+            document.querySelector('.btn-download-pdf').style.visibility = 'visible';
+            
+            if(AppState.reportMap) AppState.reportMap.invalidateSize();
+        });
+    }, 500); // Wait for repaint
 }
 
 window.toggleDashboard = toggleDashboard;
