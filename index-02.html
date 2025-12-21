@@ -299,11 +299,6 @@ body {
 .status-label-row { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
 .progress-track { background: rgba(0,0,0,0.05); height: 8px; border-radius: 4px; width: 100%; overflow: hidden; margin-bottom: 10px; }
 
-/* Expanded Status Styles for Report */
-.status-expanded-item { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.1); }
-.status-expanded-header { display: flex; justify-content: space-between; font-weight: 800; font-size: 14px; margin-bottom: 5px; color: #1f2937; }
-.status-expanded-sub { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px; color: #4b5563; padding-left: 10px; border-left: 2px solid rgba(0,0,0,0.1); }
-
 .bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; padding-bottom: 20px; }
 .bottom-card { height: 480px; padding: 20px; background: rgba(255, 255, 255, 0.65); display: flex; flex-direction: column; overflow: hidden; }
 .bottom-card-header { margin-bottom: 15px; flex-shrink: 0; }
@@ -1073,17 +1068,17 @@ const UI = {
         
         ChartManager.renderCharts(data);
         
-        // --- 1. Status Section (Dynamic, Expanded, All Categories) ---
+        // --- 1. Status Section (Style like Dashboard, All Categories, Expanded) ---
         const modalStatus = document.getElementById('dynamic-status-container');
         modalStatus.innerHTML = "";
         
-        // a. Get ALL unique statuses from ENTIRE database (not just filtered)
+        // a. Get ALL unique statuses from ENTIRE database
         const allUniqueStatuses = new Set(AppState.allProjects.map(p => Utils.getStatusCategory(p.STATUS)));
-        const allStatusList = Array.from(allUniqueStatuses).sort(); // Sort alphabetically or by importance if custom logic added
+        const allStatusList = Array.from(allUniqueStatuses).sort(); 
 
         // b. Calculate counts for CURRENTLY FILTERED data
         const currentCounts = {};
-        const currentDetails = {}; // For expanding breakdown
+        const currentDetails = {}; 
         
         data.forEach(p => {
             const s = Utils.getStatusCategory(p.STATUS);
@@ -1094,102 +1089,123 @@ const UI = {
             currentDetails[s][p._type]++;
         });
 
-        // c. Render All Categories (Expanded)
-        allStatusList.forEach(s => {
-             const count = currentCounts[s] || 0;
+        // c. Render All Categories using Dashboard Style Structure
+        allStatusList.forEach(cat => {
+             const count = currentCounts[cat] || 0;
              const percentage = data.length > 0 ? ((count / data.length) * 100).toFixed(1) : "0.0";
-             const col = Utils.getStatusColor(s);
+             const col = Utils.getStatusColor(cat);
              
-             // Prepare Expanded Sub-details
-             let subDetailsHtml = "";
-             if (currentDetails[s]) {
+             // Sub details (Expanded by default)
+             let subHtml = "";
+             if (currentDetails[cat]) {
                  APP_CONFIG.PROJECT_TYPES.forEach(t => {
-                     const tCount = currentDetails[s][t.type] || 0;
+                     const tCount = currentDetails[cat][t.type] || 0;
                      if(tCount > 0) {
-                         subDetailsHtml += `
-                            <div class="status-expanded-sub">
-                                <span>${t.icon} ${t.label}</span>
-                                <strong>${tCount}</strong>
+                         const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
+                         const tConfig = Utils.getTypeConfig(t.type);
+                         subHtml += `
+                            <div class="sub-stat-row">
+                                 <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
+                                 <span>${tCount}</span>
                             </div>
+                            <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
                          `;
                      }
                  });
-             } else {
-                 subDetailsHtml = `<div class="status-expanded-sub" style="font-style:italic; border:none; padding-left:0;">Tiada Data</div>`;
              }
+             if(!subHtml) subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic;">Tiada data untuk lokasi ini.</div>`;
 
              modalStatus.innerHTML += `
-                <div class="status-expanded-item">
-                    <div class="status-expanded-header">
-                        <span style="color:${col}">${s}</span>
-                        <span>${count} <small style="color:#6b7280; font-weight:500;">(${percentage}%)</small></span>
+                <div class="status-wrapper" style="margin-bottom:15px;">
+                    <div class="status-item selected" style="cursor:default;">
+                        <div class="status-header">
+                            <span class="status-name">${cat}</span>
+                            <span style="color:${col}; font-weight:800;">${count} (${percentage}%)</span>
+                        </div>
+                        <div class="progress-bg"><div class="progress-fill" style="width:${percentage}%; background:${col}"></div></div>
                     </div>
-                    <div class="progress-track" style="height:6px; margin-bottom:8px;">
-                        <div class="progress-fill" style="width:${percentage}%; background:${col}"></div>
-                    </div>
-                    <div>${subDetailsHtml}</div>
+                    <div class="status-details show" style="display:block;">${subHtml}</div>
                 </div>`;
         });
 
-        // --- 2. Map Section (Zoomed Layer + Markers) ---
+        // --- 2. Map Section (Zoomed Layer + Markers + Fixed Initialization) ---
         setTimeout(() => {
             if(!AppState.reportMap) {
                 AppState.reportMap = L.map('report-map', { 
                     zoomControl: false, 
                     attributionControl: false,
-                    dragging: false, // Make it static-like for report feel
-                    scrollWheelZoom: false,
-                    doubleClickZoom: false,
-                    boxZoom: false
+                    dragging: true,
+                    scrollWheelZoom: true,
+                    doubleClickZoom: true,
+                    boxZoom: true
                 });
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
                 AppState.reportMarkerLayer = L.layerGroup().addTo(AppState.reportMap);
             }
             
+            // Critical Fix for Modal Map
             AppState.reportMap.invalidateSize();
+            
+            // Clear existing layers except tiles and marker group
+            AppState.reportMap.eachLayer(layer => {
+                if (layer instanceof L.TileLayer || layer === AppState.reportMarkerLayer) return;
+                AppState.reportMap.removeLayer(layer);
+            });
             AppState.reportMarkerLayer.clearLayers();
             
+            let boundsToFit = null;
+
             // Add Boundary Layer
-            let boundaryBounds = null;
             if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
-                const boundary = L.geoJSON(AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON(), {
-                      style: (f) => {
-                          const isTarget = (Utils.extractGeoName(f) === AppState.activeFeatureName);
+                const geoJsonData = AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON();
+                const boundaryLayer = L.geoJSON(geoJsonData, {
+                      style: (feature) => {
+                          const name = Utils.extractGeoName(feature);
+                          const isActive = name === AppState.activeFeatureName;
                           return { 
-                              color: isTarget ? '#EF4444' : '#ccc', 
-                              weight: isTarget ? 3 : 1,
-                              fillOpacity: isTarget ? 0.1 : 0.05,
-                              fillColor: isTarget ? '#EF4444' : 'transparent'
+                              color: isActive ? '#DC2626' : '#94a3b8', 
+                              weight: isActive ? 2 : 1,
+                              fillColor: isActive ? '#EF4444' : 'transparent',
+                              fillOpacity: isActive ? 0.2 : 0
                           };
                       }
                 }).addTo(AppState.reportMap);
                 
                 // Find bounds of the specific active feature
-                const activeLayer = boundary.getLayers().find(l => Utils.extractGeoName(l.feature) === AppState.activeFeatureName);
-                if(activeLayer) {
-                    boundaryBounds = activeLayer.getBounds();
+                if (AppState.activeFeatureName) {
+                    boundaryLayer.eachLayer(l => {
+                        if (Utils.extractGeoName(l.feature) === AppState.activeFeatureName) boundsToFit = l.getBounds();
+                    });
                 } else {
-                    boundaryBounds = boundary.getBounds(); // Fallback to whole file
+                    boundsToFit = boundaryLayer.getBounds(); // Fallback to whole file
                 }
             } else {
-                // If no boundary selected (Seluruh Sabah), set default view
-                boundaryBounds = L.latLngBounds([4.0, 114.0], [7.5, 119.5]);
+                // If no boundary selected, use default bounds
+                boundsToFit = L.latLngBounds([4.0, 114.0], [7.5, 119.5]);
             }
 
             // Add Markers
-            data.slice(0, 2000).forEach(p => {
+            data.slice(0, 3000).forEach(p => {
+                const config = Utils.getTypeConfig(p._type);
                 L.circleMarker([p.LATITUDE, p.LONGITUDE], { 
-                    radius: 4, // Slightly larger for report
+                    radius: 4, 
                     color: '#fff', 
                     weight: 1,
-                    fillColor: Utils.getTypeConfig(p._type).color, 
-                    fillOpacity: 0.9 
+                    fillColor: config.color, 
+                    fillOpacity: 0.8 
                 }).addTo(AppState.reportMarkerLayer);
             });
 
             // Fit Bounds
-            if(boundaryBounds) {
-                AppState.reportMap.fitBounds(boundaryBounds, { padding: [20, 20] });
+            if(boundsToFit && boundsToFit.isValid()) {
+                AppState.reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
+            } else if (data.length > 0) {
+                 // Fallback to marker bounds if boundary bounds fail
+                 const group = L.featureGroup(AppState.reportMarkerLayer.getLayers());
+                 if(group.getLayers().length > 0) AppState.reportMap.fitBounds(group.getBounds());
+                 else AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
+            } else {
+                AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
             }
 
         }, 300);
