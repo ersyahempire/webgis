@@ -514,59 +514,8 @@ body {
               <div class="bottom-grid" id="dynamic-bottom-grid"></div>
 
               <footer>
-
-    <!-- GAYA FOOTER -->
-    <style>
-        footer {
-            margin-top: 30px;
-            padding: 15px 10px;
-            text-align: center;
-            font-size: 14px;
-            color: #555;
-            border-top: 1.5px solid #d0d0d0;
-            background: #fff;
-        }
-    </style>
-
-    <!-- TEKS FOOTER -->
-    Sistem Maklumat Geografi (GIS) Projek Sabah |
-    Dijana secara automatik pada
-    <span id="footer-date"></span> |
-    © MCMC Tawau
-
-    <!-- SCRIPT TARIKH & MASA -->
-    <script>
-        function formatTarikhMelayu() {
-            const bulanBM = [
-                "Januari", "Februari", "Mac", "April", "Mei", "Jun",
-                "Julai", "Ogos", "September", "Oktober", "November", "Disember"
-            ];
-
-            const now = new Date();
-
-            const hari = now.getDate();
-            const bulan = bulanBM[now.getMonth()];
-            const tahun = now.getFullYear();
-
-            let jam = now.getHours();
-            const minit = String(now.getMinutes()).padStart(2, '0');
-            const saat = String(now.getSeconds()).padStart(2, '0');
-
-            const ampm = jam >= 12 ? 'PM' : 'AM';
-            jam = jam % 12 || 12;
-
-            return `${hari} ${bulan} ${tahun}, ${jam}:${minit}:${saat} ${ampm}`;
-        }
-
-        function kemaskiniFooterDate() {
-            document.getElementById("footer-date").textContent = formatTarikhMelayu();
-        }
-
-        kemaskiniFooterDate();
-        setInterval(kemaskiniFooterDate, 1000);
-    </script>
-
-</footer>
+                  Sistem Maklumat Geografi (GIS) Projek Sabah | Dijana secara automatik pada <span id="footer-date"></span> | © MCMC Tawau
+              </footer>
           </div>
       </div>
   </div>
