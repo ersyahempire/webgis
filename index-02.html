@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.8 - Debugged</title>
+  <title>Web GIS Projek Sabah v6.9 - Report Kad Update</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -510,7 +510,7 @@ body {
                   </div>
               </div>
 
-              <!-- BOTTOM GRID -->
+              <!-- BOTTOM GRID (DYNAMIC BAR CHARTS) -->
               <div class="bottom-grid" id="dynamic-bottom-grid"></div>
 
               <footer>
@@ -987,7 +987,7 @@ const ChartManager = {
         AppState.charts.c3 = new ApexCharts(document.querySelector("#chart-03"), opts3);
         AppState.charts.c3.render();
         
-        // RENDER BOTTOM GRID (MISSING IN ORIGINAL)
+        // RENDER BOTTOM GRID (DYNAMIC CHARTS)
         this.renderBottomGrid(data);
     },
     
@@ -995,43 +995,103 @@ const ChartManager = {
         const container = document.getElementById('dynamic-bottom-grid');
         container.innerHTML = "";
         
-        // Logic: Group by District (Top 3 busiest districts + Summary) or By Type
-        // Let's create summary cards by Project Type showing top districts for each
-        
+        // Cleanup old charts
+        if (AppState.charts.bottom && AppState.charts.bottom.length) {
+            AppState.charts.bottom.forEach(c => c.destroy());
+        }
+        AppState.charts.bottom = [];
+
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
+            // Filter Data for this specific project type
             const typeData = data.filter(p => p._type === t.type);
-            if(typeData.length === 0) return;
-            
-            // Group by District
-            const distMap = {};
-            typeData.forEach(p => {
-                const d = p.DISTRICT || "UNKNOWN";
-                distMap[d] = (distMap[d] || 0) + 1;
-            });
-            
-            const sortedDist = Object.entries(distMap).sort((a,b) => b[1] - a[1]).slice(0, 10); // Top 10
-            
-            let listHtml = "";
-            sortedDist.forEach(([name, count]) => {
-                listHtml += `
-                    <div class="district-row">
-                        <span class="district-name">${name}</span>
-                        <span class="district-val">${count}</span>
-                    </div>`;
-            });
-            
+
+            // Container setup
             const card = document.createElement('div');
-            card.className = "bottom-card";
+            card.className = "bottom-card"; 
             card.style.borderTop = `4px solid ${t.color}`;
+            const chartId = `bottom-chart-${t.type}`;
+            
             card.innerHTML = `
-                <div class="bottom-card-header" style="color:${t.color}">
-                    <i class="fas fa-map-marker-alt"></i> Top Daerah (${t.label})
+                <div class="bottom-card-header" style="color:${t.color}; display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="fas fa-chart-bar"></i> ${t.label}</span>
+                    <span style="font-size:12px; opacity:0.7;">${typeData.length} Projek</span>
                 </div>
-                <div class="bottom-card-body">
-                    ${listHtml}
+                <div class="bottom-card-body" style="overflow:hidden; padding:10px;">
+                    <div id="${chartId}" style="width:100%; height:100%;"></div>
                 </div>
             `;
             container.appendChild(card);
+
+            // Prepare Chart Data
+            const counts = {};
+            typeData.forEach(p => {
+                const s = Utils.getStatusCategory(p.STATUS);
+                counts[s] = (counts[s] || 0) + 1;
+            });
+            
+            // Generate Categories and Sort them
+            let categories = Object.keys(counts);
+            if (categories.length === 0) {
+                 // Optional: If no data, maybe show empty categories or let it be blank "No Data"
+            } else {
+                 categories.sort((a,b) => Utils.getStatusSortIndex(a) - Utils.getStatusSortIndex(b));
+            }
+            
+            const seriesData = categories.map(c => counts[c]);
+            const colors = categories.map(c => Utils.getStatusColor(c));
+
+            const options = {
+                series: [{ name: 'Projek', data: seriesData }],
+                chart: {
+                    type: 'bar',
+                    height: '100%',
+                    toolbar: { show: false },
+                    fontFamily: 'Plus Jakarta Sans',
+                    animations: { enabled: false } // Disable animation for PDF performance
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        columnWidth: '50%',
+                        distributed: true,
+                        dataLabels: { position: 'top' }
+                    }
+                },
+                colors: colors,
+                dataLabels: {
+                    enabled: true,
+                    offsetY: -20,
+                    style: { fontSize: '12px', colors: ["#304758"] }
+                },
+                xaxis: {
+                    categories: categories,
+                    labels: { style: { fontSize: '11px' }, rotate: -45 },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                    title: { text: 'PROJEK' } // As per request "X: PROJEK" (interpreted as Status/Phase of project)
+                },
+                yaxis: { 
+                    show: false,
+                    title: { text: 'VALUE' } // As per request "Y: VALUE"
+                },
+                grid: { show: false, padding: { top: 20, left: 0, right: 0, bottom: 0 } },
+                legend: { show: false }, // "SERIES: STATUS" handled by distributed colors
+                title: {
+                    text: 'Jumlah Projek vs Status',
+                    align: 'center',
+                    style: { fontSize: '12px', color: '#999' }
+                },
+                noData: {
+                    text: 'Tiada Data',
+                    align: 'center',
+                    verticalAlign: 'middle',
+                    style: { color: '#999', fontSize: '14px' }
+                }
+            };
+
+            const chart = new ApexCharts(document.getElementById(chartId), options);
+            chart.render();
+            AppState.charts.bottom.push(chart);
         });
     },
 
@@ -1039,9 +1099,16 @@ const ChartManager = {
         if(AppState.charts.c1) AppState.charts.c1.destroy();
         if(AppState.charts.c2) AppState.charts.c2.destroy();
         if(AppState.charts.c3) AppState.charts.c3.destroy();
+        
+        // Also destroy all dynamic bottom charts
+        if (AppState.charts.bottom && AppState.charts.bottom.length) {
+            AppState.charts.bottom.forEach(c => c.destroy());
+        }
+        
         AppState.charts.c1 = null;
         AppState.charts.c2 = null;
         AppState.charts.c3 = null;
+        AppState.charts.bottom = [];
     }
 };
 
