@@ -28,7 +28,7 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);        
+  --glass-border: rgba(255, 255, 255, 0.8);       
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
   --glass-blur: 20px;                          
   --text-main: #111827;       /* Gray 900 */
@@ -1537,7 +1537,7 @@ const UI = {
             const count = data.filter(p => p._type === t.type).length;
             miniContainer.innerHTML += `
                 <div class="mini-card" style="border-top-color:${t.color}">
-                    <h3 style="color:${t.color}">${count}</h3><span>${t.label}</span>
+                    <h2 style="color:${t.color}">${count}</h2><span>${t.label}</span>
                 </div>`;
         });
         
