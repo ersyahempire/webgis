@@ -16,7 +16,7 @@
   <!-- ApexCharts -->
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-  <!-- PDF Generation -->
+  <!-- PDF/Image Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -28,9 +28,9 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);        
+  --glass-border: rgba(255, 255, 255, 0.8);       
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
-  --glass-blur: 20px;                          
+  --glass-blur: 20px;                           
   --text-main: #111827;       /* Gray 900 */
   --text-sub: #6b7280;        /* Gray 500 */
   --radius: 20px;             
@@ -238,7 +238,7 @@ body {
 .report-overlay.open { display: flex; opacity: 1; }
 .report-modal {
     width: 95%; max-width: 1400px; 
-    max-height: 90vh; /* Changed from height to max-height */
+    max-height: 90vh; 
     height: 90vh;
     border-radius: 20px;
     box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.5);
@@ -252,7 +252,7 @@ body {
     padding: 30px; 
     display: flex; flex-direction: column; gap: 25px; 
     height: 100%; 
-    overflow-y: auto; /* Allow the body to scroll */
+    overflow-y: auto; 
 }
 .modal-close-btn {
     position: absolute; top: 15px; right: 20px; z-index: 5002;
@@ -273,12 +273,37 @@ body {
 .header-title h1 { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; margin: 0; color: rgba(255,255,255,0.8); letter-spacing: 1px; }
 .header-title h2 { font-size: 2.2rem; font-weight: 800; margin: 5px 0 0 0; line-height: 1.1; color: #fff; }
 .header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-right: 40px; }
-.btn-download-pdf {
+
+/* --- UPDATED: DOWNLOAD BUTTON DROPDOWN --- */
+.download-wrapper { position: relative; }
+.btn-download-main {
     background: rgba(255, 255, 255, 0.9); padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; 
-    cursor: pointer; border: none; color: #4f46e5; font-weight: 700; text-transform: uppercase;
-    display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+    cursor: pointer; border: none; color: #4f46e5; font-weight: 800; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
-.btn-download-pdf:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.btn-download-main:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+
+.download-menu {
+    position: absolute; top: 110%; right: 0; 
+    background: rgba(255, 255, 255, 0.98); 
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px; border: 1px solid rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    min-width: 200px; display: none; z-index: 5005; overflow: hidden;
+    animation: fadeIn 0.2s ease-out;
+}
+.download-menu.show { display: block; }
+.download-item {
+    padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+    font-size: 0.85rem; font-weight: 600; color: #374151; cursor: pointer;
+    transition: background 0.2s; border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.download-item:last-child { border-bottom: none; }
+.download-item:hover { background: #f3f4f6; color: var(--primary); }
+.download-item i { width: 20px; text-align: center; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
 .current-time { font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 600; background: rgba(0,0,0,0.1); padding: 5px 12px; border-radius: 6px; }
 
 /* Report Layout */
@@ -292,7 +317,7 @@ body {
     background: rgba(255, 255, 255, 0.5); border-radius: 16px; padding: 15px;
     border: 1px solid rgba(255,255,255,0.5); border-top-width: 4px;
 }
-.mini-card h3 { font-size: 2.8rem; color: #1f2937; margin: 0 0 5px 0; } /* -webkit-text-stroke: 1px #9ea4ac; */
+.mini-card h3 { font-size: 2.8rem; color: #1f2937; margin: 0 0 5px 0; } 
 .mini-card span { font-size: 1.0rem; font-weight: 700; color: #4b5563; text-transform: uppercase; }
 
 .charts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
@@ -406,6 +431,28 @@ body {
     font-weight: 700;
 }
 
+/* --- UPDATED: FOOTER STYLES --- */
+footer {
+    margin-top: 30px;
+    padding: 25px 20px;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.4);
+    color: rgba(31, 41, 55, 0.85);
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 0 0 20px 20px; /* Match modal bottom radius */
+    font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+footer span#footer-date {
+    font-weight: 700;
+    color: var(--primary-dark);
+}
+
 /* Responsive */
 @media (max-width: 1200px) { .charts-row, .bottom-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) { 
@@ -511,9 +558,20 @@ body {
                       <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
                   <div class="header-info">
-                      <button class="btn-download-pdf" onclick="generatePDF()">
-                          <i class="fas fa-download"></i> Muat Turun PDF
-                      </button>
+                      <!-- UPDATED: DOWNLOAD BUTTON LOGIC -->
+                      <div class="download-wrapper">
+                          <button class="btn-download-main" onclick="toggleDownloadMenu()">
+                              <i class="fas fa-download"></i> Muat Turun
+                          </button>
+                          <div class="download-menu" id="download-menu">
+                              <div class="download-item" onclick="generateExport('png')">
+                                  <i class="fas fa-image" style="color:#10b981"></i> Imej Penuh (.PNG)
+                              </div>
+                              <div class="download-item" onclick="generateExport('pdf')">
+                                  <i class="fas fa-file-pdf" style="color:#ef4444"></i> Dokumen (.PDF)
+                              </div>
+                          </div>
+                      </div>
                       <div class="current-time" id="clock">Loading...</div>
                   </div>
               </header>
@@ -568,8 +626,10 @@ body {
               <!-- BOTTOM GRID (DYNAMIC BAR CHARTS) -->
               <div class="bottom-grid" id="dynamic-bottom-grid"></div>
 
+              <!-- UPDATED FOOTER -->
               <footer>
-                  Sistem Maklumat Geografi (GIS) Projek Sabah | Dijana secara automatik pada <span id="footer-date"></span> | © MCMC Tawau
+                  <div>Sistem Maklumat Geografi (GIS) Projek Sabah | © MCMC Tawau</div>
+                  <div style="font-size: 0.8rem; color: #666;">Dijana secara automatik pada <span id="footer-date"></span></div>
               </footer>
           </div>
       </div>
@@ -593,9 +653,6 @@ const APP_CONFIG = {
         { id: "samb", sheetId: "1Lg_rGS0I2-lyhttQBBOvdkRR-ruPKAi1KdKcXNUmUo0", type: "SAMB", label: "SAMB", color: "#20c997", icon: "🔌" },
     ],
     
-    // ===============================================================
-    // KONFIGURASI STATUS SECARA MANUAL (STATUS_MAPPING)
-    // ===============================================================
     STATUS_MAPPING: [
         { keywords: ["SIAP"], color: "#86efac" }, // Hijau
         { keywords: ["PEMBINAAN"], color: "#fde047" }, // Kuning
@@ -603,11 +660,8 @@ const APP_CONFIG = {
         { keywords: ["TIADA STATUS", "UNKNOWN"], color: "#cbd5e1" } // Kelabu
     ],
     
-    DEFAULT_STATUS_COLOR: "#cbd5e1", // Warna jika status tidak ditemui dalam mapping di atas
+    DEFAULT_STATUS_COLOR: "#cbd5e1",
 
-    // ===============================================================
-    // KONFIGURASI LAYER INFO (NEW)
-    // ===============================================================
     LAYER_INFO: {
         sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
         sheets: {
@@ -661,30 +715,22 @@ const Utils = {
         for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
         return color;
     },
-    // Updated: Returns exact normalized status (No Aggregation)
     getStatusCategory: (rawStatus) => {
         return Utils.normalize(rawStatus) || "TIADA STATUS";
     },
     getTypeConfig: (typeKey) => APP_CONFIG.PROJECT_TYPES.find(t => t.type === typeKey) || { color: "#666", icon: "❓", label: typeKey },
-    
-    // Updated: Determines color based on STATUS_MAPPING configuration
     getStatusColor: (statusKey) => {
         const s = Utils.normalize(statusKey);
-        // Find matching config
         const found = APP_CONFIG.STATUS_MAPPING.find(config => {
             return config.keywords.some(k => s.includes(k) || s === k);
         });
-        
         return found ? found.color : APP_CONFIG.DEFAULT_STATUS_COLOR;
     },
-    
-    // New Helper: Get Sort Index based on STATUS_MAPPING
     getStatusSortIndex: (statusKey) => {
         const s = Utils.normalize(statusKey);
         const idx = APP_CONFIG.STATUS_MAPPING.findIndex(config => {
             return config.keywords.some(k => s.includes(k) || s === k);
         });
-        // If found, return index. If not found, return a large number to put at bottom.
         return idx !== -1 ? idx : 999;
     }
 };
@@ -701,21 +747,18 @@ const AppState = {
     reportMarkerLayer: null,
     allProjects: [],
     currentFilteredList: [],
-    visibleProjects: [], // Tracks projects currently shown on map for CSV download
+    visibleProjects: [],
     markersBySite: new Map(),
     dataLayers: { district: null, dun: null, parliament: null },
     
-    // Filter States
     activeBoundaryKey: null,
     activeFeatureName: null,
     searchTerm: "",
     activeStatusFilter: null,
     
-    // Decoupled Filters
-    activeCategory: null,        // Left Dashboard (Single Focus)
-    activeTypeToggles: new Set(), // Right Controls (Multiple Select)
+    activeCategory: null,
+    activeTypeToggles: new Set(),
     
-    // Charts
     charts: { c1: null, c2: null, c3: null, bottom: [] }
 };
 
@@ -747,14 +790,12 @@ const DataManager = {
         }
     },
     async fetchSingleSheet(config) {
-        // Use tqx=out:json explicitly to avoid callback wrapper if possible
         const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:json&tq=`;
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
             const text = await res.text();
             
-            // ROBUST PARSING: Google sometimes wraps JSON in weird prefixes (/*O_o*/)
             const jsonStart = text.indexOf('{');
             const jsonEnd = text.lastIndexOf('}');
             if (jsonStart === -1 || jsonEnd === -1) return [];
@@ -823,17 +864,11 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-
-    // NEW: Function to fetch Layer Info based on selected boundary
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
-
-        // Determine correct sheet name
         const sheetName = APP_CONFIG.LAYER_INFO.sheets[layerType];
         if (!sheetName) return null;
-
         const url = `https://docs.google.com/spreadsheets/d/${APP_CONFIG.LAYER_INFO.sheetId}/gviz/tq?sheet=${sheetName}&tqx=out:json`;
-
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error("Layer Info Fetch Failed");
@@ -848,16 +883,11 @@ const DataManager = {
             
             if (!table || !table.cols || !table.rows) return null;
 
-            // Find matching row
             const cols = table.cols.map(c => c ? c.label : "");
-            
-            // Assume first column or a column named "NAME", "DISTRICT", etc matches the featureName
-            // We'll iterate rows and check all columns for a match with featureName
             const targetName = Utils.normalize(featureName);
 
             let matchedRow = null;
             for (let r of table.rows) {
-                // Check first few columns for a match
                 for (let i = 0; i < Math.min(r.c.length, 3); i++) {
                     const val = r.c[i]?.v;
                     if (val && Utils.normalize(String(val)) === targetName) {
@@ -869,8 +899,6 @@ const DataManager = {
             }
 
             if (!matchedRow) return null;
-
-            // Format data for display
             const infoData = [];
             cols.forEach((colName, idx) => {
                 if (colName && matchedRow.c[idx]) {
@@ -880,9 +908,7 @@ const DataManager = {
                     }
                 }
             });
-
             return infoData;
-
         } catch (e) {
             console.error("Error fetching layer info:", e);
             return null;
@@ -905,7 +931,6 @@ const MapManager = {
         L.control.zoom({ position: 'bottomright' }).addTo(AppState.map);
         AppState.markersLayerGroup = L.layerGroup().addTo(AppState.map);
         
-        // Z-INDEX FIX: Create custom panes to ensure points are always above polygons
         AppState.map.createPane('overlayPane');
         AppState.map.getPane('overlayPane').style.zIndex = 400;
         
@@ -941,7 +966,7 @@ const MapManager = {
                 AppState.dataLayers[key] = layer;
             } catch (e) {
                 console.warn(`GeoJSON ${key} gagal dimuatkan (Mungkin fail tidak wujud).`, e);
-                AppState.dataLayers[key] = L.layerGroup(); // Initialize Empty Group to prevent errors
+                AppState.dataLayers[key] = L.layerGroup(); 
             }
         };
         await Promise.all([
@@ -1012,7 +1037,6 @@ const MapManager = {
                 </div>
             </div>`;
             
-        // Use custom pane 'overlayPane' to ensure markers are above polygons
         const marker = L.circleMarker([project.LATITUDE, project.LONGITUDE], {
             pane: 'overlayPane',
             radius: 6, fillColor: config.color, color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
@@ -1049,28 +1073,22 @@ const ChartManager = {
     renderCharts(data) {
         this.destroyCharts();
         
-        // --- DATA PREPARATION ---
         const projectTypes = APP_CONFIG.PROJECT_TYPES.map(t => t.type);
         const typeLabels = APP_CONFIG.PROJECT_TYPES.map(t => t.label);
         const typeColors = APP_CONFIG.PROJECT_TYPES.map(t => t.color);
         
-        // 1. Chart 01 Data: Count per Project Type
         const countsByType = projectTypes.map(t => data.filter(p => p._type === t).length);
         
-        // 2. Chart 02 Data: Status Distribution (Overall)
         const statusMap = {};
         data.forEach(p => {
             const s = Utils.getStatusCategory(p.STATUS);
             statusMap[s] = (statusMap[s] || 0) + 1;
         });
         
-        // Sort Status by Config Order
         const sortedStatuses = Object.keys(statusMap).sort((a,b) => Utils.getStatusSortIndex(a) - Utils.getStatusSortIndex(b));
         const statusCounts = sortedStatuses.map(s => statusMap[s]);
         const statusColors = sortedStatuses.map(s => Utils.getStatusColor(s));
         
-        // 3. Chart 03 Data: Stacked Bar (Type vs Status)
-        // Series array needs to be: [{name: 'Siap', data: [bwa, nad, pop...]}, {name: 'Pembinaan', ...}]
         const seriesData = sortedStatuses.map(status => {
             const dataArray = projectTypes.map(type => {
                 return data.filter(p => p._type === type && Utils.getStatusCategory(p.STATUS) === status).length;
@@ -1078,9 +1096,6 @@ const ChartManager = {
             return { name: status, data: dataArray, color: Utils.getStatusColor(status) };
         });
 
-        // --- RENDER CHARTS ---
-        
-        // CHART 01: Bar Chart
         const opts1 = {
             series: [{ name: 'Jumlah', data: countsByType }],
             chart: { type: 'bar', height: '100%', toolbar: { show: false }, fontFamily: 'Plus Jakarta Sans' },
@@ -1093,7 +1108,6 @@ const ChartManager = {
         AppState.charts.c1 = new ApexCharts(document.querySelector("#chart-01"), opts1);
         AppState.charts.c1.render();
         
-        // CHART 02: Donut Chart
         const opts2 = {
             series: statusCounts,
             labels: sortedStatuses,
@@ -1106,11 +1120,10 @@ const ChartManager = {
         AppState.charts.c2 = new ApexCharts(document.querySelector("#chart-02"), opts2);
         AppState.charts.c2.render();
         
-        // CHART 03: Stacked Bar
         const opts3 = {
             series: seriesData,
             chart: { type: 'bar', height: '100%', stacked: true, toolbar: { show: false }, fontFamily: 'Plus Jakarta Sans' },
-            colors: statusColors, // Not strictly needed as colors are in series, but good fallback
+            colors: statusColors,
             plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
             xaxis: { categories: typeLabels },
             legend: { position: 'bottom' },
@@ -1119,7 +1132,6 @@ const ChartManager = {
         AppState.charts.c3 = new ApexCharts(document.querySelector("#chart-03"), opts3);
         AppState.charts.c3.render();
         
-        // RENDER BOTTOM GRID (DYNAMIC CHARTS)
         this.renderBottomGrid(data);
     },
     
@@ -1127,17 +1139,14 @@ const ChartManager = {
         const container = document.getElementById('dynamic-bottom-grid');
         container.innerHTML = "";
         
-        // Cleanup old charts
         if (AppState.charts.bottom && AppState.charts.bottom.length) {
             AppState.charts.bottom.forEach(c => c.destroy());
         }
         AppState.charts.bottom = [];
 
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
-            // Filter Data for this specific project type
             const typeData = data.filter(p => p._type === t.type);
 
-            // Container setup
             const card = document.createElement('div');
             card.className = "bottom-card"; 
             card.style.borderTop = `4px solid ${t.color}`;
@@ -1154,18 +1163,14 @@ const ChartManager = {
             `;
             container.appendChild(card);
 
-            // Prepare Chart Data
             const counts = {};
             typeData.forEach(p => {
                 const s = Utils.getStatusCategory(p.STATUS);
                 counts[s] = (counts[s] || 0) + 1;
             });
             
-            // Generate Categories and Sort them
             let categories = Object.keys(counts);
-            if (categories.length === 0) {
-                 // Optional: If no data, maybe show empty categories or let it be blank "No Data"
-            } else {
+            if (categories.length > 0) {
                  categories.sort((a,b) => Utils.getStatusSortIndex(a) - Utils.getStatusSortIndex(b));
             }
             
@@ -1179,7 +1184,7 @@ const ChartManager = {
                     height: '100%',
                     toolbar: { show: false },
                     fontFamily: 'Plus Jakarta Sans',
-                    animations: { enabled: false } // Disable animation for PDF performance
+                    animations: { enabled: false }
                 },
                 plotOptions: {
                     bar: {
@@ -1200,14 +1205,14 @@ const ChartManager = {
                     labels: { style: { fontSize: '11px' }, rotate: -45 },
                     axisBorder: { show: false },
                     axisTicks: { show: false },
-                    title: { text: 'PROJEK' } // As per request "X: PROJEK" (interpreted as Status/Phase of project)
+                    title: { text: 'PROJEK' }
                 },
                 yaxis: { 
                     show: false,
-                    title: { text: 'VALUE' } // As per request "Y: VALUE"
+                    title: { text: 'VALUE' }
                 },
                 grid: { show: false, padding: { top: 20, left: 0, right: 0, bottom: 0 } },
-                legend: { show: false }, // "SERIES: STATUS" handled by distributed colors
+                legend: { show: false },
                 title: {
                     text: 'Jumlah Projek vs Status',
                     align: 'center',
@@ -1231,12 +1236,9 @@ const ChartManager = {
         if(AppState.charts.c1) AppState.charts.c1.destroy();
         if(AppState.charts.c2) AppState.charts.c2.destroy();
         if(AppState.charts.c3) AppState.charts.c3.destroy();
-        
-        // Also destroy all dynamic bottom charts
         if (AppState.charts.bottom && AppState.charts.bottom.length) {
             AppState.charts.bottom.forEach(c => c.destroy());
         }
-        
         AppState.charts.c1 = null;
         AppState.charts.c2 = null;
         AppState.charts.c3 = null;
@@ -1298,7 +1300,6 @@ const FilterManager = {
     },
     updateMapMarkers(displayList) {
         AppState.markersLayerGroup.clearLayers();
-        // IMPORTANT: Simpan senarai projek yang dipaparkan untuk CSV
         AppState.visibleProjects = displayList;
 
         const visibleIds = new Set(displayList.map(p => p._id));
@@ -1414,18 +1415,15 @@ const UI = {
         };
         window.requestAnimationFrame(step);
     },
-    // Updated: Render Status List dynamically based on MASTER Data and new Config
     renderStatusList(data) {
         const container = document.getElementById('status-list');
         container.innerHTML = "";
         
-        // 1. Dapatkan Senarai Master Status daripada SEMUA projek (AppState.allProjects)
         const masterStatusSet = new Set();
         AppState.allProjects.forEach(p => {
             masterStatusSet.add(Utils.getStatusCategory(p.STATUS));
         });
         
-        // 2. Initialize stats untuk semua status yang wujud dalam Master List
         const stats = {};
         masterStatusSet.forEach(s => {
             stats[s] = { 
@@ -1436,10 +1434,8 @@ const UI = {
             APP_CONFIG.PROJECT_TYPES.forEach(t => stats[s].details[t.type] = 0);
         });
 
-        // 3. Kira data semasa (filtered view)
         data.forEach(p => {
             const cat = Utils.getStatusCategory(p.STATUS);
-            // Safety check: if filtered data has a status not in master (unlikely but safe)
             if(!stats[cat]) {
                 stats[cat] = { count: 0, color: Utils.getStatusColor(cat), details: {} };
                 APP_CONFIG.PROJECT_TYPES.forEach(t => stats[cat].details[t.type] = 0);
@@ -1450,19 +1446,12 @@ const UI = {
         
         const totalCount = data.length;
         
-        // 4. Susun: Gunakan Priority Index dari Config, kemudian Count
         const sortedCats = Object.keys(stats).sort((a,b) => {
             const indexA = Utils.getStatusSortIndex(a);
             const indexB = Utils.getStatusSortIndex(b);
-            
-            // Priority 1: Config Order
             if (indexA !== indexB) return indexA - indexB;
-            
-            // Priority 2: Count Descending (untuk status yang tiada dalam config)
             const diff = stats[b].count - stats[a].count;
             if (diff !== 0) return diff;
-            
-            // Priority 3: Alphabetical
             return a.localeCompare(b);
         });
 
@@ -1478,15 +1467,12 @@ const UI = {
             
             let subHtml = "";
             
-            // LOGIC CHANGE: If count is 0, show text instead of breakdown
             if (itemData.count === 0) {
                 subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic; padding: 8px 0;">Tiada projek dalam kategori ini.</div>`;
             } else {
                 Object.entries(itemData.details).forEach(([type, tCount]) => {
-                    // *** UPDATED LOGIC: ONLY SHOW IF COUNT > 0 ***
                     if (tCount > 0) {
                         const tConfig = Utils.getTypeConfig(type);
-                        // Percent relative to category count (avoid div by zero)
                         const tPercent = itemData.count > 0 ? Math.round((tCount / itemData.count) * 100) : 0;
                         
                         subHtml += `
@@ -1520,7 +1506,6 @@ const UI = {
         FilterManager.applyFilters();
     },
     async openReport() {
-        // Fallback to all projects if filter is empty (e.g., initialization)
         const data = (AppState.currentFilteredList && AppState.currentFilteredList.length > 0) ? AppState.currentFilteredList : AppState.allProjects;
         
         document.getElementById('report-overlay').classList.add('open');
@@ -1528,7 +1513,13 @@ const UI = {
         document.getElementById('report-badge-area').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-total-count').textContent = data.length;
         this.updateClock();
-        document.getElementById('footer-date').textContent = new Date().toLocaleString();
+        
+        // --- UPDATED FOOTER DATE FORMAT ---
+        const footerDate = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
+        // Use 'ms-MY' for Malay but check for consistency. If 'ms-MY' doesn't produce "Selasa", browser might default to EN.
+        // Forcing specific format to match request.
+        document.getElementById('footer-date').textContent = footerDate.toLocaleDateString('ms-MY', options);
         
         // Mini Stats (Top)
         const miniContainer = document.getElementById('report-mini-stats');
@@ -1541,24 +1532,21 @@ const UI = {
                 </div>`;
         });
         
-        // Important: Wait for transition to expand element before rendering charts/maps
         setTimeout(() => {
-            ChartManager.renderCharts(data); // FIXED: Defined ChartManager above
+            ChartManager.renderCharts(data); 
             this.initReportMap(data);
         }, 300);
 
-        // --- FETCH AND RENDER LAYER INFO (NEW) ---
         const infoSection = document.getElementById('layer-info-section');
         const infoContent = document.getElementById('layer-info-content');
         const infoTitle = document.getElementById('layer-info-name');
         
-        infoSection.style.display = 'none'; // Reset to hidden
-        infoContent.innerHTML = ''; // Clear previous content
+        infoSection.style.display = 'none'; 
+        infoContent.innerHTML = ''; 
 
         if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
             UI.showLoading(true, "MEMUATKAN MAKLUMAT KAWASAN...");
             
-            // Small delay to allow loading screen to appear
             setTimeout(async () => {
                 try {
                     const layerInfo = await DataManager.fetchLayerInfo(AppState.activeBoundaryKey, AppState.activeFeatureName);
@@ -1586,49 +1574,38 @@ const UI = {
             }, 100);
         }
         
-        // --- 1. Status Section (Fixed: Show All Categories from Master List including 0) ---
         const modalStatus = document.getElementById('dynamic-status-container');
         modalStatus.innerHTML = "";
         
-        // a. Dapatkan Senarai Master Status daripada SEMUA projek
         const masterStatusSet = new Set();
         AppState.allProjects.forEach(p => {
             masterStatusSet.add(Utils.getStatusCategory(p.STATUS));
         });
 
-        // b. Initialize stats object untuk laporan
         const reportStats = {};
         masterStatusSet.forEach(s => {
             reportStats[s] = { count: 0, details: {} };
             APP_CONFIG.PROJECT_TYPES.forEach(t => reportStats[s].details[t.type] = 0);
         });
         
-        // c. Kira data semasa untuk laporan
         data.forEach(p => {
             const s = Utils.getStatusCategory(p.STATUS);
             if(reportStats[s]) {
                 reportStats[s].count++;
                 reportStats[s].details[p._type]++;
             } else {
-                // Fallback (sepatutnya tak berlaku jika logic betul)
                 reportStats[s] = { count: 1, details: {} };
                 APP_CONFIG.PROJECT_TYPES.forEach(t => reportStats[s].details[t.type] = 0);
                 reportStats[s].details[p._type]++;
             }
         });
 
-        // d. Sort: Gunakan Priority Index dari Config, kemudian Count
         const sortedStatusList = Object.keys(reportStats).sort((a, b) => {
             const indexA = Utils.getStatusSortIndex(a);
             const indexB = Utils.getStatusSortIndex(b);
-            
-            // Priority 1: Config Order
             if (indexA !== indexB) return indexA - indexB;
-            
-            // Priority 2: Count Descending (untuk status yang tiada dalam config)
             const diff = reportStats[b].count - reportStats[a].count;
             if (diff !== 0) return diff;
-            
             return a.localeCompare(b);
         });
 
@@ -1636,7 +1613,6 @@ const UI = {
              modalStatus.innerHTML = `<div style="text-align:center; color:#aaa; font-style:italic; padding:20px;">Tiada data status.</div>`;
         }
 
-        // e. Render Status List
         sortedStatusList.forEach(cat => {
              const itemData = reportStats[cat];
              const count = itemData.count;
@@ -1645,14 +1621,11 @@ const UI = {
              
              let subHtml = "";
              
-             // LOGIC CHANGE: If count is 0, show text instead of breakdown
              if (count === 0) {
                  subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic; padding: 8px 0;">Tiada projek dalam kategori ini.</div>`;
              } else {
-                 // Render breakdown
                  APP_CONFIG.PROJECT_TYPES.forEach(t => {
                      const tCount = itemData.details[t.type] || 0;
-                     // *** UPDATED LOGIC: ONLY SHOW IF COUNT > 0 ***
                      if (tCount > 0) {
                          const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
                          const tConfig = Utils.getTypeConfig(t.type);
@@ -1680,9 +1653,7 @@ const UI = {
                 </div>`;
         });
     },
-    // Extracted initReportMap for cleaner logic
     initReportMap(data) {
-        // A. Clean up existing map instance and DOM
         if (AppState.reportMap) {
             AppState.reportMap.off();
             AppState.reportMap.remove();
@@ -1691,18 +1662,16 @@ const UI = {
         
         const mapContainer = document.getElementById('report-map');
         if (!mapContainer) return;
-        mapContainer.innerHTML = ""; // Force clean DOM
+        mapContainer.innerHTML = ""; 
 
-        // B. Initialize Map
         AppState.reportMap = L.map('report-map', { 
             zoomControl: false, 
             attributionControl: false,
-            preferCanvas: true // Optimization for PDF generation
+            preferCanvas: true 
         });
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
         
-        // C. Create Panes for z-indexing
         AppState.reportMap.createPane('boundaryPane');
         AppState.reportMap.getPane('boundaryPane').style.zIndex = 300;
         AppState.reportMap.createPane('markerPane');
@@ -1711,12 +1680,10 @@ const UI = {
         const boundaryGroup = L.featureGroup().addTo(AppState.reportMap);
         const markerGroup = L.featureGroup({pane: 'markerPane'}).addTo(AppState.reportMap);
         
-        // D. Add Boundary Layer (Safe Check)
         let boundaryAdded = false;
         if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
             const layerObj = AppState.dataLayers[AppState.activeBoundaryKey];
             
-            // SAFETY CHECK: Ensure layer has toGeoJSON method
             if (typeof layerObj.toGeoJSON === 'function') {
                 const geoJson = layerObj.toGeoJSON();
                 const boundaryLayer = L.geoJSON(geoJson, {
@@ -1736,7 +1703,6 @@ const UI = {
             }
         }
 
-        // E. Add Markers
         data.forEach(p => {
             if(p._validCoord) {
                 const config = Utils.getTypeConfig(p._type);
@@ -1751,17 +1717,12 @@ const UI = {
             }
         });
 
-        // F. Final Rendering & Zoom
-        // Must invalidate size AFTER map is visible and initialized
         AppState.reportMap.invalidateSize();
 
-        // Smart Zoom Logic
         if (AppState.activeFeatureName && boundaryAdded) {
-            // Find bounds of the specific active feature
             let boundsToFit = null;
             boundaryGroup.eachLayer(l => {
-                 // Check specifically inside the added GeoJSON layer
-                 if (l.eachLayer) { // It's a group/geoJSON
+                 if (l.eachLayer) { 
                      l.eachLayer(featLayer => {
                          const name = Utils.normalize(featLayer.feature.properties.NAME || featLayer.feature.properties.name || featLayer.feature.properties.DISTRICT || featLayer.feature.properties.DAERAH || featLayer.feature.properties.DUN || featLayer.feature.properties.PARLIAMENT);
                          if (name === AppState.activeFeatureName) {
@@ -1784,30 +1745,25 @@ const UI = {
     },
     updateClock() {
         const now = new Date();
-        document.getElementById('clock').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
+        document.getElementById('clock').textContent = now.toLocaleDateString('ms-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
     },
     downloadCSV() {
-        // 1. Sumber Data: Hanya projek yang dipaparkan di peta (visibleProjects)
         const data = AppState.visibleProjects; 
         if (!data || data.length === 0) return alert("Tiada data pada peta untuk dimuat turun.");
 
-        // 2. Kumpulkan semua header unik (Standard + Extra)
         const stdHeaders = ["SITE_NAME", "DISTRICT", "DUN", "PARLIAMENT", "LATITUDE", "LONGITUDE", "STATUS", "PROJECT_TYPE"];
         const extraKeys = new Set();
         data.forEach(p => p._extra_details.forEach(d => extraKeys.add(d.label)));
         const allHeaders = [...stdHeaders, ...Array.from(extraKeys)];
 
-        // 3. Bina kandungan CSV
         const csvContent = [
             allHeaders.join(","),
             ...data.map(p => {
                 return allHeaders.map(h => {
-                    // Mapping standard columns
                     if (h === "PROJECT_TYPE") return p._type;
-                    if (h === "LATITUDE" || h === "LONGITUDE") return p[h]; // Keep numbers
+                    if (h === "LATITUDE" || h === "LONGITUDE") return p[h]; 
                     if (p[h] !== undefined) return `"${String(p[h]).replace(/"/g, '""')}"`;
                     
-                    // Mapping extra columns
                     const extra = p._extra_details.find(d => d.label === h);
                     const extraVal = extra ? extra.value : "";
                     return `"${String(extraVal).replace(/"/g, '""')}"`;
@@ -1815,7 +1771,6 @@ const UI = {
             })
         ].join("\n");
 
-        // 4. Bina Nama Fail Automatik
         let fLayer = AppState.activeFeatureName ? AppState.activeFeatureName.replace(/\s+/g, '_') : "Seluruh_Sabah";
         let fProject = "Semua_Projek";
         if (AppState.activeCategory) {
@@ -1832,7 +1787,6 @@ const UI = {
         
         const fileName = `data_gis_${fLayer}_${fProject}_${fStatus}_${fDate}_${fTime}.csv`;
 
-        // 5. Muat Turun
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
@@ -1843,7 +1797,7 @@ const UI = {
 
 /**
  * =============================================================================
- * 9. GLOBAL HANDLERS & INITIALIZATION
+ * 9. GLOBAL HANDLERS & EXPORT LOGIC (UPDATED)
  * =============================================================================
  */
 function toggleDashboard() {
@@ -1851,7 +1805,6 @@ function toggleDashboard() {
     const btn = document.getElementById('sidebar-toggle');
     panel.classList.toggle('closed');
     btn.innerHTML = panel.classList.contains('closed') ? '<i class="fas fa-chart-pie"></i>' : '<i class="fas fa-times"></i>';
-    // Fix: Trigger map resize when sidebar toggles to avoid grey areas
     setTimeout(() => {
         if(AppState.map) AppState.map.invalidateSize();
     }, 300);
@@ -1859,7 +1812,6 @@ function toggleDashboard() {
 
 function closeReport() {
     document.getElementById('report-overlay').classList.remove('open');
-    // CLEANUP: Destroy map immediately to free memory
     if (AppState.reportMap) {
         AppState.reportMap.off();
         AppState.reportMap.remove();
@@ -1867,7 +1819,21 @@ function closeReport() {
     }
 }
 
-function generatePDF() {
+// TOGGLE DOWNLOAD MENU
+function toggleDownloadMenu() {
+    const menu = document.getElementById('download-menu');
+    menu.classList.toggle('show');
+}
+
+// Close menu if clicked outside
+window.addEventListener('click', function(e) {
+    if (!e.target.closest('.download-wrapper')) {
+        document.getElementById('download-menu').classList.remove('show');
+    }
+});
+
+// GENERATE EXPORT (PNG/PDF)
+function generateExport(type) {
     const element = document.querySelector('.report-container');
     const modal = document.querySelector('.report-modal');
     
@@ -1879,15 +1845,14 @@ function generatePDF() {
     // Paksa visible supaya html2canvas boleh tangkap semua content
     modal.style.overflow = "visible";
     element.style.overflowY = "visible";
-    element.style.height = "auto"; // Biarkan ia memanjang ke bawah
+    element.style.height = "auto"; 
     
+    // Hide UI elements during capture
     document.querySelector('.modal-close-btn').style.display = 'none';
-    document.querySelector('.btn-download-pdf').style.visibility = 'hidden';
+    document.querySelector('.download-wrapper').style.visibility = 'hidden';
 
-    // Tambah tetingkap loading
-    UI.showLoading(true, "MENJANA PDF...");
+    UI.showLoading(true, type === 'png' ? "MENJANA IMEJ..." : "MENJANA PDF...");
 
-    // Wait briefly for map tiles to be ready after style change
     setTimeout(() => {
         html2canvas(element, { 
             scale: 1.5, 
@@ -1896,30 +1861,48 @@ function generatePDF() {
             scrollY: -window.scrollY, 
             windowHeight: element.scrollHeight + 100 
         }).then(canvas => {
-            const imgData = canvas.toDataURL('image/jpeg', 0.90);
-            const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); // Landscape, A3
+            // CONSTRUCT FILENAME
+            // format: data_dashboard_NAMA LAYER_TARIKH_MASA
+            const layerName = (AppState.activeFeatureName || "Seluruh_Sabah").replace(/\s+/g, '_').toUpperCase();
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
             
-            const pdfW = pdf.internal.pageSize.getWidth();
-            const pdfH = pdf.internal.pageSize.getHeight();
-            
-            const imgRatio = canvas.height / canvas.width;
-            const printH = pdfW * imgRatio;
+            const fileName = `data_dashboard_${layerName}_${year}${month}${day}_${hour}${min}`;
 
-            if (printH > pdfH) {
-                 const scaleFactor = pdfH / printH;
-                 const finalW = pdfW * scaleFactor;
-                 const finalH = pdfH; 
-                 const x = (pdfW - finalW) / 2;
-                 pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
+            if (type === 'png') {
+                const link = document.createElement('a');
+                link.download = `${fileName}.png`;
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
             } else {
-                 pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
-            }
+                const imgData = canvas.toDataURL('image/jpeg', 0.90);
+                const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); // Landscape, A3
+                
+                const pdfW = pdf.internal.pageSize.getWidth();
+                const pdfH = pdf.internal.pageSize.getHeight();
+                
+                const imgRatio = canvas.height / canvas.width;
+                const printH = pdfW * imgRatio;
 
-            const fileName = `Laporan_GIS_Sabah_${new Date().toISOString().slice(0,10)}.pdf`;
-            pdf.save(fileName);
+                if (printH > pdfH) {
+                     const scaleFactor = pdfH / printH;
+                     const finalW = pdfW * scaleFactor;
+                     const finalH = pdfH; 
+                     const x = (pdfW - finalW) / 2;
+                     pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
+                } else {
+                     pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
+                }
+                
+                pdf.save(`${fileName}.pdf`);
+            }
         }).catch(err => {
-            console.error("PDF Error:", err);
-            alert("Ralat menjana PDF. Sila cuba lagi.");
+            console.error("Export Error:", err);
+            alert("Ralat menjana fail. Sila cuba lagi.");
         }).finally(() => {
             // Restore styles
             modal.style.overflow = origOverflow;
@@ -1927,16 +1910,18 @@ function generatePDF() {
             element.style.height = origHeight;
             
             document.querySelector('.modal-close-btn').style.display = 'flex';
-            document.querySelector('.btn-download-pdf').style.visibility = 'visible';
+            document.querySelector('.download-wrapper').style.visibility = 'visible';
+            document.getElementById('download-menu').classList.remove('show');
             UI.showLoading(false);
         });
-    }, 500); // 500ms delay for map rendering
+    }, 500); 
 }
 
 // Bind functions to window
 window.toggleDashboard = toggleDashboard;
 window.closeReport = closeReport;
-window.generatePDF = generatePDF;
+window.generateExport = generateExport;
+window.toggleDownloadMenu = toggleDownloadMenu;
 window.downloadCSV = UI.downloadCSV;
 window.openReport = UI.openReport.bind(UI);
 
@@ -1944,7 +1929,6 @@ window.onload = () => {
     UI.init();
     MapManager.init();
     DataManager.loadAllData();
-    // Auto refresh every 15 mins
     setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS);
 };
 </script>
