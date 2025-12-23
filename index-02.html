@@ -361,6 +361,51 @@ body {
 .district-name { font-weight: 600; color: #374151; }
 .district-val { font-weight: 800; color: var(--primary); }
 
+/* --- LAYER INFO CARD (NEW) --- */
+.layer-info-card {
+    background: rgba(255, 255, 255, 0.65);
+    border-radius: 16px;
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    margin-bottom: 20px;
+}
+.layer-info-title {
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid rgba(79, 70, 229, 0.2);
+    padding-bottom: 10px;
+}
+.layer-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+.layer-info-item {
+    background: rgba(255, 255, 255, 0.5);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+.layer-info-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+.layer-info-value {
+    font-size: 1rem;
+    color: #111827;
+    font-weight: 700;
+}
+
 /* Responsive */
 @media (max-width: 1200px) { .charts-row, .bottom-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) { 
@@ -510,6 +555,16 @@ body {
                   </div>
               </div>
 
+              <!-- LAYER INFO CARD (NEW) -->
+              <div id="layer-info-section" style="display:none;">
+                  <div class="card layer-info-card">
+                      <div class="layer-info-title">
+                          <i class="fas fa-info-circle"></i> Maklumat Kawasan: <span id="layer-info-name"></span>
+                      </div>
+                      <div class="layer-info-grid" id="layer-info-content"></div>
+                  </div>
+              </div>
+
               <!-- BOTTOM GRID (DYNAMIC BAR CHARTS) -->
               <div class="bottom-grid" id="dynamic-bottom-grid"></div>
 
@@ -549,6 +604,18 @@ const APP_CONFIG = {
     ],
     
     DEFAULT_STATUS_COLOR: "#cbd5e1", // Warna jika status tidak ditemui dalam mapping di atas
+
+    // ===============================================================
+    // KONFIGURASI LAYER INFO (NEW)
+    // ===============================================================
+    LAYER_INFO: {
+        sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
+        sheets: {
+            district: "district",
+            dun: "dun",
+            parliament: "parliament"
+        }
+    },
 
     SETTINGS: {
         MAX_EXTRA_INFO_COLUMNS: 15,
@@ -755,6 +822,71 @@ const DataManager = {
             rowData._id = Utils.generateId(rowData, config.type);
             return rowData;
         }).filter(item => item !== null);
+    },
+
+    // NEW: Function to fetch Layer Info based on selected boundary
+    async fetchLayerInfo(layerType, featureName) {
+        if (!layerType || !featureName) return null;
+
+        // Determine correct sheet name
+        const sheetName = APP_CONFIG.LAYER_INFO.sheets[layerType];
+        if (!sheetName) return null;
+
+        const url = `https://docs.google.com/spreadsheets/d/${APP_CONFIG.LAYER_INFO.sheetId}/gviz/tq?sheet=${sheetName}&tqx=out:json`;
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Layer Info Fetch Failed");
+            const text = await res.text();
+            
+            const jsonStart = text.indexOf('{');
+            const jsonEnd = text.lastIndexOf('}');
+            if (jsonStart === -1 || jsonEnd === -1) return null;
+            
+            const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+            const table = json.table;
+            
+            if (!table || !table.cols || !table.rows) return null;
+
+            // Find matching row
+            const cols = table.cols.map(c => c ? c.label : "");
+            
+            // Assume first column or a column named "NAME", "DISTRICT", etc matches the featureName
+            // We'll iterate rows and check all columns for a match with featureName
+            const targetName = Utils.normalize(featureName);
+
+            let matchedRow = null;
+            for (let r of table.rows) {
+                // Check first few columns for a match
+                for (let i = 0; i < Math.min(r.c.length, 3); i++) {
+                    const val = r.c[i]?.v;
+                    if (val && Utils.normalize(String(val)) === targetName) {
+                        matchedRow = r;
+                        break;
+                    }
+                }
+                if (matchedRow) break;
+            }
+
+            if (!matchedRow) return null;
+
+            // Format data for display
+            const infoData = [];
+            cols.forEach((colName, idx) => {
+                if (colName && matchedRow.c[idx]) {
+                    const val = matchedRow.c[idx].v;
+                    if (val !== null && val !== "") {
+                        infoData.push({ label: colName, value: val });
+                    }
+                }
+            });
+
+            return infoData;
+
+        } catch (e) {
+            console.error("Error fetching layer info:", e);
+            return null;
+        }
     }
 };
 
@@ -1387,7 +1519,7 @@ const UI = {
         AppState.activeStatusFilter = (AppState.activeStatusFilter === status) ? null : status;
         FilterManager.applyFilters();
     },
-    openReport() {
+    async openReport() {
         // Fallback to all projects if filter is empty (e.g., initialization)
         const data = (AppState.currentFilteredList && AppState.currentFilteredList.length > 0) ? AppState.currentFilteredList : AppState.allProjects;
         
@@ -1414,6 +1546,45 @@ const UI = {
             ChartManager.renderCharts(data); // FIXED: Defined ChartManager above
             this.initReportMap(data);
         }, 300);
+
+        // --- FETCH AND RENDER LAYER INFO (NEW) ---
+        const infoSection = document.getElementById('layer-info-section');
+        const infoContent = document.getElementById('layer-info-content');
+        const infoTitle = document.getElementById('layer-info-name');
+        
+        infoSection.style.display = 'none'; // Reset to hidden
+        infoContent.innerHTML = ''; // Clear previous content
+
+        if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
+            UI.showLoading(true, "MEMUATKAN MAKLUMAT KAWASAN...");
+            
+            // Small delay to allow loading screen to appear
+            setTimeout(async () => {
+                try {
+                    const layerInfo = await DataManager.fetchLayerInfo(AppState.activeBoundaryKey, AppState.activeFeatureName);
+                    
+                    if (layerInfo && layerInfo.length > 0) {
+                        infoTitle.textContent = AppState.activeFeatureName;
+                        
+                        layerInfo.forEach(info => {
+                            const item = document.createElement('div');
+                            item.className = 'layer-info-item';
+                            item.innerHTML = `
+                                <div class="layer-info-label">${info.label}</div>
+                                <div class="layer-info-value">${info.value}</div>
+                            `;
+                            infoContent.appendChild(item);
+                        });
+                        
+                        infoSection.style.display = 'block';
+                    }
+                } catch (err) {
+                    console.error("Failed to load layer info", err);
+                } finally {
+                    UI.showLoading(false);
+                }
+            }, 100);
+        }
         
         // --- 1. Status Section (Fixed: Show All Categories from Master List including 0) ---
         const modalStatus = document.getElementById('dynamic-status-container');
