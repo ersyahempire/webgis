@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.9 - sms update</title>
+  <title>Web GIS Projek Sabah v6.9 - sms update (Fixed)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,9 +28,9 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);       
+  --glass-border: rgba(255, 255, 255, 0.8);        
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
-  --glass-blur: 20px;                           
+  --glass-blur: 20px;                             
   --text-main: #111827;       /* Gray 900 */
   --text-sub: #6b7280;        /* Gray 500 */
   --radius: 20px;             
@@ -139,6 +139,7 @@ body {
 .panel-header {
   padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.2);
   background: linear-gradient(to right, rgba(255,255,255,0.5), rgba(255,255,255,0.1));
+  flex-shrink: 0;
 }
 .panel-header h2 { 
   margin: 0; font-size: 20px; font-weight: 800; 
@@ -146,7 +147,13 @@ body {
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   display: flex; align-items: center; gap: 10px; 
 }
-.panel-content { padding: 20px 24px; overflow-y: auto; flex: 1; }
+/* Fix scroll for content */
+.panel-content { 
+    padding: 20px 24px; 
+    overflow-y: auto; 
+    flex: 1; 
+    min-height: 0; /* Important for flex child scrolling */
+}
 
 .main-stat {
   text-align: center; margin-bottom: 24px; padding: 20px; border-radius: 20px;
@@ -459,6 +466,7 @@ footer span#footer-date {
     .charts-row, .bottom-grid { grid-template-columns: 1fr; }
     .top-row, .main-content { grid-template-columns: 1fr; }
     .header-info { margin-right: 40px; }
+    .dashboard-panel { width: 90%; left: 5%; bottom: 10px; height: 60vh; top: auto; }
 }
 </style>
 </head>
@@ -790,17 +798,30 @@ const DataManager = {
         }
     },
     async fetchSingleSheet(config) {
+        // [DEBUG] Added specific query to ensure JSON output
         const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:json&tq=`;
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
             const text = await res.text();
             
-            const jsonStart = text.indexOf('{');
-            const jsonEnd = text.lastIndexOf('}');
-            if (jsonStart === -1 || jsonEnd === -1) return [];
+            // [DEBUG] Improved parsing logic to handle Google's various wrapper formats
+            // It removes /*O_o*/ and google.visualization.Query.setResponse(...);
+            let jsonString = text;
             
-            const jsonString = text.substring(jsonStart, jsonEnd + 1);
+            // Remove comments/padding if present
+            if (jsonString.startsWith("/*O_o*/")) {
+                jsonString = jsonString.replace("/*O_o*/", "").trim();
+            }
+            
+            // Extract JSON object from wrapper function
+            const start = jsonString.indexOf('(');
+            const end = jsonString.lastIndexOf(')');
+            
+            if (start > -1 && end > -1) {
+                 jsonString = jsonString.substring(start + 1, end);
+            }
+            
             const json = JSON.parse(jsonString);
             
             return (json.table && json.table.rows) ? this.processSheetData(json.table, config) : [];
@@ -874,11 +895,14 @@ const DataManager = {
             if (!res.ok) throw new Error("Layer Info Fetch Failed");
             const text = await res.text();
             
-            const jsonStart = text.indexOf('{');
-            const jsonEnd = text.lastIndexOf('}');
-            if (jsonStart === -1 || jsonEnd === -1) return null;
+            // Same fix for Layer Info parsing
+            let jsonString = text;
+            if (jsonString.startsWith("/*O_o*/")) jsonString = jsonString.replace("/*O_o*/", "").trim();
+            const start = jsonString.indexOf('(');
+            const end = jsonString.lastIndexOf(')');
+            if (start > -1 && end > -1) jsonString = jsonString.substring(start + 1, end);
             
-            const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+            const json = JSON.parse(jsonString);
             const table = json.table;
             
             if (!table || !table.cols || !table.rows) return null;
@@ -929,10 +953,15 @@ const MapManager = {
         satellite.addTo(AppState.map);
         L.control.layers({ "Satelit (Esri)": satellite, "Peta (OSM)": osm }, null, { position: 'topright' }).addTo(AppState.map);
         L.control.zoom({ position: 'bottomright' }).addTo(AppState.map);
-        AppState.markersLayerGroup = L.layerGroup().addTo(AppState.map);
+        
+        // [DEBUG] Fix Z-Index layering
+        AppState.map.createPane('boundaryPane');
+        AppState.map.getPane('boundaryPane').style.zIndex = 350;
         
         AppState.map.createPane('overlayPane');
-        AppState.map.getPane('overlayPane').style.zIndex = 400;
+        AppState.map.getPane('overlayPane').style.zIndex = 450;
+        
+        AppState.markersLayerGroup = L.layerGroup().addTo(AppState.map);
         
         this.loadBoundaries();
     },
@@ -943,6 +972,7 @@ const MapManager = {
                 if (!res.ok) throw new Error("File Missing");
                 const data = await res.json();
                 const layer = L.geoJSON(data, {
+                    pane: 'boundaryPane', // Ensure boundaries stay below markers
                     style: { color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' },
                     onEachFeature: (feature, layer) => {
                         const name = this.extractGeoName(feature);
@@ -965,21 +995,27 @@ const MapManager = {
                 });
                 AppState.dataLayers[key] = layer;
             } catch (e) {
-                console.warn(`GeoJSON ${key} gagal dimuatkan (Mungkin fail tidak wujud).`, e);
+                console.warn(`GeoJSON ${key} gagal dimuatkan (Mungkin fail tidak wujud atau URL salah).`, e);
                 AppState.dataLayers[key] = L.layerGroup(); 
             }
         };
-        await Promise.all([
-            loadLayer('district', APP_CONFIG.GEOJSON_URLS.district),
-            loadLayer('dun', APP_CONFIG.GEOJSON_URLS.dun),
-            loadLayer('parliament', APP_CONFIG.GEOJSON_URLS.parliament)
-        ]);
+
+        // [DEBUG] Changed Promise.all to load independently. If one fails, others still load.
+        await loadLayer('district', APP_CONFIG.GEOJSON_URLS.district);
+        await loadLayer('dun', APP_CONFIG.GEOJSON_URLS.dun);
+        await loadLayer('parliament', APP_CONFIG.GEOJSON_URLS.parliament);
         
+        // Initial setup
         document.getElementById('toggle-daerah').onclick = () => this.switchBoundary('district', 'toggle-daerah');
         document.getElementById('toggle-dun').onclick = () => this.switchBoundary('dun', 'toggle-dun');
         document.getElementById('toggle-parliament').onclick = () => this.switchBoundary('parliament', 'toggle-parliament');
         
-        setTimeout(() => this.switchBoundary('district', 'toggle-daerah'), 500);
+        // Attempt to switch to district if it loaded, otherwise wait
+        setTimeout(() => {
+            if (AppState.dataLayers.district && AppState.dataLayers.district.getLayers().length > 0) {
+                this.switchBoundary('district', 'toggle-daerah');
+            }
+        }, 500);
     },
     extractGeoName(feature) {
         const props = feature.properties || {};
@@ -1623,18 +1659,18 @@ const UI = {
                  subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic; padding: 8px 0;">Tiada projek dalam kategori ini.</div>`;
              } else {
                  APP_CONFIG.PROJECT_TYPES.forEach(t => {
-                     const tCount = itemData.details[t.type] || 0;
-                     if (tCount > 0) {
-                         const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
-                         const tConfig = Utils.getTypeConfig(t.type);
-                         subHtml += `
+                      const tCount = itemData.details[t.type] || 0;
+                      if (tCount > 0) {
+                          const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
+                          const tConfig = Utils.getTypeConfig(t.type);
+                          subHtml += `
                             <div class="sub-stat-row">
                                  <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
                                  <span>${tCount}</span>
                             </div>
                             <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
-                         `;
-                     }
+                          `;
+                      }
                  });
              }
 
@@ -1721,12 +1757,12 @@ const UI = {
             let boundsToFit = null;
             boundaryGroup.eachLayer(l => {
                  if (l.eachLayer) { 
-                     l.eachLayer(featLayer => {
-                         const name = Utils.normalize(featLayer.feature.properties.NAME || featLayer.feature.properties.name || featLayer.feature.properties.DISTRICT || featLayer.feature.properties.DAERAH || featLayer.feature.properties.DUN || featLayer.feature.properties.PARLIAMENT);
-                         if (name === AppState.activeFeatureName) {
-                             boundsToFit = featLayer.getBounds();
-                         }
-                     });
+                      l.eachLayer(featLayer => {
+                          const name = Utils.normalize(featLayer.feature.properties.NAME || featLayer.feature.properties.name || featLayer.feature.properties.DISTRICT || featLayer.feature.properties.DAERAH || featLayer.feature.properties.DUN || featLayer.feature.properties.PARLIAMENT);
+                          if (name === AppState.activeFeatureName) {
+                              boundsToFit = featLayer.getBounds();
+                          }
+                      });
                  }
             });
             
@@ -1845,18 +1881,27 @@ function generateExport(type) {
         borderRadius: captureElement.style.borderRadius,
         position: captureElement.style.position,
         width: captureElement.style.width,
-        margin: captureElement.style.margin
+        margin: captureElement.style.margin,
+        left: captureElement.style.left,
+        top: captureElement.style.top
     };
     
     // 3. Save Scroll Position
     const originalScrollPos = scrollContainer.scrollTop;
 
     // 4. Modify Styles for Capture (Expand to fit content)
+    // [DEBUG] Critical fix for html2canvas with transform:scale
+    captureElement.style.transform = "none"; 
     captureElement.style.overflow = "visible";
     captureElement.style.maxHeight = "none";
     captureElement.style.height = "auto";
-    captureElement.style.transform = "none"; // Remove scale effect for clear capture
-    captureElement.style.borderRadius = "0"; // Flatten for document look
+    captureElement.style.borderRadius = "0"; 
+    // Position fixed at 0,0 to ensure full capture
+    captureElement.style.position = "absolute";
+    captureElement.style.top = "0";
+    captureElement.style.left = "0";
+    captureElement.style.width = "1400px"; // Set fixed width for consistency
+    captureElement.style.margin = "0";
     
     // Ensure scroll container is fully visible
     scrollContainer.style.overflow = "visible";
@@ -1877,7 +1922,8 @@ function generateExport(type) {
             logging: false,
             // Ensure we capture the whole height
             windowHeight: captureElement.scrollHeight,
-            height: captureElement.scrollHeight
+            height: captureElement.scrollHeight,
+            width: 1400 // Match forced width
         }).then(canvas => {
             // CONSTRUCT FILENAME
             const layerName = (AppState.activeFeatureName || "Seluruh_Sabah").replace(/\s+/g, '_').toUpperCase();
@@ -1927,6 +1973,11 @@ function generateExport(type) {
             captureElement.style.height = originalStyles.height;
             captureElement.style.transform = originalStyles.transform;
             captureElement.style.borderRadius = originalStyles.borderRadius;
+            captureElement.style.position = originalStyles.position;
+            captureElement.style.top = originalStyles.top;
+            captureElement.style.left = originalStyles.left;
+            captureElement.style.width = originalStyles.width;
+            captureElement.style.margin = originalStyles.margin;
             
             scrollContainer.style.overflow = "auto";
             scrollContainer.style.height = "100%";
