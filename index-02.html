@@ -1517,8 +1517,6 @@ const UI = {
         // --- UPDATED FOOTER DATE FORMAT ---
         const footerDate = new Date();
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
-        // Use 'ms-MY' for Malay but check for consistency. If 'ms-MY' doesn't produce "Selasa", browser might default to EN.
-        // Forcing specific format to match request.
         document.getElementById('footer-date').textContent = footerDate.toLocaleDateString('ms-MY', options);
         
         // Mini Stats (Top)
@@ -1834,35 +1832,54 @@ window.addEventListener('click', function(e) {
 
 // GENERATE EXPORT (PNG/PDF)
 function generateExport(type) {
-    const element = document.querySelector('.report-container');
-    const modal = document.querySelector('.report-modal');
+    // 1. Target the Modal (Parent) to capture background gradient
+    const captureElement = document.getElementById('report-content');
+    const scrollContainer = document.querySelector('.report-container');
     
-    // Simpan style asal
-    const origOverflow = modal.style.overflow;
-    const origContOverflow = element.style.overflowY;
-    const origHeight = element.style.height;
+    // 2. Save Original Styles
+    const originalStyles = {
+        overflow: captureElement.style.overflow,
+        maxHeight: captureElement.style.maxHeight,
+        height: captureElement.style.height,
+        transform: captureElement.style.transform,
+        borderRadius: captureElement.style.borderRadius,
+        position: captureElement.style.position,
+        width: captureElement.style.width,
+        margin: captureElement.style.margin
+    };
+    
+    // 3. Save Scroll Position
+    const originalScrollPos = scrollContainer.scrollTop;
 
-    // Paksa visible supaya html2canvas boleh tangkap semua content
-    modal.style.overflow = "visible";
-    element.style.overflowY = "visible";
-    element.style.height = "auto"; 
+    // 4. Modify Styles for Capture (Expand to fit content)
+    captureElement.style.overflow = "visible";
+    captureElement.style.maxHeight = "none";
+    captureElement.style.height = "auto";
+    captureElement.style.transform = "none"; // Remove scale effect for clear capture
+    captureElement.style.borderRadius = "0"; // Flatten for document look
     
-    // Hide UI elements during capture
+    // Ensure scroll container is fully visible
+    scrollContainer.style.overflow = "visible";
+    scrollContainer.style.height = "auto";
+
+    // Hide UI controls
     document.querySelector('.modal-close-btn').style.display = 'none';
     document.querySelector('.download-wrapper').style.visibility = 'hidden';
 
     UI.showLoading(true, type === 'png' ? "MENJANA IMEJ..." : "MENJANA PDF...");
 
     setTimeout(() => {
-        html2canvas(element, { 
-            scale: 1.5, 
+        html2canvas(captureElement, { 
+            scale: 2, // Higher scale for better quality
             useCORS: true,
             allowTaint: true,
-            scrollY: -window.scrollY, 
-            windowHeight: element.scrollHeight + 100 
+            backgroundColor: null, // Transparent background
+            logging: false,
+            // Ensure we capture the whole height
+            windowHeight: captureElement.scrollHeight,
+            height: captureElement.scrollHeight
         }).then(canvas => {
             // CONSTRUCT FILENAME
-            // format: data_dashboard_NAMA LAYER_TARIKH_MASA
             const layerName = (AppState.activeFeatureName || "Seluruh_Sabah").replace(/\s+/g, '_').toUpperCase();
             const now = new Date();
             const year = now.getFullYear();
@@ -1904,11 +1921,20 @@ function generateExport(type) {
             console.error("Export Error:", err);
             alert("Ralat menjana fail. Sila cuba lagi.");
         }).finally(() => {
-            // Restore styles
-            modal.style.overflow = origOverflow;
-            element.style.overflowY = origContOverflow;
-            element.style.height = origHeight;
+            // Restore Styles
+            captureElement.style.overflow = originalStyles.overflow;
+            captureElement.style.maxHeight = originalStyles.maxHeight;
+            captureElement.style.height = originalStyles.height;
+            captureElement.style.transform = originalStyles.transform;
+            captureElement.style.borderRadius = originalStyles.borderRadius;
             
+            scrollContainer.style.overflow = "auto";
+            scrollContainer.style.height = "100%";
+
+            // Restore Scroll
+            scrollContainer.scrollTop = originalScrollPos;
+
+            // Show UI
             document.querySelector('.modal-close-btn').style.display = 'flex';
             document.querySelector('.download-wrapper').style.visibility = 'visible';
             document.getElementById('download-menu').classList.remove('show');
