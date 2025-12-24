@@ -903,9 +903,7 @@ const DataManager = {
             cols.forEach((colName, idx) => {
                 if (colName && matchedRow.c[idx]) {
                     const val = matchedRow.c[idx].v;
-                    // FIX: Ensure we don't display the name itself again or empty values
-                    // Also filter out any columns that might be causing the "all layers" issue if they exist
-                    if (val !== null && val !== "" && Utils.normalize(colName) !== "NAME" && Utils.normalize(colName) !== "DAERAH" && Utils.normalize(colName) !== "DISTRICT") {
+                    if (val !== null && val !== "") {
                         infoData.push({ label: colName, value: val });
                     }
                 }
@@ -1834,10 +1832,11 @@ window.addEventListener('click', function(e) {
 
 // GENERATE EXPORT (PNG/PDF)
 function generateExport(type) {
+    // 1. Target the Modal (Parent) to capture background gradient
     const captureElement = document.getElementById('report-content');
     const scrollContainer = document.querySelector('.report-container');
     
-    // Simpan style asal
+    // 2. Save Original Styles
     const originalStyles = {
         overflow: captureElement.style.overflow,
         maxHeight: captureElement.style.maxHeight,
@@ -1846,23 +1845,20 @@ function generateExport(type) {
         borderRadius: captureElement.style.borderRadius,
         position: captureElement.style.position,
         width: captureElement.style.width,
-        margin: captureElement.style.margin,
-        boxShadow: captureElement.style.boxShadow,
-        background: captureElement.style.background
+        margin: captureElement.style.margin
     };
     
+    // 3. Save Scroll Position
     const originalScrollPos = scrollContainer.scrollTop;
 
-    // Apply capture styles (Clean look for export)
+    // 4. Modify Styles for Capture (Expand to fit content)
     captureElement.style.overflow = "visible";
     captureElement.style.maxHeight = "none";
     captureElement.style.height = "auto";
-    captureElement.style.transform = "none"; 
-    captureElement.style.borderRadius = "0"; 
-    captureElement.style.boxShadow = "none"; // Remove shadow to prevent dark borders
-    // Ensure background is solid (not transparent)
-    captureElement.style.background = "linear-gradient(135deg, #7F7FD5 0%, #86A8E7 50%, #91EAE4 100%)"; 
+    captureElement.style.transform = "none"; // Remove scale effect for clear capture
+    captureElement.style.borderRadius = "0"; // Flatten for document look
     
+    // Ensure scroll container is fully visible
     scrollContainer.style.overflow = "visible";
     scrollContainer.style.height = "auto";
 
@@ -1874,11 +1870,12 @@ function generateExport(type) {
 
     setTimeout(() => {
         html2canvas(captureElement, { 
-            scale: 1.5, // Reduced scale for better performance and smaller size
+            scale: 2, // Higher scale for better quality
             useCORS: true,
             allowTaint: true,
-            backgroundColor: null, // Let CSS handle background
+            backgroundColor: null, // Transparent background
             logging: false,
+            // Ensure we capture the whole height
             windowHeight: captureElement.scrollHeight,
             height: captureElement.scrollHeight
         }).then(canvas => {
@@ -1896,11 +1893,11 @@ function generateExport(type) {
             if (type === 'png') {
                 const link = document.createElement('a');
                 link.download = `${fileName}.png`;
-                link.href = canvas.toDataURL('image/png', 0.9); // Slight compression
+                link.href = canvas.toDataURL('image/png', 1.0);
                 link.click();
             } else {
-                const imgData = canvas.toDataURL('image/jpeg', 0.85); // Compress JPEG for PDF
-                const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); 
+                const imgData = canvas.toDataURL('image/jpeg', 0.90);
+                const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); // Landscape, A3
                 
                 const pdfW = pdf.internal.pageSize.getWidth();
                 const pdfH = pdf.internal.pageSize.getHeight();
@@ -1930,14 +1927,14 @@ function generateExport(type) {
             captureElement.style.height = originalStyles.height;
             captureElement.style.transform = originalStyles.transform;
             captureElement.style.borderRadius = originalStyles.borderRadius;
-            captureElement.style.boxShadow = originalStyles.boxShadow;
-            captureElement.style.background = originalStyles.background;
             
             scrollContainer.style.overflow = "auto";
             scrollContainer.style.height = "100%";
 
+            // Restore Scroll
             scrollContainer.scrollTop = originalScrollPos;
 
+            // Show UI
             document.querySelector('.modal-close-btn').style.display = 'flex';
             document.querySelector('.download-wrapper').style.visibility = 'visible';
             document.getElementById('download-menu').classList.remove('show');
