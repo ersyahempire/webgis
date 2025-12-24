@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.7</title>
+  <title>Web GIS Projek Sabah v7.8</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -875,7 +875,7 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FUNCTION V7.7: SMART COMMENT EXTRACTION FROM FORMATTED STRING ---
+    // --- UPDATED FUNCTION V7.8: FREE STRUCTURE ROW SCANNING ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
@@ -901,98 +901,67 @@ const DataManager = {
             const cols = table.cols.map(c => c ? c.label : "");
             const targetName = Utils.normalize(featureName);
 
-            // 1. Identify Key Column
-            const layerKeys = {
-                district: ["DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH", "NAME", "NAMA"],
-                dun: ["DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "NAME", "NAMA", "KOD DUN"],
-                parliament: ["PARLIAMENT", "PARLIMEN", "NAMA PARLIMEN", "NAMA_PARLIMEN", "NAME", "NAMA", "KOD PARLIMEN"]
-            };
-
-            const possibleKeys = layerKeys[layerType] || ["NAME"];
-            
-            let keyIndex = -1;
-            for (let i = 0; i < cols.length; i++) {
-                if (possibleKeys.includes(Utils.normalize(cols[i]))) {
-                    keyIndex = i;
-                    break;
-                }
-            }
-
-            if (keyIndex === -1 && cols.length > 0) keyIndex = 0;
-            if (keyIndex === -1) return null;
-
-            // 2. Find row
+            // --- 1. FIND ROW (SCAN ALL COLUMNS FOR NAME) ---
             let matchedRow = null;
+            
             for (let r of table.rows) {
-                const val = r.c[keyIndex]?.v;
-                if (!val) continue;
-                const strVal = Utils.normalize(String(val));
-                
-                if (strVal === targetName) {
+                let rowMatch = false;
+                for (let c of r.c) {
+                    if (c && c.v) {
+                        const valStr = Utils.normalize(String(c.v));
+                        // Exact match
+                        if (valStr === targetName) {
+                            rowMatch = true;
+                            break;
+                        }
+                        // Robust partial match
+                        if (targetName.length > 3 && valStr.includes(targetName)) {
+                            rowMatch = true;
+                            break;
+                        }
+                    }
+                }
+                if (rowMatch) {
                     matchedRow = r;
                     break;
-                }
-                if (strVal.length > 3 && targetName.length > 3) {
-                     if (strVal.includes(targetName) || targetName.includes(strVal)) {
-                         matchedRow = r;
-                     }
                 }
             }
 
             if (!matchedRow) return null;
             
-            // 3. Process Columns (USE FORMATTED VALUE PREFERENCE)
+            // --- 2. PROCESS COLUMNS (SHOW ALL EXCEPT 'LAYER') ---
             const infoData = [];
-            const BANNED_KEYS = [
-                "LAYER", "TIER", "LEVEL", "KOD",
-                "DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH",
-                "DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "KOD DUN",
-                "PARLIAMENT", "PARLIMEN", "NAMA PARLIMEN", "NAMA_PARLIMEN", "KOD PARLIMEN",
-                "NAME", "NAMA", "OBJECTID", "ID", "SENARAI", "LIST", "ALL"
-            ];
             
             cols.forEach((colName, idx) => {
                 if (!colName) return;
+                
+                // FILTER: Only exclude "LAYER"
+                if (Utils.normalize(colName) === "LAYER") return;
+
                 const cell = matchedRow.c[idx];
                 if (!cell) return;
 
-                const val = cell.v; // Raw Value (e.g., 34534 or 0.9025)
-                const fmt = cell.f; // Formatted Value (e.g., "34534 (sumber: DOSM)" or "90.25%")
+                const val = cell.v;
+                const fmt = cell.f;
                 
-                // Skip if empty or banned
+                // Skip empty values
                 if (val === null || val === "" || String(val).trim() === "") return;
-                const normLabel = Utils.normalize(colName);
-                if (BANNED_KEYS.some(ban => normLabel === ban || normLabel.includes(ban + " "))) return;
 
-                // Safety: Hide massive text dumps unless explicitly marked
-                const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
-                if (String(val).length > 300 && !isLikelyNote) return;
-
-                // --- NEW LOGIC V7.7: USE FORMATTED STRING AS TRUTH, THEN EXTRACT COMMENTS ---
+                // --- DATA SEBENAR & KOMEN ---
                 let displayValue = val; 
                 let displayComment = null;
 
-                if (fmt) {
-                    const strFmt = String(fmt);
-                    // 1. Check for comment pattern in PARENTHESES at the end
-                    // Regex searches for (...) containing letters/text at end of string
-                    const commentMatch = strFmt.match(/(\([a-zA-Z\s:0-9]+\))$/); 
-                    
-                    if (commentMatch) {
-                        // Found a comment like "(sumber: DOSM)"
-                        const fullComment = commentMatch[1]; 
-                        
-                        // Set comment
-                        displayComment = fullComment;
-                        
-                        // Remove comment from value string to get clean value
-                        let cleanValue = strFmt.replace(fullComment, "").trim();
-                        displayValue = cleanValue;
-                    } else {
-                        // No comment found, use the full formatted string as value
-                        // This ensures percentages like 90.25% are displayed correctly
-                        displayValue = strFmt;
-                    }
+                // Use formatted string if available to preserve formatting (e.g. 90.25%)
+                let strToCheck = fmt ? String(fmt) : String(val);
+                
+                // Check for comment pattern (...) at the end
+                const commentMatch = strToCheck.match(/(\([a-zA-Z\s:0-9]+\))$/); 
+                
+                if (commentMatch) {
+                    displayComment = commentMatch[1]; 
+                    displayValue = strToCheck.replace(displayComment, "").trim();
+                } else {
+                    displayValue = strToCheck;
                 }
 
                 infoData.push({ 
