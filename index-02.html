@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.9 - sms 1.0</title>
+  <title>Web GIS Projek Sabah v6.9 - sms 1.2</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -421,10 +421,10 @@ body {
     margin-top: 5px;
     padding-top: 5px;
     border-top: 1px dashed rgba(0,0,0,0.1);
-    font-size: 0.75rem;
-    color: #6b7280; 
+    font-size: 0.8rem;
+    color: #ef4444; /* Red for emphasis */
     font-style: italic;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 /* --- UPDATED: FOOTER STYLES --- */
@@ -896,9 +896,9 @@ const DataManager = {
             const cols = table.cols.map(c => c ? c.label : "");
             const targetName = Utils.normalize(featureName);
 
-            // 1. Find the specific row for this feature (e.g., "Tawau")
             let matchedRow = null;
             for (let r of table.rows) {
+                // Check first few columns for the name
                 for (let i = 0; i < Math.min(r.c.length, 3); i++) {
                     const val = r.c[i]?.v;
                     if (val && Utils.normalize(String(val)) === targetName) {
@@ -911,87 +911,35 @@ const DataManager = {
 
             if (!matchedRow) return null;
             
-            // --- UPDATED LOGIC FOR COLUMN FILTERING & COMMENT PAIRING ---
+            // --- UPDATED LOGIC: FILTER KEYS & DETECT COMMENTS ---
             const infoData = [];
-            // Daftar lajur yang ingin DIABAIKAN/DIBUANG dari paparan
-            const BANNED_KEYS = ["DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIMEN", "NAME", "NAMA", "OBJECTID", "ID"];
-            
-            // Temporary storage for processing pairs
-            // We iterate through all columns to build a raw map first
-            const processedCols = [];
+            const BANNED_KEYS = ["DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIMEN", "NAME", "NAMA"];
             
             cols.forEach((colName, idx) => {
-                if (!colName) return;
-                const val = matchedRow.c[idx] ? matchedRow.c[idx].v : null;
-                // Simpan semua column yang ada nilai
-                if (val !== null && val !== "") {
-                    processedCols.push({ 
-                        idx: idx,
-                        label: colName, 
-                        normLabel: Utils.normalize(colName),
-                        value: val 
-                    });
+                if (colName && matchedRow.c[idx]) {
+                    const normalizedCol = Utils.normalize(colName);
+                    
+                    // 1. Skip if Banned
+                    if (BANNED_KEYS.includes(normalizedCol)) return;
+                    
+                    // 2. Check for "Comment/Note" columns
+                    // Assumption: If a column implies a note (e.g., ends in _NOTE or is just "CATATAN"), handle it.
+                    // However, standard display just renders it. The new requirement is: 
+                    // "info/ tulisan kecil dibawah setiap kad JIKA terdapat comments"
+                    // We'll treat columns named "CATATAN", "NOTE", "KOMEN" as specific comments for the previous value or general notes.
+                    
+                    const isComment = normalizedCol.includes("CATATAN") || normalizedCol.includes("NOTE") || normalizedCol.includes("KOMEN");
+                    const val = matchedRow.c[idx].v;
+                    
+                    if (val !== null && val !== "") {
+                        infoData.push({ 
+                            label: colName, 
+                            value: val,
+                            isComment: isComment 
+                        });
+                    }
                 }
             });
-
-            // Iterate and pair logic: 
-            // Look for columns that are "Comments" (contain SUMBER/CATATAN/NOTE).
-            // Try to attach them to the immediately preceding non-comment column.
-            
-            for (let i = 0; i < processedCols.length; i++) {
-                const current = processedCols[i];
-                
-                // If this is a banned key, skip completely (unless it acts as a join key, but here we just want to hide it from display)
-                if (BANNED_KEYS.includes(current.normLabel)) continue;
-
-                // Check if this column itself looks like a comment/note column
-                const isCommentType = current.normLabel.includes("SUMBER") || 
-                                      current.normLabel.includes("CATATAN") || 
-                                      current.normLabel.includes("NOTE") ||
-                                      current.normLabel.includes("KOMEN");
-
-                if (isCommentType) {
-                    // It's a standalone comment, or belongs to previous. 
-                    // Since we are iterating, if we found a "Source" col, and the previous item pushed was a data item, update it.
-                    if (infoData.length > 0) {
-                         const lastItem = infoData[infoData.length - 1];
-                         // Check if last item doesn't already have a comment
-                         if (!lastItem.comment) {
-                             lastItem.comment = current.value; // Attach as comment to previous card
-                         } else {
-                             // If last item already has comment, maybe add another line or treat as new item?
-                             // Let's treat as new item but mark it as full width or simple text
-                             infoData.push({ label: current.label, value: current.value, isPureComment: true });
-                         }
-                    } else {
-                        // If it's the very first item, just show it
-                        infoData.push({ label: current.label, value: current.value, isPureComment: true });
-                    }
-                } else {
-                    // It's a regular data column. Check if the NEXT column is a "Source/Note" for this one.
-                    // (Forward lookahead optimization)
-                    let associatedComment = null;
-                    if (i + 1 < processedCols.length) {
-                        const next = processedCols[i+1];
-                        const nextIsComment = next.normLabel.includes("SUMBER") || 
-                                              next.normLabel.includes("CATATAN") || 
-                                              next.normLabel.includes("NOTE");
-                        // Also check if name similarity? E.g. "POPULASI" and "POPULASI_SUMBER"
-                        // Or just simplistic "Next column is a note"
-                        if (nextIsComment) {
-                             associatedComment = next.value;
-                             i++; // Skip next column in main loop since we consumed it here
-                        }
-                    }
-                    
-                    infoData.push({
-                        label: current.label,
-                        value: current.value,
-                        comment: associatedComment
-                    });
-                }
-            }
-            
             return infoData;
         } catch (e) {
             console.error("Error fetching layer info:", e);
@@ -1639,23 +1587,19 @@ const UI = {
                         layerInfo.forEach(info => {
                             const item = document.createElement('div');
                             item.className = 'layer-info-item';
-                            // Logic: Render Value. If there is a comment/note attached, render it small below.
+                            // Logic: Render Value. If there is a comment/note attached (implied by column name), render it small below.
                             
                             let html = `
                                 <div class="layer-info-label">${info.label}</div>
                                 <div class="layer-info-value">${info.value}</div>
                             `;
                             
-                            // If this specific item IS a pure comment (based on column name), style it differently
-                            if (info.isPureComment) {
+                            // If this specific item IS a comment (based on column name), style it differently
+                            if (info.isComment) {
                                 html = `
-                                    <div class="layer-info-label" style="color:#6b7280; font-style:italic;">CATATAN / NOTA</div>
+                                    <div class="layer-info-label" style="color:#ef4444;">CATATAN / NOTA</div>
                                     <div class="layer-info-value" style="font-size:0.9rem; font-style:italic;">${info.value}</div>
                                 `;
-                            } 
-                            // If it has an attached comment from the "next" column
-                            else if (info.comment) {
-                                html += `<div class="layer-info-comment">${info.comment}</div>`;
                             }
 
                             item.innerHTML = html;
