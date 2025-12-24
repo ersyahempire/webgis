@@ -875,7 +875,7 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FUNCTION V7.8: SMART COMMENT EXTRACTION ---
+    // --- UPDATED FUNCTION V7.8: SEPARATE COMMENTS FROM CELL VALUE ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
@@ -941,7 +941,7 @@ const DataManager = {
 
             if (!matchedRow) return null;
             
-            // 3. Process Columns (Values vs Formatted Values)
+            // 3. Process Columns (USE FORMATTED VALUE PREFERENCE)
             const infoData = [];
             const BANNED_KEYS = [
                 "LAYER", "TIER", "LEVEL", "KOD",
@@ -956,45 +956,38 @@ const DataManager = {
                 const cell = matchedRow.c[idx];
                 if (!cell) return;
 
-                const val = cell.v; // Raw Value 
-                const fmt = cell.f; // Formatted Value
+                // --- LOGIC PEMISAHAN KOMEN v7.8 ---
+                // 1. Ambil nilai format (jika ada) atau nilai mentah
+                let rawString = (cell.f) ? String(cell.f) : String(cell.v);
                 
                 // Skip if empty or banned
-                if (val === null || val === "" || String(val).trim() === "") return;
+                if (rawString === null || rawString === "" || rawString.trim() === "") return;
                 const normLabel = Utils.normalize(colName);
                 if (BANNED_KEYS.some(ban => normLabel === ban || normLabel.includes(ban + " "))) return;
 
-                // Safety: Hide massive text dumps unless explicitly marked
+                // Safety check for huge text dumps
                 const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
-                if (String(val).length > 300 && !isLikelyNote) return;
+                if (rawString.length > 300 && !isLikelyNote) return;
 
-                // --- NEW LOGIC V7.8: ROBUST COMMENT SEPARATION ---
-                // We use FORMATTED VALUE (fmt) as the base because it represents what the user sees/wants (e.g. 90.25%).
-                // If fmt is undefined, use val.
-                let baseString = String(fmt || val);
-                let displayValue = baseString; 
-                let displayComment = null;
+                let finalValue = rawString;
+                let finalComment = null;
 
-                // Pattern 1: New Line separation (Alt+Enter in Sheets)
-                if (baseString.includes('\n')) {
-                    const parts = baseString.split('\n');
-                    displayValue = parts[0].trim();
-                    // Join the rest as comment
-                    displayComment = parts.slice(1).join(' ').trim(); 
-                } 
-                // Pattern 2: Parentheses at the end containing text e.g. "12345 (Sumber: ABC)"
-                else {
-                    const parenMatch = baseString.match(/^(.*)\s+(\(.*\))$/);
-                    if (parenMatch) {
-                        displayValue = parenMatch[1].trim();
-                        displayComment = parenMatch[2].trim();
-                    }
+                // 2. Regex untuk mengesan teks dalam kurungan di hujung ayat
+                // Contoh: "34534 (sumber: DOSM)" atau "Projek A (Fasa 1)"
+                // Regex ini menangkap sebarang teks dalam kurungan yang berada di akhir string
+                // [\s\n]+ bermaksud ia mesti dipisahkan oleh 'space' atau 'newline'
+                const commentRegex = /[\s\n]+(\(.*\))$/;
+                const match = rawString.match(commentRegex);
+
+                if (match) {
+                    finalComment = match[1]; // Ambil teks kurungan: "(sumber: DOSM)"
+                    finalValue = rawString.replace(match[0], '').trim(); // Buang komen dari nilai utama
                 }
 
                 infoData.push({ 
                     label: colName, 
-                    value: displayValue, 
-                    comment: displayComment 
+                    value: finalValue, 
+                    comment: finalComment 
                 });
             });
             
@@ -1898,6 +1891,164 @@ const UI = {
         link.click();
     }
 };
+
+/**
+ * =============================================================================
+ * 9. GLOBAL HANDLERS & EXPORT LOGIC
+ * =============================================================================
+ */
+function toggleDashboard() {
+    const panel = document.getElementById('dashboard-panel');
+    const btn = document.getElementById('sidebar-toggle');
+    panel.classList.toggle('closed');
+    btn.innerHTML = panel.classList.contains('closed') ? '<i class="fas fa-chart-pie"></i>' : '<i class="fas fa-times"></i>';
+    setTimeout(() => {
+        if(AppState.map) AppState.map.invalidateSize();
+    }, 300);
+}
+
+function closeReport() {
+    document.getElementById('report-overlay').classList.remove('open');
+    if (AppState.reportMap) {
+        AppState.reportMap.off();
+        AppState.reportMap.remove();
+        AppState.reportMap = null;
+    }
+}
+
+// SHARE FUNCTION
+async function shareReport() {
+    const url = new URL(window.location.href);
+    if(AppState.activeBoundaryKey) url.searchParams.set('layer', AppState.activeBoundaryKey);
+    if(AppState.activeFeatureName) url.searchParams.set('name', AppState.activeFeatureName);
+    
+    const shareData = {
+        title: 'Laporan Dashboard Projek Sabah',
+        text: `Lihat Laporan Projek GIS untuk: ${AppState.activeFeatureName || 'Seluruh Sabah'}`,
+        url: url.toString()
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (err) {
+            console.log('Share dibatalkan');
+        }
+    } else {
+        // Fallback for desktop
+        try {
+            await navigator.clipboard.writeText(url.toString());
+            alert('Pautan laporan telah disalin ke papan keratan!');
+        } catch (err) {
+            alert('Gagal menyalin pautan.');
+        }
+    }
+}
+
+// GENERATE EXPORT (PDF ONLY)
+function generateExport() {
+    // 1. Target the Modal (Parent)
+    const captureElement = document.getElementById('report-content');
+    const scrollContainer = document.querySelector('.report-container');
+    
+    // 2. Save Original Styles
+    const originalStyles = {
+        overflow: captureElement.style.overflow,
+        maxHeight: captureElement.style.maxHeight,
+        height: captureElement.style.height,
+        transform: captureElement.style.transform,
+        borderRadius: captureElement.style.borderRadius,
+        position: captureElement.style.position,
+        width: captureElement.style.width,
+        margin: captureElement.style.margin
+    };
+    
+    // 3. Save Scroll Position
+    const originalScrollPos = scrollContainer.scrollTop;
+
+    // 4. Modify Styles for Capture (Expand to fit content)
+    captureElement.style.overflow = "visible";
+    captureElement.style.maxHeight = "none";
+    captureElement.style.height = "auto";
+    captureElement.style.transform = "none"; 
+    captureElement.style.borderRadius = "0"; 
+    
+    // Ensure scroll container is fully visible
+    scrollContainer.style.overflow = "visible";
+    scrollContainer.style.height = "auto";
+
+    // Hide UI controls
+    document.querySelector('.modal-close-btn').style.display = 'none';
+    document.querySelector('.action-buttons').style.visibility = 'hidden';
+
+    UI.showLoading(true, "MENJANA DOKUMEN PDF...");
+
+    // Use Try-Catch-Finally to prevent "Stuck" state
+    setTimeout(() => {
+        html2canvas(captureElement, { 
+            scale: 1.5, // Standard quality for PDF
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#eef2f5', 
+            logging: false,
+            windowHeight: captureElement.scrollHeight,
+            height: captureElement.scrollHeight
+        }).then(canvas => {
+            // CONSTRUCT FILENAME
+            const layerName = (AppState.activeFeatureName || "Seluruh_Sabah").replace(/\s+/g, '_').toUpperCase();
+            const now = new Date();
+            const fileName = `Laporan_Projek_${layerName}_${now.toISOString().slice(0,10)}`;
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
+            const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); 
+            
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            
+            const imgRatio = canvas.height / canvas.width;
+            const printH = pdfW * imgRatio;
+
+            if (printH > pdfH) {
+                  const scaleFactor = pdfH / printH;
+                  const finalW = pdfW * scaleFactor;
+                  const finalH = pdfH; 
+                  const x = (pdfW - finalW) / 2;
+                  pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
+            } else {
+                  pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
+            }
+            
+            pdf.save(`${fileName}.pdf`);
+
+        }).catch(err => {
+            console.error("Export Error:", err);
+            alert("Ralat semasa menjana PDF. Sila cuba sekali lagi atau semak sambungan internet.");
+        }).finally(() => {
+            // CRITICAL: ALWAYS RESTORE STYLES
+            captureElement.style.overflow = originalStyles.overflow;
+            captureElement.style.maxHeight = originalStyles.maxHeight;
+            captureElement.style.height = originalStyles.height;
+            captureElement.style.transform = originalStyles.transform;
+            captureElement.style.borderRadius = originalStyles.borderRadius;
+            
+            scrollContainer.style.overflow = "auto";
+            scrollContainer.style.height = "100%";
+
+            // Restore Scroll
+            scrollContainer.scrollTop = originalScrollPos;
+
+            // Show UI
+            document.querySelector('.modal-close-btn').style.display = 'flex';
+            document.querySelector('.action-buttons').style.visibility = 'visible';
+            
+            // Hide loading
+            UI.showLoading(false);
+            
+            // Scroll to top of window to prevent disorientation
+            window.scrollTo(0,0);
+        });
+    }, 500); 
+}
 
 // Bind functions to window
 window.toggleDashboard = toggleDashboard;
