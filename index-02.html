@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9</title>
+  <title>Web GIS Projek Sabah v7.8 (Fixed Layer Info)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);       
+  --glass-border: rgba(255, 255, 255, 0.8);        
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
   --glass-blur: 20px;                             
   --text-main: #111827;       /* Gray 900 */
@@ -685,6 +685,19 @@ const APP_CONFIG = {
 const Utils = {
     escapeHtml: (str) => String(str || "").replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
     normalize: (str) => String(str || "").trim().toUpperCase(),
+    
+    // --- NEW: AGGRESSIVE NORMALIZATION FOR LAYER MATCHING ---
+    // Removes "DAERAH", "PARLIMEN", "DUN", "N.", dots, spaces, special chars
+    // Example: "DAERAH TAWAU" -> "TAWAU", "N.61 SEGAMA" -> "61SEGAMA"
+    normalizeKey: (str) => {
+        if (!str) return "";
+        let s = String(str).toUpperCase();
+        // Remove specific administrative prefixes to ensure matches like "Daerah Tawau" == "Tawau"
+        s = s.replace(/^DAERAH\s+|^PARLIMEN\s+|^DUN\s+|^N\.?\s*|^P\.?\s*|^KAWASAN\s+/, "");
+        // Keep only alphanumeric (A-Z, 0-9). Remove dots, spaces, dashes.
+        return s.replace(/[^A-Z0-9]/g, "");
+    },
+
     cleanFloat: (val) => {
         if (typeof val === 'number') return val;
         if (!val) return 0;
@@ -875,13 +888,15 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FUNCTION V7.9: FIX LAYER MATCHING (N.61 SEGAMA) ---
+    
+    // --- UPDATED V7.8: FIXED FETCH LAYER INFO (STRICT LAYER COLUMN MATCHING) ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
         const sheetName = APP_CONFIG.LAYER_INFO.sheets[layerType];
         if (!sheetName) return null;
         
+        // Use GVIZ API to fetch the specific sheet for this layer type
         const url = `https://docs.google.com/spreadsheets/d/${APP_CONFIG.LAYER_INFO.sheetId}/gviz/tq?sheet=${sheetName}&tqx=out:json`;
 
         try {
@@ -898,90 +913,101 @@ const DataManager = {
             
             if (!table || !table.cols || !table.rows) return null;
 
-            const cols = table.cols.map(c => c ? c.label : "");
-            
-            // --- Helper: Clean string for robust comparison ---
-            // Removes dots, spaces, special chars, and converts to uppercase
-            // e.g. "N.61 SEGAMA" -> "N61SEGAMA", "Segama" -> "SEGAMA"
-            const cleanStr = (str) => {
-                if(!str) return "";
-                return String(str).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-            };
+            // 1. FIND THE 'LAYER' COLUMN (MANDATORY)
+            // We search for a column specifically named "LAYER" (case-insensitive)
+            let layerColIndex = -1;
+            for (let i = 0; i < table.cols.length; i++) {
+                if (table.cols[i] && table.cols[i].label.toUpperCase() === 'LAYER') {
+                    layerColIndex = i;
+                    break;
+                }
+            }
 
-            const targetNameClean = cleanStr(featureName); // e.g. N61SEGAMA
+            // If no LAYER column found, we cannot match safely. Abort.
+            if (layerColIndex === -1) {
+                console.warn(`Column 'LAYER' not found in sheet: ${sheetName}`);
+                return null;
+            }
 
-            // --- 1. FIND ROW (SCAN ALL COLUMNS FOR NAME) ---
+            // 2. NORMALIZE THE TARGET FEATURE NAME (from GeoJSON)
+            // Remove "DAERAH", "N.", dots, etc. to get raw matching key
+            const targetKey = Utils.normalizeKey(featureName);
+
+            // 3. FIND THE MATCHING ROW
             let matchedRow = null;
             
             for (let r of table.rows) {
-                let rowMatch = false;
-                for (let c of r.c) {
-                    if (c && c.v) {
-                        const cellValClean = cleanStr(c.v);
-                        
-                        // Strict Equality Check
-                        if (cellValClean === targetNameClean) {
-                            rowMatch = true;
-                            break;
-                        }
-                        
-                        // Containment Check (Bidirectional)
-                        // Only if strings are "substantial" (>3 chars) to avoid false positives like "A" matching "TAWAU"
-                        if (targetNameClean.length > 3 && cellValClean.length > 3) {
-                            if (targetNameClean.includes(cellValClean) || cellValClean.includes(targetNameClean)) {
-                                rowMatch = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (rowMatch) {
+                // Get value from LAYER column
+                const cell = r.c[layerColIndex];
+                if (!cell || !cell.v) continue;
+                
+                const sheetValRaw = String(cell.v);
+                const sheetKey = Utils.normalizeKey(sheetValRaw);
+
+                // MATCH LOGIC: 
+                // A. Exact Normalized Match (Primary) -> "N61SEGAMA" === "N61SEGAMA"
+                // B. Contains Match (Fallback) -> "DAERAHTAWAU".includes("TAWAU") to handle "DAERAH TAWAU" vs "TAWAU"
+                if (sheetKey === targetKey) {
                     matchedRow = r;
                     break;
+                }
+                
+                // Additional safe check: If key is long enough (>3 chars), check if one contains the other
+                if (sheetKey.length > 3 && targetKey.length > 3) {
+                     if (sheetKey.includes(targetKey) || targetKey.includes(sheetKey)) {
+                         matchedRow = r;
+                         break;
+                     }
                 }
             }
 
             if (!matchedRow) return null;
             
-            // --- 2. PROCESS COLUMNS (SHOW ALL EXCEPT 'LAYER') ---
+            // 4. EXTRACT ALL OTHER COLUMNS (DYNAMIC)
             const infoData = [];
             
-            cols.forEach((colName, idx) => {
-                if (!colName) return;
+            table.cols.forEach((col, idx) => {
+                // Skip the LAYER column itself or if column is empty
+                if (idx === layerColIndex || !col || !col.label) return;
                 
-                // FILTER: Only exclude "LAYER"
-                if (Utils.normalize(colName) === "LAYER") return;
+                const colLabel = col.label;
+                
+                // Skip system columns or likely internal IDs if needed, usually we show everything else
+                if (colLabel.toUpperCase() === 'ID' || colLabel.toUpperCase() === 'OBJECTID') return;
 
                 const cell = matchedRow.c[idx];
                 if (!cell) return;
 
-                const val = cell.v;
-                const fmt = cell.f;
+                const val = cell.v; 
+                const fmt = cell.f; 
                 
-                // Skip empty values
                 if (val === null || val === "" || String(val).trim() === "") return;
 
-                // --- DATA SEBENAR & KOMEN ---
+                // --- FORMATTED STRING & COMMENT EXTRACTION LOGIC ---
                 let displayValue = val; 
                 let displayComment = null;
 
-                // Use formatted string if available to preserve formatting (e.g. 90.25%)
-                let strToCheck = fmt ? String(fmt) : String(val);
-                
-                // Check for comment pattern (...) at the end
-                const commentMatch = strToCheck.match(/(\([a-zA-Z\s:0-9]+\))$/); 
-                
-                if (commentMatch) {
-                    displayComment = commentMatch[1]; 
-                    displayValue = strToCheck.replace(displayComment, "").trim();
-                } else {
-                    displayValue = strToCheck;
+                if (fmt) {
+                    const strFmt = String(fmt);
+                    // Check for comment pattern: ends with "(...)"
+                    const commentMatch = strFmt.match(/(\([a-zA-Z\s:0-9]+\))$/); 
+                    
+                    if (commentMatch) {
+                        const fullComment = commentMatch[1]; 
+                        displayComment = fullComment;
+                        // Clean value
+                        displayValue = strFmt.replace(fullComment, "").trim();
+                    } else {
+                        displayValue = strFmt;
+                    }
                 }
 
                 infoData.push({ 
-                    label: colName, 
+                    label: colLabel, 
                     value: displayValue, 
-                    comment: displayComment 
+                    comment: displayComment,
+                    // Check if the label itself implies it's a note field
+                    isPureComment: /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colLabel)
                 });
             });
             
@@ -1060,15 +1086,7 @@ const MapManager = {
     },
     extractGeoName(feature) {
         const props = feature.properties || {};
-        // Enhanced property check for Malaysian GIS datasets
-        return Utils.normalize(
-            props.NAME || props.Name || props.name || 
-            props.NAM || props.Nam || props.NAM_K || props.NAMA_K ||
-            props.DISTRICT || props.District || props.DAERAH || 
-            props.DUN || props.Dun || props.DUN_NAME ||
-            props.PARLIAMENT || props.Parliament || props.PARLIMEN || props.PAR_NAME ||
-            props.Label || "Sabah"
-        );
+        return Utils.normalize(props.NAME || props.name || props.DISTRICT || props.DAERAH || props.DUN || props.PARLIAMENT || "Sabah");
     },
     switchBoundary(key, btnId) {
         Object.values(AppState.dataLayers).forEach(l => { if(l && AppState.map.hasLayer(l)) AppState.map.removeLayer(l); });
