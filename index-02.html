@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.6</title>
+  <title>Web GIS Projek Sabah v7.3</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -875,7 +875,7 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FUNCTION: DETECT EMBEDDED COMMENTS (VALUE vs FORMAT) ---
+    // --- UPDATED FIXED FUNCTION FOR LAYER INFO V7.3 ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
@@ -901,7 +901,7 @@ const DataManager = {
             const cols = table.cols.map(c => c ? c.label : "");
             const targetName = Utils.normalize(featureName);
 
-            // 1. Identify Key Column
+            // 1. Identify Key Column (same as before)
             const layerKeys = {
                 district: ["DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH", "NAME", "NAMA"],
                 dun: ["DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "NAME", "NAMA", "KOD DUN"],
@@ -918,7 +918,9 @@ const DataManager = {
                 }
             }
 
+            // Fallback
             if (keyIndex === -1 && cols.length > 0) keyIndex = 0;
+
             if (keyIndex === -1) return null;
 
             // 2. Find row
@@ -928,10 +930,12 @@ const DataManager = {
                 if (!val) continue;
                 const strVal = Utils.normalize(String(val));
                 
+                // Exact
                 if (strVal === targetName) {
                     matchedRow = r;
                     break;
                 }
+                // Partial
                 if (strVal.length > 3 && targetName.length > 3) {
                      if (strVal.includes(targetName) || targetName.includes(strVal)) {
                          matchedRow = r;
@@ -941,8 +945,9 @@ const DataManager = {
 
             if (!matchedRow) return null;
             
-            // 3. Process Columns (Values vs Formatted Values)
+            // 3. Process Columns (UPDATED LOGIC V7.3)
             const infoData = [];
+            // LIST OF BANNED KEYS - includes "LAYER" and specific ID keys
             const BANNED_KEYS = [
                 "LAYER", "TIER", "LEVEL", "KOD",
                 "DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH",
@@ -951,63 +956,71 @@ const DataManager = {
                 "NAME", "NAMA", "OBJECTID", "ID", "SENARAI", "LIST", "ALL"
             ];
             
+            const processedCols = [];
+            
             cols.forEach((colName, idx) => {
                 if (!colName) return;
-                const cell = matchedRow.c[idx];
-                if (!cell) return;
-
-                const val = cell.v; // Raw Value (e.g., 34534)
-                const fmt = cell.f; // Formatted Value (e.g., "34534 (sumber: DOSM)")
+                const val = matchedRow.c[idx] ? matchedRow.c[idx].v : null;
                 
-                // Skip if empty or banned
-                if (val === null || val === "" || String(val).trim() === "") return;
-                const normLabel = Utils.normalize(colName);
-                if (BANNED_KEYS.some(ban => normLabel === ban || normLabel.includes(ban + " "))) return;
+                // --- Logic: Only include if valid value and NOT empty ---
+                if (val !== null && val !== "" && String(val).trim() !== "") {
+                    // Safety check for huge text dumps
+                    const isLikelyComment = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
+                    if (String(val).length > 300 && !isLikelyComment) return;
 
-                // Safety: Hide massive text dumps unless explicitly marked
-                const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
-                if (String(val).length > 300 && !isLikelyNote) return;
+                    processedCols.push({ 
+                        idx: idx,
+                        label: colName, 
+                        normLabel: Utils.normalize(colName),
+                        value: val 
+                    });
+                }
+            });
 
-                // --- DETECT "EMBEDDED" COMMENTS ---
-                let comment = null;
+            // Iterate and Filter
+            for (let i = 0; i < processedCols.length; i++) {
+                const current = processedCols[i];
                 
-                if (fmt && typeof fmt === 'string' && fmt !== String(val)) {
-                    // Strategy: Find text in 'fmt' that is NOT in 'val'
-                    // Focus on Parentheses as per example
-                    const parenRegex = /\((.*?)\)/g;
-                    let match;
-                    while ((match = parenRegex.exec(fmt)) !== null) {
-                        // content of parens
-                        const content = match[0]; // e.g. "(sumber: ...)"
-                        // ensure this content isn't just part of the raw string (e.g. if raw value was text "(A)")
-                        if (!String(val).includes(content)) {
-                            comment = content; // Found it
-                            break; 
+                // --- STRICT FILTERING ---
+                // If the column name matches ANY banned key, skip it
+                if (BANNED_KEYS.some(ban => current.normLabel === ban || current.normLabel.includes(ban + " "))) continue;
+
+                const isCommentType = current.normLabel.includes("SUMBER") || 
+                                      current.normLabel.includes("CATATAN") || 
+                                      current.normLabel.includes("NOTE") ||
+                                      current.normLabel.includes("KOMEN");
+
+                if (isCommentType) {
+                    if (infoData.length > 0) {
+                         const lastItem = infoData[infoData.length - 1];
+                         if (!lastItem.comment) {
+                             lastItem.comment = current.value;
+                         } else {
+                             infoData.push({ label: current.label, value: current.value, isPureComment: true });
+                         }
+                    } else {
+                        infoData.push({ label: current.label, value: current.value, isPureComment: true });
+                    }
+                } else {
+                    let associatedComment = null;
+                    if (i + 1 < processedCols.length) {
+                        const next = processedCols[i+1];
+                        const nextIsComment = next.normLabel.includes("SUMBER") || 
+                                              next.normLabel.includes("CATATAN") || 
+                                              next.normLabel.includes("NOTE");
+                        if (nextIsComment) {
+                             associatedComment = next.value;
+                             i++; 
                         }
                     }
                     
-                    // Fallback: If no parens, check if fmt is significantly longer and contains text
-                    if (!comment) {
-                         // remove the value string from fmt (approximate)
-                         const cleanFmt = fmt.replace(/[0-9.,]/g, '').trim(); 
-                         // If remaining text is long enough and not just symbols
-                         if (cleanFmt.length > 2 && /[a-zA-Z]/.test(cleanFmt)) {
-                             // Try to isolate it. 
-                             // If fmt contains val
-                             const strVal = String(val);
-                             if (fmt.includes(strVal)) {
-                                 comment = fmt.replace(strVal, '').trim();
-                             }
-                         }
-                    }
+                    infoData.push({
+                        label: current.label,
+                        value: current.value,
+                        comment: associatedComment
+                    });
                 }
-
-                infoData.push({ 
-                    label: colName, 
-                    value: val, // AMBIL VALUE SEBENAR SAHAJA
-                    comment: comment 
-                });
-            });
+            }
             
             return infoData;
         } catch (e) {
