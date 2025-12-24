@@ -3,20 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.2</title>
+  <title>Web GIS Projek Sabah v7.2 (Debugged)</title>
   
-  <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-  <!-- ApexCharts -->
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-  <!-- PDF/Image Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -28,7 +24,7 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);       
+  --glass-border: rgba(255, 255, 255, 0.8);        
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
   --glass-blur: 20px;                             
   --text-main: #111827;       /* Gray 900 */
@@ -274,7 +270,6 @@ body {
 .header-title h2 { font-size: 2.2rem; font-weight: 800; margin: 5px 0 0 0; line-height: 1.1; color: #fff; }
 .header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-right: 40px; }
 
-/* --- UPDATED: DOWNLOAD BUTTON & SHARE --- */
 .action-buttons { display: flex; gap: 10px; align-items: center; }
 
 .btn-download-main, .btn-share {
@@ -309,13 +304,13 @@ body {
 .chart-card { height: 480px; padding: 20px; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.65); overflow: hidden; }
 .chart-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; color: #111827; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
-/* --- MAIN CONTENT FIXES (MAP & STATUS AUTO HEIGHT) --- */
+/* --- MAP & STATUS AUTO HEIGHT FIX --- */
 .main-content { 
     display: grid; 
     grid-template-columns: 2fr 1fr; 
     gap: 20px; 
     height: auto; 
-    align-items: stretch; /* Ensure both columns stretch to the height of the tallest */
+    align-items: stretch; 
 }
 
 .map-container { 
@@ -332,7 +327,7 @@ body {
 #report-map { 
     width: 100%; 
     min-height: 550px; 
-    flex: 1; /* Grow to fill container */
+    flex: 1; 
     background: #e5e7eb; 
     z-index: 1;
     position: relative;
@@ -361,17 +356,12 @@ body {
     overflow: visible; 
 }
 
-/* ----------------------------------------------------- */
-
 .bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; padding-bottom: 20px; }
 .bottom-card { height: 480px; padding: 20px; background: rgba(255, 255, 255, 0.65); display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; border: 1px solid rgba(255,255,255,0.6); }
 .bottom-card-header { margin-bottom: 15px; flex-shrink: 0; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 10px;}
 .bottom-card-body { flex: 1; min-height: 0; width: 100%; overflow-y: auto;}
-.district-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed rgba(0,0,0,0.1); font-size: 13px;}
-.district-name { font-weight: 600; color: #374151; }
-.district-val { font-weight: 800; color: var(--primary); }
 
-/* --- LAYER INFO CARD (NEW) --- */
+/* --- LAYER INFO CARD --- */
 .layer-info-card {
     background: rgba(255, 255, 255, 0.65);
     border-radius: 16px;
@@ -416,7 +406,7 @@ body {
     font-size: 1rem;
     color: #111827;
     font-weight: 700;
-    word-break: break-word; /* Prevents long text from overflowing */
+    word-break: break-word; 
 }
 .layer-info-comment {
     margin-top: 5px;
@@ -428,7 +418,7 @@ body {
     font-weight: 500;
 }
 
-/* --- UPDATED: FOOTER STYLES --- */
+/* --- FOOTER --- */
 footer {
     margin-top: 30px;
     padding: 25px 20px;
@@ -437,7 +427,7 @@ footer {
     color: rgba(31, 41, 55, 0.85);
     font-size: 0.9rem;
     background: rgba(255, 255, 255, 0.4);
-    border-radius: 0 0 20px 20px; /* Match modal bottom radius */
+    border-radius: 0 0 20px 20px; 
     font-weight: 500;
     display: flex;
     flex-direction: column;
@@ -461,17 +451,14 @@ footer span#footer-date {
 </head>
 <body>
 
-  <!-- Map Background -->
   <div id="map"></div>
 
-  <!-- Loading Screen -->
   <div class="loading-overlay" id="loading">
     <div class="spinner"></div>
     <div style="font-weight: 700; font-size: 14px; color: var(--primary); letter-spacing: 0.5px;">MEMUATKAN DATA GIS...</div>
     <div id="loading-msg" style="font-size: 11px; margin-top: 5px; color: #666;"></div>
   </div>
 
-  <!-- Top Search Bar -->
   <div class="search-container">
     <div class="search-box">
       <i class="fas fa-search"></i>
@@ -479,25 +466,21 @@ footer span#footer-date {
     </div>
   </div>
 
-  <!-- Sidebar Toggle -->
   <button class="panel-toggle" id="sidebar-toggle" onclick="toggleDashboard()">
     <i class="fas fa-bars"></i>
   </button>
 
-  <!-- Floating Dashboard -->
   <div class="dashboard-panel" id="dashboard-panel">
     <div class="panel-header">
       <h2><i class="fas fa-layer-group"></i> Statistik Projek</h2>
     </div>
     
     <div class="panel-content">
-      <!-- Main Count -->
       <div class="main-stat">
         <div class="main-stat-value" id="total-projects">0</div>
         <div class="main-stat-label">Jumlah Projek</div>
         <div id="selected-area" class="area-badge">SELURUH SABAH</div>
       </div>
-      <!-- End Main Count -->
 
       <div class="grid-stats" id="dynamic-grid-stats"></div>
       <div class="status-section-title">Status Kemajuan</div>
@@ -506,23 +489,19 @@ footer span#footer-date {
     </div>
   </div>
 
-  <!-- Right Controls -->
   <div class="controls-container">
-    <!-- CSV -->
     <div class="control-card">
         <button class="toggle-btn" title="Muat Turun CSV" onclick="downloadCSV()">
             <span class="icon-slot"><i class="fas fa-file-csv" style="color: #10B981;"></i></span> 
             <span class="text-slot">Muat Turun CSV</span>
         </button>
     </div>
-    <!-- Report -->
     <div class="control-card">
         <button class="toggle-btn" title="Dashboard" onclick="openReport()">
             <span class="icon-slot"><i class="fas fa-file-invoice-dollar" style="color: #F59E0B;"></i></span> 
             <span class="text-slot">Dashboard</span>
         </button>
     </div>
-    <!-- Layer Toggle (Updated Title) -->
     <div class="control-card" id="layer-card">
       <div class="control-group-title">Penapis Sempadan</div>
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
@@ -535,27 +514,23 @@ footer span#footer-date {
         <span class="icon-slot"><i class="fas fa-building"></i></span> <span class="text-slot">Parlimen</span>
       </button>
     </div>
-    <!-- Category Filters (Updated Title) -->
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
       <div id="dynamic-filter-btns"></div>
     </div>
   </div>
 
-  <!-- REPORT MODAL -->
   <div class="report-overlay" id="report-overlay">
       <div class="report-modal" id="report-content">
           <button class="modal-close-btn" onclick="closeReport()"><i class="fas fa-times"></i></button>
           
           <div class="report-container">
-              <!-- HEADER -->
               <header class="report-header-content">
                   <div class="header-title">
                       <h1>Laporan Dashboard Projek</h1>
                       <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
                   <div class="header-info">
-                      <!-- UPDATED: BUTTON LOGIC -->
                       <div class="action-buttons">
                         <button class="btn-share" onclick="shareReport()">
                             <i class="fas fa-share-alt"></i> Share
@@ -568,7 +543,6 @@ footer span#footer-date {
                   </div>
               </header>
 
-              <!-- TOP STATS -->
               <div class="top-row">
                   <div class="card report-main-stat">
                       <h1 id="report-total-count">0</h1>
@@ -578,7 +552,6 @@ footer span#footer-date {
                   <div class="mini-stats-grid" id="report-mini-stats"></div>
               </div>
 
-              <!-- CHARTS ROW -->
               <div class="charts-row">
                   <div class="card chart-card">
                       <div class="chart-title">Carta 01: Jumlah Site Mengikut Projek</div>
@@ -594,7 +567,6 @@ footer span#footer-date {
                   </div>
               </div>
 
-              <!-- MAIN CONTENT (MAP & STATUS) -->
               <div class="main-content">
                   <div class="card map-container">
                       <div id="report-map"></div>
@@ -605,7 +577,6 @@ footer span#footer-date {
                   </div>
               </div>
 
-              <!-- LAYER INFO CARD (NEW) -->
               <div id="layer-info-section" style="display:none;">
                   <div class="card layer-info-card">
                       <div class="layer-info-title">
@@ -615,10 +586,8 @@ footer span#footer-date {
                   </div>
               </div>
 
-              <!-- BOTTOM GRID (DYNAMIC BAR CHARTS) -->
               <div class="bottom-grid" id="dynamic-bottom-grid"></div>
 
-              <!-- UPDATED FOOTER -->
               <footer>
                   <div>Sistem Maklumat Geografi (GIS) Projek Sabah | © MCMC Tawau</div>
                   <div style="font-size: 0.8rem; color: #666;">Dijana secara automatik pada <span id="footer-date"></span></div>
@@ -627,11 +596,10 @@ footer span#footer-date {
       </div>
   </div>
     
-<!-- MAIN SCRIPT -->
 <script>
 /**
  * =============================================================================
- * 1. CONFIGURATION (WAJIB - USER BOLEH UBAH)
+ * 1. CONFIGURATION
  * =============================================================================
  */
 const APP_CONFIG = {
@@ -656,11 +624,7 @@ const APP_CONFIG = {
 
     LAYER_INFO: {
         sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
-        sheets: {
-            district: "district",
-            dun: "dun",
-            parliament: "parliament"
-        }
+        sheets: { district: "district", dun: "dun", parliament: "parliament" }
     },
 
     SETTINGS: {
@@ -670,6 +634,7 @@ const APP_CONFIG = {
         DEFAULT_ZOOM: 8
     },
     
+    // [FIX] Ensure these files exist relative to index.html or use full URL
     GEOJSON_URLS: {
         district: "district.json",
         dun: "dun.json",
@@ -679,7 +644,7 @@ const APP_CONFIG = {
 
 /**
  * =============================================================================
- * 2. UTILITIES / HELPER FUNCTIONS
+ * 2. UTILITIES
  * =============================================================================
  */
 const Utils = {
@@ -736,7 +701,6 @@ const AppState = {
     map: null,
     reportMap: null,
     markersLayerGroup: null,
-    reportMarkerLayer: null,
     allProjects: [],
     currentFilteredList: [],
     visibleProjects: [],
@@ -768,36 +732,34 @@ const DataManager = {
             AppState.allProjects = results.flat();
             
             if (AppState.allProjects.length === 0) {
-                 console.warn("Tiada data ditemui dalam Google Sheets.");
+                 console.warn("Tiada data ditemui atau semua Sheet gagal dimuatkan.");
             }
             
             MapManager.renderMarkersInBatches(AppState.allProjects, () => {
                 FilterManager.applyFilters();
                 UI.showLoading(false);
                 
-                // --- URL PARAMETER HANDLING FOR SHARING ---
+                // URL Parameter Sharing
                 const params = new URLSearchParams(window.location.search);
                 const bKey = params.get('layer');
                 const bName = params.get('name');
                 if (bKey && bName && AppState.dataLayers[bKey]) {
-                    // Try to find the layer and click it
                     let found = false;
                     AppState.dataLayers[bKey].eachLayer(l => {
                         const lName = MapManager.extractGeoName(l.feature);
                         if (lName === Utils.normalize(bName)) {
-                            // Programmatic selection
                             MapManager.switchBoundary(bKey, (bKey === 'district' ? 'toggle-daerah' : (bKey === 'dun' ? 'toggle-dun' : 'toggle-parliament')));
                             MapManager.highlightBoundary(bKey, l, lName);
                             found = true;
                         }
                     });
-                    if(found) UI.openReport(); // Auto open report if shared
+                    if(found) UI.openReport(); 
                 }
             });
         } catch (error) {
             console.error("Critical Data Load Error:", error);
             UI.showLoading(false);
-            alert("Ralat memuatkan data. Sila pastikan Google Sheets 'Published to Web'.");
+            alert("Ralat memuatkan data. Sila semak konsol.");
         }
     },
     async fetchSingleSheet(config) {
@@ -806,7 +768,8 @@ const DataManager = {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
             const text = await res.text();
-            
+
+            // [FIX] Improved JSON extraction from Google's response (handles /*O_o*/ prefix)
             const jsonStart = text.indexOf('{');
             const jsonEnd = text.lastIndexOf('}');
             if (jsonStart === -1 || jsonEnd === -1) return [];
@@ -816,13 +779,16 @@ const DataManager = {
             
             return (json.table && json.table.rows) ? this.processSheetData(json.table, config) : [];
         } catch (e) {
-            console.warn(`Gagal memuatkan sheet: ${config.label}. ID: ${config.sheetId}`, e);
+            console.warn(`Gagal memuatkan sheet: ${config.label}.`, e);
             return [];
         }
     },
     processSheetData(table, config) {
+        // [FIX] Guard clauses for null columns
+        if(!table.cols) return [];
         const cols = table.cols.map(c => c ? Utils.normalize(c.label) : "");
         const rows = table.rows;
+        
         const STD_HEADERS = {
             SITE_NAME: ["SITE_NAME", "SITE NAME", "SITE", "NAMA_TAPAK"],
             DISTRICT: ["DISTRICT", "DAERAH"],
@@ -832,9 +798,14 @@ const DataManager = {
             LNG: ["LONGITUDE", "LON", "LNG", "LONG"],
             STATUS: ["STATUS", "STATUS_1", "KEMAJUAN"]
         };
+
         return rows.map(r => {
+            // [FIX] Guard clause for empty rows
+            if(!r || !r.c) return null;
+
             const rowData = {};
             const extraDetails = [];
+            
             const getValue = (headerKeys) => {
                 for (let key of headerKeys) {
                     const idx = cols.indexOf(key);
@@ -842,6 +813,7 @@ const DataManager = {
                 }
                 return "";
             };
+
             if (config.filter) {
                 const filterColIdx = cols.indexOf(Utils.normalize(config.filter.col));
                 if (filterColIdx > -1) {
@@ -849,6 +821,7 @@ const DataManager = {
                     if (Utils.normalize(val) !== Utils.normalize(config.filter.val)) return null;
                 }
             }
+
             rowData.SITE_NAME = String(getValue(STD_HEADERS.SITE_NAME) || "N/A").trim();
             rowData.DISTRICT = String(getValue(STD_HEADERS.DISTRICT)).trim();
             rowData.DUN = String(getValue(STD_HEADERS.DUN)).trim();
@@ -858,7 +831,9 @@ const DataManager = {
             rowData.LONGITUDE = Utils.cleanFloat(getValue(STD_HEADERS.LNG));
             rowData._type = config.type;
             rowData._validCoord = (rowData.LATITUDE !== 0 && rowData.LONGITUDE !== 0);
+
             if (rowData.SITE_NAME === "N/A") return null;
+
             let count = 0;
             const usedKeys = Object.values(STD_HEADERS).flat();
             cols.forEach((colName, idx) => {
@@ -875,10 +850,8 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FIXED FUNCTION FOR LAYER INFO ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
-        
         const sheetName = APP_CONFIG.LAYER_INFO.sheets[layerType];
         if (!sheetName) return null;
         
@@ -889,6 +862,7 @@ const DataManager = {
             if (!res.ok) throw new Error("Layer Info Fetch Failed");
             const text = await res.text();
             
+            // [FIX] Same JSON extraction fix
             const jsonStart = text.indexOf('{');
             const jsonEnd = text.lastIndexOf('}');
             if (jsonStart === -1 || jsonEnd === -1) return null;
@@ -901,8 +875,6 @@ const DataManager = {
             const cols = table.cols.map(c => c ? c.label : "");
             const targetName = Utils.normalize(featureName);
 
-            // 1. Identify the Strict Column to match based on layerType
-            // Added space variants and fallback
             const layerKeys = {
                 district: ["DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH", "NAME", "NAMA"],
                 dun: ["DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "NAME", "NAMA", "KOD DUN"],
@@ -910,8 +882,6 @@ const DataManager = {
             };
 
             const possibleKeys = layerKeys[layerType] || ["NAME"];
-            
-            // Find the index of the column that serves as the ID
             let keyIndex = -1;
             for (let i = 0; i < cols.length; i++) {
                 if (possibleKeys.includes(Utils.normalize(cols[i]))) {
@@ -919,90 +889,47 @@ const DataManager = {
                     break;
                 }
             }
+            if (keyIndex === -1 && cols.length > 0) keyIndex = 0; 
+            if (keyIndex === -1) return null;
 
-            // Fallback: If no key column found, assume Index 0 is the ID
-            if (keyIndex === -1 && cols.length > 0) {
-                 console.log("Using fallback column index 0 for matching");
-                 keyIndex = 0;
-            }
-
-            if (keyIndex === -1) {
-                console.warn(`Layer Info: Could not find identifying column for ${layerType}`);
-                return null;
-            }
-
-            // 2. Find specific row using the identified key column (Smart Matching)
             let matchedRow = null;
             for (let r of table.rows) {
                 const val = r.c[keyIndex]?.v;
                 if (!val) continue;
-                
                 const strVal = Utils.normalize(String(val));
-                
-                // Exact Match
-                if (strVal === targetName) {
-                    matchedRow = r;
-                    break;
-                }
-                
-                // Partial Match (Handle "N.66 BUGAYA" vs "BUGAYA")
-                // Only if lengths are reasonable (avoid matching "A" in "AB")
-                if (strVal.length > 3 && targetName.length > 3) {
-                     if (strVal.includes(targetName) || targetName.includes(strVal)) {
-                         matchedRow = r;
-                         // Don't break yet, keep looking for exact match. 
-                         // If loop finishes without exact match, we use this one.
-                     }
+                if (strVal === targetName) { matchedRow = r; break; }
+                if (strVal.length > 3 && targetName.length > 3 && (strVal.includes(targetName) || targetName.includes(strVal))) {
+                     matchedRow = r;
                 }
             }
 
             if (!matchedRow) return null;
             
-            // 3. Process Columns (With strict filtering)
             const infoData = [];
-            // Added explicit removals: NAMA DUN, NAMA PARLIMEN, KOD DUN, KOD PARLIMEN
             const BANNED_KEYS = ["DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIMEN", "NAME", "NAMA", "OBJECTID", "ID", "SENARAI", "LIST", "ALL", "NAMA DUN", "NAMA PARLIMEN", "KOD DUN", "KOD PARLIMEN"];
-            const processedCols = [];
             
+            const processedCols = [];
             cols.forEach((colName, idx) => {
                 if (!colName) return;
                 const val = matchedRow.c[idx] ? matchedRow.c[idx].v : null;
-                
-                // --- FIX: Prevent showing huge text blocks that are not comments ---
                 const isLikelyComment = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
-                if (val && String(val).length > 200 && !isLikelyComment) {
-                     return; // Skip this column, it's likely a data dump
-                }
-
+                if (val && String(val).length > 200 && !isLikelyComment) return;
                 if (val !== null && val !== "") {
-                    processedCols.push({ 
-                        idx: idx,
-                        label: colName, 
-                        normLabel: Utils.normalize(colName),
-                        value: val 
-                    });
+                    processedCols.push({ idx: idx, label: colName, normLabel: Utils.normalize(colName), value: val });
                 }
             });
 
-            // Iterate and pair logic
             for (let i = 0; i < processedCols.length; i++) {
                 const current = processedCols[i];
-                
                 if (BANNED_KEYS.includes(current.normLabel)) continue;
 
-                const isCommentType = current.normLabel.includes("SUMBER") || 
-                                      current.normLabel.includes("CATATAN") || 
-                                      current.normLabel.includes("NOTE") ||
-                                      current.normLabel.includes("KOMEN");
+                const isCommentType = /SUMBER|CATATAN|NOTE|KOMEN/.test(current.normLabel);
 
                 if (isCommentType) {
                     if (infoData.length > 0) {
                          const lastItem = infoData[infoData.length - 1];
-                         if (!lastItem.comment) {
-                             lastItem.comment = current.value;
-                         } else {
-                             infoData.push({ label: current.label, value: current.value, isPureComment: true });
-                         }
+                         if (!lastItem.comment) lastItem.comment = current.value;
+                         else infoData.push({ label: current.label, value: current.value, isPureComment: true });
                     } else {
                         infoData.push({ label: current.label, value: current.value, isPureComment: true });
                     }
@@ -1010,23 +937,15 @@ const DataManager = {
                     let associatedComment = null;
                     if (i + 1 < processedCols.length) {
                         const next = processedCols[i+1];
-                        const nextIsComment = next.normLabel.includes("SUMBER") || 
-                                              next.normLabel.includes("CATATAN") || 
-                                              next.normLabel.includes("NOTE");
+                        const nextIsComment = /SUMBER|CATATAN|NOTE/.test(next.normLabel);
                         if (nextIsComment) {
                              associatedComment = next.value;
                              i++; 
                         }
                     }
-                    
-                    infoData.push({
-                        label: current.label,
-                        value: current.value,
-                        comment: associatedComment
-                    });
+                    infoData.push({ label: current.label, value: current.value, comment: associatedComment });
                 }
             }
-            
             return infoData;
         } catch (e) {
             console.error("Error fetching layer info:", e);
@@ -1043,8 +962,18 @@ const DataManager = {
 const MapManager = {
     init() {
         AppState.map = L.map('map', { zoomControl: false }).setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, APP_CONFIG.SETTINGS.DEFAULT_ZOOM);
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
-        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+        
+        // [FIX] Added crossOrigin to tiles for PDF export
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
+            attribution: 'Tiles &copy; Esri',
+            crossOrigin: 'anonymous' 
+        });
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+            maxZoom: 19, 
+            attribution: '© OpenStreetMap',
+            crossOrigin: 'anonymous'
+        });
+        
         satellite.addTo(AppState.map);
         L.control.layers({ "Satelit (Esri)": satellite, "Peta (OSM)": osm }, null, { position: 'topright' }).addTo(AppState.map);
         L.control.zoom({ position: 'bottomright' }).addTo(AppState.map);
@@ -1084,10 +1013,12 @@ const MapManager = {
                 });
                 AppState.dataLayers[key] = layer;
             } catch (e) {
-                console.warn(`GeoJSON ${key} gagal dimuatkan (Mungkin fail tidak wujud).`, e);
+                // [FIX] Better error logging for common CORS/missing file issue
+                console.warn(`GeoJSON ${key} gagal dimuatkan. Pastikan fail .json wujud dan tiada sekatan CORS.`, e);
                 AppState.dataLayers[key] = L.layerGroup(); 
             }
         };
+        
         await Promise.all([
             loadLayer('district', APP_CONFIG.GEOJSON_URLS.district),
             loadLayer('dun', APP_CONFIG.GEOJSON_URLS.dun),
@@ -1122,10 +1053,6 @@ const MapManager = {
     highlightBoundary(key, layer, name) {
         AppState.dataLayers[key].eachLayer(l => {
             AppState.dataLayers[key].resetStyle(l);
-            if (!l.getTooltip()) {
-                 const lName = this.extractGeoName(l.feature);
-                 l.bindTooltip(lName, { sticky: true, interactive: false, direction: 'center', className: 'leaflet-tooltip' });
-            }
             l.closeTooltip();
         });
         const color = Utils.getRandomColor();
@@ -1332,17 +1259,7 @@ const ChartManager = {
                 },
                 grid: { show: false, padding: { top: 20, left: 0, right: 0, bottom: 0 } },
                 legend: { show: false },
-                title: {
-                    text: 'Jumlah Projek vs Status',
-                    align: 'center',
-                    style: { fontSize: '12px', color: '#999' }
-                },
-                noData: {
-                    text: 'Tiada Data',
-                    align: 'center',
-                    verticalAlign: 'middle',
-                    style: { color: '#999', fontSize: '14px' }
-                }
+                noData: { text: 'Tiada Data', align: 'center', verticalAlign: 'middle' }
             };
 
             const chart = new ApexCharts(document.getElementById(chartId), options);
@@ -1545,11 +1462,7 @@ const UI = {
         
         const stats = {};
         masterStatusSet.forEach(s => {
-            stats[s] = { 
-                count: 0, 
-                color: Utils.getStatusColor(s), 
-                details: {} 
-            };
+            stats[s] = { count: 0, color: Utils.getStatusColor(s), details: {} };
             APP_CONFIG.PROJECT_TYPES.forEach(t => stats[s].details[t.type] = 0);
         });
 
@@ -1633,12 +1546,10 @@ const UI = {
         document.getElementById('report-total-count').textContent = data.length;
         this.updateClock();
         
-        // --- UPDATED FOOTER DATE FORMAT ---
         const footerDate = new Date();
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
         document.getElementById('footer-date').textContent = footerDate.toLocaleDateString('ms-MY', options);
         
-        // Mini Stats (Top)
         const miniContainer = document.getElementById('report-mini-stats');
         miniContainer.innerHTML = "";
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
@@ -1674,21 +1585,18 @@ const UI = {
                         layerInfo.forEach(info => {
                             const item = document.createElement('div');
                             item.className = 'layer-info-item';
-                            // Logic: Render Value. If there is a comment/note attached, render it small below.
                             
                             let html = `
                                 <div class="layer-info-label">${info.label}</div>
                                 <div class="layer-info-value">${info.value}</div>
                             `;
                             
-                            // If this specific item IS a pure comment (based on column name), style it differently
                             if (info.isPureComment) {
                                 html = `
                                     <div class="layer-info-label" style="color:#6b7280; font-style:italic;">CATATAN / NOTA</div>
                                     <div class="layer-info-value" style="font-size:0.9rem; font-style:italic;">${info.value}</div>
                                 `;
                             } 
-                            // If it has an attached comment from the "next" column
                             else if (info.comment) {
                                 html += `<div class="layer-info-comment">${info.comment}</div>`;
                             }
@@ -1797,13 +1705,17 @@ const UI = {
         if (!mapContainer) return;
         mapContainer.innerHTML = ""; 
 
+        // [FIX] preferCanvas improves html2canvas capture compatibility
         AppState.reportMap = L.map('report-map', { 
             zoomControl: false, 
             attributionControl: false,
             preferCanvas: true 
         });
         
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
+        // [FIX] CORS tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            crossOrigin: 'anonymous'
+        }).addTo(AppState.reportMap);
         
         AppState.reportMap.createPane('boundaryPane');
         AppState.reportMap.getPane('boundaryPane').style.zIndex = 300;
@@ -1819,7 +1731,7 @@ const UI = {
             
             if (typeof layerObj.toGeoJSON === 'function') {
                 const geoJson = layerObj.toGeoJSON();
-                const boundaryLayer = L.geoJSON(geoJson, {
+                L.geoJSON(geoJson, {
                       pane: 'boundaryPane',
                       style: (feature) => {
                           const name = Utils.normalize(feature.properties.NAME || feature.properties.name || feature.properties.DISTRICT || feature.properties.DAERAH || feature.properties.DUN || feature.properties.PARLIAMENT || "Sabah");
@@ -1850,6 +1762,7 @@ const UI = {
             }
         });
 
+        // [FIX] Force size update
         AppState.reportMap.invalidateSize();
 
         if (AppState.activeFeatureName && boundaryAdded) {
@@ -1952,7 +1865,6 @@ function closeReport() {
     }
 }
 
-// SHARE FUNCTION
 async function shareReport() {
     const url = new URL(window.location.href);
     if(AppState.activeBoundaryKey) url.searchParams.set('layer', AppState.activeBoundaryKey);
@@ -1971,7 +1883,6 @@ async function shareReport() {
             console.log('Share dibatalkan');
         }
     } else {
-        // Fallback for desktop
         try {
             await navigator.clipboard.writeText(url.toString());
             alert('Pautan laporan telah disalin ke papan keratan!');
@@ -1983,11 +1894,9 @@ async function shareReport() {
 
 // GENERATE EXPORT (PDF ONLY)
 function generateExport() {
-    // 1. Target the Modal (Parent)
     const captureElement = document.getElementById('report-content');
     const scrollContainer = document.querySelector('.report-container');
     
-    // 2. Save Original Styles
     const originalStyles = {
         overflow: captureElement.style.overflow,
         maxHeight: captureElement.style.maxHeight,
@@ -1999,38 +1908,32 @@ function generateExport() {
         margin: captureElement.style.margin
     };
     
-    // 3. Save Scroll Position
     const originalScrollPos = scrollContainer.scrollTop;
 
-    // 4. Modify Styles for Capture (Expand to fit content)
     captureElement.style.overflow = "visible";
     captureElement.style.maxHeight = "none";
     captureElement.style.height = "auto";
     captureElement.style.transform = "none"; 
     captureElement.style.borderRadius = "0"; 
     
-    // Ensure scroll container is fully visible
     scrollContainer.style.overflow = "visible";
     scrollContainer.style.height = "auto";
 
-    // Hide UI controls
     document.querySelector('.modal-close-btn').style.display = 'none';
     document.querySelector('.action-buttons').style.visibility = 'hidden';
 
-    UI.showLoading(true, "MENJANA DOKUMEN PDF...");
+    UI.showLoading(true, "MENJANA DOKUMEN PDF (Sila tunggu)...");
 
-    // Use Try-Catch-Finally to prevent "Stuck" state
     setTimeout(() => {
         html2canvas(captureElement, { 
-            scale: 1.5, // Standard quality for PDF
-            useCORS: true,
+            scale: 1.5, 
+            useCORS: true, // [FIX] Essential for map tiles
             allowTaint: true,
             backgroundColor: '#eef2f5', 
             logging: false,
             windowHeight: captureElement.scrollHeight,
             height: captureElement.scrollHeight
         }).then(canvas => {
-            // CONSTRUCT FILENAME
             const layerName = (AppState.activeFeatureName || "Seluruh_Sabah").replace(/\s+/g, '_').toUpperCase();
             const now = new Date();
             const fileName = `Laporan_Projek_${layerName}_${now.toISOString().slice(0,10)}`;
@@ -2060,7 +1963,7 @@ function generateExport() {
             console.error("Export Error:", err);
             alert("Ralat semasa menjana PDF. Sila cuba sekali lagi atau semak sambungan internet.");
         }).finally(() => {
-            // CRITICAL: ALWAYS RESTORE STYLES
+            // RESTORE
             captureElement.style.overflow = originalStyles.overflow;
             captureElement.style.maxHeight = originalStyles.maxHeight;
             captureElement.style.height = originalStyles.height;
@@ -2069,24 +1972,16 @@ function generateExport() {
             
             scrollContainer.style.overflow = "auto";
             scrollContainer.style.height = "100%";
-
-            // Restore Scroll
             scrollContainer.scrollTop = originalScrollPos;
 
-            // Show UI
             document.querySelector('.modal-close-btn').style.display = 'flex';
             document.querySelector('.action-buttons').style.visibility = 'visible';
-            
-            // Hide loading
             UI.showLoading(false);
-            
-            // Scroll to top of window to prevent disorientation
             window.scrollTo(0,0);
         });
     }, 500); 
 }
 
-// Bind functions to window
 window.toggleDashboard = toggleDashboard;
 window.closeReport = closeReport;
 window.generateExport = generateExport;
