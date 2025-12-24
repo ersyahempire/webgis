@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v6.9 - sms 1.0</title>
+  <title>Web GIS Projek Sabah v7.6</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -416,15 +416,16 @@ body {
     font-size: 1rem;
     color: #111827;
     font-weight: 700;
+    word-break: break-word; /* Prevents long text from overflowing */
 }
 .layer-info-comment {
     margin-top: 5px;
     padding-top: 5px;
     border-top: 1px dashed rgba(0,0,0,0.1);
-    font-size: 0.8rem;
-    color: #ef4444; /* Red for emphasis */
+    font-size: 0.75rem;
+    color: #6b7280; 
     font-style: italic;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 /* --- UPDATED: FOOTER STYLES --- */
@@ -874,11 +875,15 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
+    // --- UPDATED FUNCTION: DETECT EMBEDDED COMMENTS (VALUE vs FORMAT) ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
+        
         const sheetName = APP_CONFIG.LAYER_INFO.sheets[layerType];
         if (!sheetName) return null;
+        
         const url = `https://docs.google.com/spreadsheets/d/${APP_CONFIG.LAYER_INFO.sheetId}/gviz/tq?sheet=${sheetName}&tqx=out:json`;
+
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error("Layer Info Fetch Failed");
@@ -896,50 +901,114 @@ const DataManager = {
             const cols = table.cols.map(c => c ? c.label : "");
             const targetName = Utils.normalize(featureName);
 
+            // 1. Identify Key Column
+            const layerKeys = {
+                district: ["DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH", "NAME", "NAMA"],
+                dun: ["DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "NAME", "NAMA", "KOD DUN"],
+                parliament: ["PARLIAMENT", "PARLIMEN", "NAMA PARLIMEN", "NAMA_PARLIMEN", "NAME", "NAMA", "KOD PARLIMEN"]
+            };
+
+            const possibleKeys = layerKeys[layerType] || ["NAME"];
+            
+            let keyIndex = -1;
+            for (let i = 0; i < cols.length; i++) {
+                if (possibleKeys.includes(Utils.normalize(cols[i]))) {
+                    keyIndex = i;
+                    break;
+                }
+            }
+
+            if (keyIndex === -1 && cols.length > 0) keyIndex = 0;
+            if (keyIndex === -1) return null;
+
+            // 2. Find row
             let matchedRow = null;
             for (let r of table.rows) {
-                // Check first few columns for the name
-                for (let i = 0; i < Math.min(r.c.length, 3); i++) {
-                    const val = r.c[i]?.v;
-                    if (val && Utils.normalize(String(val)) === targetName) {
-                        matchedRow = r;
-                        break;
-                    }
+                const val = r.c[keyIndex]?.v;
+                if (!val) continue;
+                const strVal = Utils.normalize(String(val));
+                
+                if (strVal === targetName) {
+                    matchedRow = r;
+                    break;
                 }
-                if (matchedRow) break;
+                if (strVal.length > 3 && targetName.length > 3) {
+                     if (strVal.includes(targetName) || targetName.includes(strVal)) {
+                         matchedRow = r;
+                     }
+                }
             }
 
             if (!matchedRow) return null;
             
-            // --- UPDATED LOGIC: FILTER KEYS & DETECT COMMENTS ---
+            // 3. Process Columns (Values vs Formatted Values)
             const infoData = [];
-            const BANNED_KEYS = ["DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIMEN", "NAME", "NAMA"];
+            const BANNED_KEYS = [
+                "LAYER", "TIER", "LEVEL", "KOD",
+                "DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH",
+                "DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "KOD DUN",
+                "PARLIAMENT", "PARLIMEN", "NAMA PARLIMEN", "NAMA_PARLIMEN", "KOD PARLIMEN",
+                "NAME", "NAMA", "OBJECTID", "ID", "SENARAI", "LIST", "ALL"
+            ];
             
             cols.forEach((colName, idx) => {
-                if (colName && matchedRow.c[idx]) {
-                    const normalizedCol = Utils.normalize(colName);
+                if (!colName) return;
+                const cell = matchedRow.c[idx];
+                if (!cell) return;
+
+                const val = cell.v; // Raw Value (e.g., 34534)
+                const fmt = cell.f; // Formatted Value (e.g., "34534 (sumber: DOSM)")
+                
+                // Skip if empty or banned
+                if (val === null || val === "" || String(val).trim() === "") return;
+                const normLabel = Utils.normalize(colName);
+                if (BANNED_KEYS.some(ban => normLabel === ban || normLabel.includes(ban + " "))) return;
+
+                // Safety: Hide massive text dumps unless explicitly marked
+                const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
+                if (String(val).length > 300 && !isLikelyNote) return;
+
+                // --- DETECT "EMBEDDED" COMMENTS ---
+                let comment = null;
+                
+                if (fmt && typeof fmt === 'string' && fmt !== String(val)) {
+                    // Strategy: Find text in 'fmt' that is NOT in 'val'
+                    // Focus on Parentheses as per example
+                    const parenRegex = /\((.*?)\)/g;
+                    let match;
+                    while ((match = parenRegex.exec(fmt)) !== null) {
+                        // content of parens
+                        const content = match[0]; // e.g. "(sumber: ...)"
+                        // ensure this content isn't just part of the raw string (e.g. if raw value was text "(A)")
+                        if (!String(val).includes(content)) {
+                            comment = content; // Found it
+                            break; 
+                        }
+                    }
                     
-                    // 1. Skip if Banned
-                    if (BANNED_KEYS.includes(normalizedCol)) return;
-                    
-                    // 2. Check for "Comment/Note" columns
-                    // Assumption: If a column implies a note (e.g., ends in _NOTE or is just "CATATAN"), handle it.
-                    // However, standard display just renders it. The new requirement is: 
-                    // "info/ tulisan kecil dibawah setiap kad JIKA terdapat comments"
-                    // We'll treat columns named "CATATAN", "NOTE", "KOMEN" as specific comments for the previous value or general notes.
-                    
-                    const isComment = normalizedCol.includes("CATATAN") || normalizedCol.includes("NOTE") || normalizedCol.includes("KOMEN");
-                    const val = matchedRow.c[idx].v;
-                    
-                    if (val !== null && val !== "") {
-                        infoData.push({ 
-                            label: colName, 
-                            value: val,
-                            isComment: isComment 
-                        });
+                    // Fallback: If no parens, check if fmt is significantly longer and contains text
+                    if (!comment) {
+                         // remove the value string from fmt (approximate)
+                         const cleanFmt = fmt.replace(/[0-9.,]/g, '').trim(); 
+                         // If remaining text is long enough and not just symbols
+                         if (cleanFmt.length > 2 && /[a-zA-Z]/.test(cleanFmt)) {
+                             // Try to isolate it. 
+                             // If fmt contains val
+                             const strVal = String(val);
+                             if (fmt.includes(strVal)) {
+                                 comment = fmt.replace(strVal, '').trim();
+                             }
+                         }
                     }
                 }
+
+                infoData.push({ 
+                    label: colName, 
+                    value: val, // AMBIL VALUE SEBENAR SAHAJA
+                    comment: comment 
+                });
             });
+            
             return infoData;
         } catch (e) {
             console.error("Error fetching layer info:", e);
@@ -1587,19 +1656,23 @@ const UI = {
                         layerInfo.forEach(info => {
                             const item = document.createElement('div');
                             item.className = 'layer-info-item';
-                            // Logic: Render Value. If there is a comment/note attached (implied by column name), render it small below.
+                            // Logic: Render Value. If there is a comment/note attached, render it small below.
                             
                             let html = `
                                 <div class="layer-info-label">${info.label}</div>
                                 <div class="layer-info-value">${info.value}</div>
                             `;
                             
-                            // If this specific item IS a comment (based on column name), style it differently
-                            if (info.isComment) {
+                            // If this specific item IS a pure comment (based on column name), style it differently
+                            if (info.isPureComment) {
                                 html = `
-                                    <div class="layer-info-label" style="color:#ef4444;">CATATAN / NOTA</div>
+                                    <div class="layer-info-label" style="color:#6b7280; font-style:italic;">CATATAN / NOTA</div>
                                     <div class="layer-info-value" style="font-size:0.9rem; font-style:italic;">${info.value}</div>
                                 `;
+                            } 
+                            // If it has an attached comment from the "next" column
+                            else if (info.comment) {
+                                html += `<div class="layer-info-comment">${info.comment}</div>`;
                             }
 
                             item.innerHTML = html;
