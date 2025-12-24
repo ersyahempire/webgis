@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.6</title>
+  <title>Web GIS Projek Sabah v7.7</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -875,7 +875,7 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FUNCTION: DETECT EMBEDDED COMMENTS (VALUE vs FORMAT) ---
+    // --- UPDATED FUNCTION V7.7: SMART COMMENT EXTRACTION FROM FORMATTED STRING ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
@@ -941,7 +941,7 @@ const DataManager = {
 
             if (!matchedRow) return null;
             
-            // 3. Process Columns (Values vs Formatted Values)
+            // 3. Process Columns (USE FORMATTED VALUE PREFERENCE)
             const infoData = [];
             const BANNED_KEYS = [
                 "LAYER", "TIER", "LEVEL", "KOD",
@@ -956,8 +956,8 @@ const DataManager = {
                 const cell = matchedRow.c[idx];
                 if (!cell) return;
 
-                const val = cell.v; // Raw Value (e.g., 34534)
-                const fmt = cell.f; // Formatted Value (e.g., "34534 (sumber: DOSM)")
+                const val = cell.v; // Raw Value (e.g., 34534 or 0.9025)
+                const fmt = cell.f; // Formatted Value (e.g., "34534 (sumber: DOSM)" or "90.25%")
                 
                 // Skip if empty or banned
                 if (val === null || val === "" || String(val).trim() === "") return;
@@ -968,44 +968,37 @@ const DataManager = {
                 const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
                 if (String(val).length > 300 && !isLikelyNote) return;
 
-                // --- DETECT "EMBEDDED" COMMENTS ---
-                let comment = null;
-                
-                if (fmt && typeof fmt === 'string' && fmt !== String(val)) {
-                    // Strategy: Find text in 'fmt' that is NOT in 'val'
-                    // Focus on Parentheses as per example
-                    const parenRegex = /\((.*?)\)/g;
-                    let match;
-                    while ((match = parenRegex.exec(fmt)) !== null) {
-                        // content of parens
-                        const content = match[0]; // e.g. "(sumber: ...)"
-                        // ensure this content isn't just part of the raw string (e.g. if raw value was text "(A)")
-                        if (!String(val).includes(content)) {
-                            comment = content; // Found it
-                            break; 
-                        }
-                    }
+                // --- NEW LOGIC V7.7: USE FORMATTED STRING AS TRUTH, THEN EXTRACT COMMENTS ---
+                let displayValue = val; 
+                let displayComment = null;
+
+                if (fmt) {
+                    const strFmt = String(fmt);
+                    // 1. Check for comment pattern in PARENTHESES at the end
+                    // Regex searches for (...) containing letters/text at end of string
+                    const commentMatch = strFmt.match(/(\([a-zA-Z\s:0-9]+\))$/); 
                     
-                    // Fallback: If no parens, check if fmt is significantly longer and contains text
-                    if (!comment) {
-                         // remove the value string from fmt (approximate)
-                         const cleanFmt = fmt.replace(/[0-9.,]/g, '').trim(); 
-                         // If remaining text is long enough and not just symbols
-                         if (cleanFmt.length > 2 && /[a-zA-Z]/.test(cleanFmt)) {
-                             // Try to isolate it. 
-                             // If fmt contains val
-                             const strVal = String(val);
-                             if (fmt.includes(strVal)) {
-                                 comment = fmt.replace(strVal, '').trim();
-                             }
-                         }
+                    if (commentMatch) {
+                        // Found a comment like "(sumber: DOSM)"
+                        const fullComment = commentMatch[1]; 
+                        
+                        // Set comment
+                        displayComment = fullComment;
+                        
+                        // Remove comment from value string to get clean value
+                        let cleanValue = strFmt.replace(fullComment, "").trim();
+                        displayValue = cleanValue;
+                    } else {
+                        // No comment found, use the full formatted string as value
+                        // This ensures percentages like 90.25% are displayed correctly
+                        displayValue = strFmt;
                     }
                 }
 
                 infoData.push({ 
                     label: colName, 
-                    value: val, // AMBIL VALUE SEBENAR SAHAJA
-                    comment: comment 
+                    value: displayValue, 
+                    comment: displayComment 
                 });
             });
             
