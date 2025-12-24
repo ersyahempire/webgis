@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.8</title>
+  <title>Web GIS Projek Sabah v7.9</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -875,7 +875,7 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FUNCTION V7.8: FREE STRUCTURE ROW SCANNING ---
+    // --- UPDATED FUNCTION V7.9: FIX LAYER MATCHING (N.61 SEGAMA) ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
@@ -899,7 +899,16 @@ const DataManager = {
             if (!table || !table.cols || !table.rows) return null;
 
             const cols = table.cols.map(c => c ? c.label : "");
-            const targetName = Utils.normalize(featureName);
+            
+            // --- Helper: Clean string for robust comparison ---
+            // Removes dots, spaces, special chars, and converts to uppercase
+            // e.g. "N.61 SEGAMA" -> "N61SEGAMA", "Segama" -> "SEGAMA"
+            const cleanStr = (str) => {
+                if(!str) return "";
+                return String(str).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            };
+
+            const targetNameClean = cleanStr(featureName); // e.g. N61SEGAMA
 
             // --- 1. FIND ROW (SCAN ALL COLUMNS FOR NAME) ---
             let matchedRow = null;
@@ -908,16 +917,21 @@ const DataManager = {
                 let rowMatch = false;
                 for (let c of r.c) {
                     if (c && c.v) {
-                        const valStr = Utils.normalize(String(c.v));
-                        // Exact match
-                        if (valStr === targetName) {
+                        const cellValClean = cleanStr(c.v);
+                        
+                        // Strict Equality Check
+                        if (cellValClean === targetNameClean) {
                             rowMatch = true;
                             break;
                         }
-                        // Robust partial match
-                        if (targetName.length > 3 && valStr.includes(targetName)) {
-                            rowMatch = true;
-                            break;
+                        
+                        // Containment Check (Bidirectional)
+                        // Only if strings are "substantial" (>3 chars) to avoid false positives like "A" matching "TAWAU"
+                        if (targetNameClean.length > 3 && cellValClean.length > 3) {
+                            if (targetNameClean.includes(cellValClean) || cellValClean.includes(targetNameClean)) {
+                                rowMatch = true;
+                                break;
+                            }
                         }
                     }
                 }
