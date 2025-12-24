@@ -30,7 +30,7 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
   --glass-border: rgba(255, 255, 255, 0.8);       
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
-  --glass-blur: 20px;                           
+  --glass-blur: 20px;                             
   --text-main: #111827;       /* Gray 900 */
   --text-sub: #6b7280;        /* Gray 500 */
   --radius: 20px;             
@@ -274,33 +274,18 @@ body {
 .header-title h2 { font-size: 2.2rem; font-weight: 800; margin: 5px 0 0 0; line-height: 1.1; color: #fff; }
 .header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-right: 40px; }
 
-/* --- UPDATED: DOWNLOAD BUTTON DROPDOWN --- */
-.download-wrapper { position: relative; }
-.btn-download-main {
+/* --- UPDATED: DOWNLOAD BUTTON & SHARE --- */
+.action-buttons { display: flex; gap: 10px; align-items: center; }
+
+.btn-download-main, .btn-share {
     background: rgba(255, 255, 255, 0.9); padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; 
-    cursor: pointer; border: none; color: #4f46e5; font-weight: 800; text-transform: uppercase;
+    cursor: pointer; border: none; font-weight: 800; text-transform: uppercase;
     display: flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
-.btn-download-main:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+.btn-download-main { color: #4f46e5; }
+.btn-share { color: #10B981; }
 
-.download-menu {
-    position: absolute; top: 110%; right: 0; 
-    background: rgba(255, 255, 255, 0.98); 
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-radius: 12px; border: 1px solid rgba(0,0,0,0.1);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    min-width: 200px; display: none; z-index: 5005; overflow: hidden;
-    animation: fadeIn 0.2s ease-out;
-}
-.download-menu.show { display: block; }
-.download-item {
-    padding: 12px 16px; display: flex; align-items: center; gap: 10px;
-    font-size: 0.85rem; font-weight: 600; color: #374151; cursor: pointer;
-    transition: background 0.2s; border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-.download-item:last-child { border-bottom: none; }
-.download-item:hover { background: #f3f4f6; color: var(--primary); }
-.download-item i { width: 20px; text-align: center; }
+.btn-download-main:hover, .btn-share:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -416,6 +401,8 @@ body {
     padding: 15px;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.4);
+    display: flex;
+    flex-direction: column;
 }
 .layer-info-label {
     font-size: 0.75rem;
@@ -429,6 +416,15 @@ body {
     font-size: 1rem;
     color: #111827;
     font-weight: 700;
+}
+.layer-info-comment {
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px dashed rgba(0,0,0,0.1);
+    font-size: 0.8rem;
+    color: #ef4444; /* Red for emphasis */
+    font-style: italic;
+    font-weight: 600;
 }
 
 /* --- UPDATED: FOOTER STYLES --- */
@@ -558,19 +554,14 @@ footer span#footer-date {
                       <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
                   <div class="header-info">
-                      <!-- UPDATED: DOWNLOAD BUTTON LOGIC -->
-                      <div class="download-wrapper">
-                          <button class="btn-download-main" onclick="toggleDownloadMenu()">
-                              <i class="fas fa-download"></i> Muat Turun
-                          </button>
-                          <div class="download-menu" id="download-menu">
-                              <div class="download-item" onclick="generateExport('png')">
-                                  <i class="fas fa-image" style="color:#10b981"></i> Imej Penuh (.PNG)
-                              </div>
-                              <div class="download-item" onclick="generateExport('pdf')">
-                                  <i class="fas fa-file-pdf" style="color:#ef4444"></i> Dokumen (.PDF)
-                              </div>
-                          </div>
+                      <!-- UPDATED: BUTTON LOGIC -->
+                      <div class="action-buttons">
+                        <button class="btn-share" onclick="shareReport()">
+                            <i class="fas fa-share-alt"></i> Share
+                        </button>
+                        <button class="btn-download-main" onclick="generateExport()">
+                            <i class="fas fa-file-pdf"></i> Muat Turun PDF
+                        </button>
                       </div>
                       <div class="current-time" id="clock">Loading...</div>
                   </div>
@@ -782,6 +773,25 @@ const DataManager = {
             MapManager.renderMarkersInBatches(AppState.allProjects, () => {
                 FilterManager.applyFilters();
                 UI.showLoading(false);
+                
+                // --- URL PARAMETER HANDLING FOR SHARING ---
+                const params = new URLSearchParams(window.location.search);
+                const bKey = params.get('layer');
+                const bName = params.get('name');
+                if (bKey && bName && AppState.dataLayers[bKey]) {
+                    // Try to find the layer and click it
+                    let found = false;
+                    AppState.dataLayers[bKey].eachLayer(l => {
+                        const lName = MapManager.extractGeoName(l.feature);
+                        if (lName === Utils.normalize(bName)) {
+                            // Programmatic selection
+                            MapManager.switchBoundary(bKey, (bKey === 'district' ? 'toggle-daerah' : (bKey === 'dun' ? 'toggle-dun' : 'toggle-parliament')));
+                            MapManager.highlightBoundary(bKey, l, lName);
+                            found = true;
+                        }
+                    });
+                    if(found) UI.openReport(); // Auto open report if shared
+                }
             });
         } catch (error) {
             console.error("Critical Data Load Error:", error);
@@ -888,6 +898,7 @@ const DataManager = {
 
             let matchedRow = null;
             for (let r of table.rows) {
+                // Check first few columns for the name
                 for (let i = 0; i < Math.min(r.c.length, 3); i++) {
                     const val = r.c[i]?.v;
                     if (val && Utils.normalize(String(val)) === targetName) {
@@ -899,12 +910,33 @@ const DataManager = {
             }
 
             if (!matchedRow) return null;
+            
+            // --- UPDATED LOGIC: FILTER KEYS & DETECT COMMENTS ---
             const infoData = [];
+            const BANNED_KEYS = ["DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIMEN", "NAME", "NAMA"];
+            
             cols.forEach((colName, idx) => {
                 if (colName && matchedRow.c[idx]) {
+                    const normalizedCol = Utils.normalize(colName);
+                    
+                    // 1. Skip if Banned
+                    if (BANNED_KEYS.includes(normalizedCol)) return;
+                    
+                    // 2. Check for "Comment/Note" columns
+                    // Assumption: If a column implies a note (e.g., ends in _NOTE or is just "CATATAN"), handle it.
+                    // However, standard display just renders it. The new requirement is: 
+                    // "info/ tulisan kecil dibawah setiap kad JIKA terdapat comments"
+                    // We'll treat columns named "CATATAN", "NOTE", "KOMEN" as specific comments for the previous value or general notes.
+                    
+                    const isComment = normalizedCol.includes("CATATAN") || normalizedCol.includes("NOTE") || normalizedCol.includes("KOMEN");
                     const val = matchedRow.c[idx].v;
+                    
                     if (val !== null && val !== "") {
-                        infoData.push({ label: colName, value: val });
+                        infoData.push({ 
+                            label: colName, 
+                            value: val,
+                            isComment: isComment 
+                        });
                     }
                 }
             });
@@ -1555,10 +1587,22 @@ const UI = {
                         layerInfo.forEach(info => {
                             const item = document.createElement('div');
                             item.className = 'layer-info-item';
-                            item.innerHTML = `
+                            // Logic: Render Value. If there is a comment/note attached (implied by column name), render it small below.
+                            
+                            let html = `
                                 <div class="layer-info-label">${info.label}</div>
                                 <div class="layer-info-value">${info.value}</div>
                             `;
+                            
+                            // If this specific item IS a comment (based on column name), style it differently
+                            if (info.isComment) {
+                                html = `
+                                    <div class="layer-info-label" style="color:#ef4444;">CATATAN / NOTA</div>
+                                    <div class="layer-info-value" style="font-size:0.9rem; font-style:italic;">${info.value}</div>
+                                `;
+                            }
+
+                            item.innerHTML = html;
                             infoContent.appendChild(item);
                         });
                         
@@ -1795,7 +1839,7 @@ const UI = {
 
 /**
  * =============================================================================
- * 9. GLOBAL HANDLERS & EXPORT LOGIC (UPDATED)
+ * 9. GLOBAL HANDLERS & EXPORT LOGIC
  * =============================================================================
  */
 function toggleDashboard() {
@@ -1817,22 +1861,38 @@ function closeReport() {
     }
 }
 
-// TOGGLE DOWNLOAD MENU
-function toggleDownloadMenu() {
-    const menu = document.getElementById('download-menu');
-    menu.classList.toggle('show');
+// SHARE FUNCTION
+async function shareReport() {
+    const url = new URL(window.location.href);
+    if(AppState.activeBoundaryKey) url.searchParams.set('layer', AppState.activeBoundaryKey);
+    if(AppState.activeFeatureName) url.searchParams.set('name', AppState.activeFeatureName);
+    
+    const shareData = {
+        title: 'Laporan Dashboard Projek Sabah',
+        text: `Lihat Laporan Projek GIS untuk: ${AppState.activeFeatureName || 'Seluruh Sabah'}`,
+        url: url.toString()
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (err) {
+            console.log('Share dibatalkan');
+        }
+    } else {
+        // Fallback for desktop
+        try {
+            await navigator.clipboard.writeText(url.toString());
+            alert('Pautan laporan telah disalin ke papan keratan!');
+        } catch (err) {
+            alert('Gagal menyalin pautan.');
+        }
+    }
 }
 
-// Close menu if clicked outside
-window.addEventListener('click', function(e) {
-    if (!e.target.closest('.download-wrapper')) {
-        document.getElementById('download-menu').classList.remove('show');
-    }
-});
-
-// GENERATE EXPORT (PNG/PDF)
-function generateExport(type) {
-    // 1. Target the Modal (Parent) to capture background gradient
+// GENERATE EXPORT (PDF ONLY)
+function generateExport() {
+    // 1. Target the Modal (Parent)
     const captureElement = document.getElementById('report-content');
     const scrollContainer = document.querySelector('.report-container');
     
@@ -1855,8 +1915,8 @@ function generateExport(type) {
     captureElement.style.overflow = "visible";
     captureElement.style.maxHeight = "none";
     captureElement.style.height = "auto";
-    captureElement.style.transform = "none"; // Remove scale effect for clear capture
-    captureElement.style.borderRadius = "0"; // Flatten for document look
+    captureElement.style.transform = "none"; 
+    captureElement.style.borderRadius = "0"; 
     
     // Ensure scroll container is fully visible
     scrollContainer.style.overflow = "visible";
@@ -1864,64 +1924,52 @@ function generateExport(type) {
 
     // Hide UI controls
     document.querySelector('.modal-close-btn').style.display = 'none';
-    document.querySelector('.download-wrapper').style.visibility = 'hidden';
+    document.querySelector('.action-buttons').style.visibility = 'hidden';
 
-    UI.showLoading(true, type === 'png' ? "MENJANA IMEJ..." : "MENJANA PDF...");
+    UI.showLoading(true, "MENJANA DOKUMEN PDF...");
 
+    // Use Try-Catch-Finally to prevent "Stuck" state
     setTimeout(() => {
         html2canvas(captureElement, { 
-            scale: 2, // Higher scale for better quality
+            scale: 1.5, // Standard quality for PDF
             useCORS: true,
             allowTaint: true,
-            backgroundColor: null, // Transparent background
+            backgroundColor: '#eef2f5', 
             logging: false,
-            // Ensure we capture the whole height
             windowHeight: captureElement.scrollHeight,
             height: captureElement.scrollHeight
         }).then(canvas => {
             // CONSTRUCT FILENAME
             const layerName = (AppState.activeFeatureName || "Seluruh_Sabah").replace(/\s+/g, '_').toUpperCase();
             const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hour = String(now.getHours()).padStart(2, '0');
-            const min = String(now.getMinutes()).padStart(2, '0');
+            const fileName = `Laporan_Projek_${layerName}_${now.toISOString().slice(0,10)}`;
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
+            const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); 
             
-            const fileName = `data_dashboard_${layerName}_${year}${month}${day}_${hour}${min}`;
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            
+            const imgRatio = canvas.height / canvas.width;
+            const printH = pdfW * imgRatio;
 
-            if (type === 'png') {
-                const link = document.createElement('a');
-                link.download = `${fileName}.png`;
-                link.href = canvas.toDataURL('image/png', 1.0);
-                link.click();
+            if (printH > pdfH) {
+                  const scaleFactor = pdfH / printH;
+                  const finalW = pdfW * scaleFactor;
+                  const finalH = pdfH; 
+                  const x = (pdfW - finalW) / 2;
+                  pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
             } else {
-                const imgData = canvas.toDataURL('image/jpeg', 0.90);
-                const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); // Landscape, A3
-                
-                const pdfW = pdf.internal.pageSize.getWidth();
-                const pdfH = pdf.internal.pageSize.getHeight();
-                
-                const imgRatio = canvas.height / canvas.width;
-                const printH = pdfW * imgRatio;
-
-                if (printH > pdfH) {
-                     const scaleFactor = pdfH / printH;
-                     const finalW = pdfW * scaleFactor;
-                     const finalH = pdfH; 
-                     const x = (pdfW - finalW) / 2;
-                     pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
-                } else {
-                     pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
-                }
-                
-                pdf.save(`${fileName}.pdf`);
+                  pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
             }
+            
+            pdf.save(`${fileName}.pdf`);
+
         }).catch(err => {
             console.error("Export Error:", err);
-            alert("Ralat menjana fail. Sila cuba lagi.");
+            alert("Ralat semasa menjana PDF. Sila cuba sekali lagi atau semak sambungan internet.");
         }).finally(() => {
-            // Restore Styles
+            // CRITICAL: ALWAYS RESTORE STYLES
             captureElement.style.overflow = originalStyles.overflow;
             captureElement.style.maxHeight = originalStyles.maxHeight;
             captureElement.style.height = originalStyles.height;
@@ -1936,9 +1984,13 @@ function generateExport(type) {
 
             // Show UI
             document.querySelector('.modal-close-btn').style.display = 'flex';
-            document.querySelector('.download-wrapper').style.visibility = 'visible';
-            document.getElementById('download-menu').classList.remove('show');
+            document.querySelector('.action-buttons').style.visibility = 'visible';
+            
+            // Hide loading
             UI.showLoading(false);
+            
+            // Scroll to top of window to prevent disorientation
+            window.scrollTo(0,0);
         });
     }, 500); 
 }
@@ -1947,7 +1999,7 @@ function generateExport(type) {
 window.toggleDashboard = toggleDashboard;
 window.closeReport = closeReport;
 window.generateExport = generateExport;
-window.toggleDownloadMenu = toggleDownloadMenu;
+window.shareReport = shareReport;
 window.downloadCSV = UI.downloadCSV;
 window.openReport = UI.openReport.bind(UI);
 
