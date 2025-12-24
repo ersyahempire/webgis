@@ -1060,7 +1060,15 @@ const MapManager = {
     },
     extractGeoName(feature) {
         const props = feature.properties || {};
-        return Utils.normalize(props.NAME || props.name || props.DISTRICT || props.DAERAH || props.DUN || props.PARLIAMENT || "Sabah");
+        // Enhanced property check for Malaysian GIS datasets
+        return Utils.normalize(
+            props.NAME || props.Name || props.name || 
+            props.NAM || props.Nam || props.NAM_K || props.NAMA_K ||
+            props.DISTRICT || props.District || props.DAERAH || 
+            props.DUN || props.Dun || props.DUN_NAME ||
+            props.PARLIAMENT || props.Parliament || props.PARLIMEN || props.PAR_NAME ||
+            props.Label || "Sabah"
+        );
     },
     switchBoundary(key, btnId) {
         Object.values(AppState.dataLayers).forEach(l => { if(l && AppState.map.hasLayer(l)) AppState.map.removeLayer(l); });
