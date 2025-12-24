@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.0</title>
+  <title>Web GIS Projek Sabah v6.9 - sms 1.0</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -416,7 +416,6 @@ body {
     font-size: 1rem;
     color: #111827;
     font-weight: 700;
-    word-break: break-word; /* Prevents long text from overflowing */
 }
 .layer-info-comment {
     margin-top: 5px;
@@ -875,15 +874,11 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FIXED FUNCTION FOR LAYER INFO ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
-        
         const sheetName = APP_CONFIG.LAYER_INFO.sheets[layerType];
         if (!sheetName) return null;
-        
         const url = `https://docs.google.com/spreadsheets/d/${APP_CONFIG.LAYER_INFO.sheetId}/gviz/tq?sheet=${sheetName}&tqx=out:json`;
-
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error("Layer Info Fetch Failed");
@@ -901,59 +896,34 @@ const DataManager = {
             const cols = table.cols.map(c => c ? c.label : "");
             const targetName = Utils.normalize(featureName);
 
-            // 1. Identify the Strict Column to match based on layerType
-            // This prevents "fuzzy matching" which might pick up a summary row or a wrong column
-            const layerKeys = {
-                district: ["DISTRICT", "DAERAH", "NAMA_DAERAH", "NAME", "NAMA"],
-                dun: ["DUN", "DEWAN_UNDANGAN_NEGERI", "NAMA_DUN", "NAME", "NAMA"],
-                parliament: ["PARLIAMENT", "PARLIMEN", "NAMA_PARLIMEN", "NAME", "NAMA"]
-            };
-
-            const possibleKeys = layerKeys[layerType] || ["NAME"];
-            
-            // Find the index of the column that serves as the ID
-            let keyIndex = -1;
-            for (let i = 0; i < cols.length; i++) {
-                if (possibleKeys.includes(Utils.normalize(cols[i]))) {
-                    keyIndex = i;
-                    break;
-                }
-            }
-
-            if (keyIndex === -1) {
-                console.warn(`Layer Info: Could not find identifying column for ${layerType}`);
-                return null;
-            }
-
-            // 2. Find specific row using the identified key column
+            // 1. Find the specific row for this feature (e.g., "Tawau")
             let matchedRow = null;
             for (let r of table.rows) {
-                const val = r.c[keyIndex]?.v;
-                if (val && Utils.normalize(String(val)) === targetName) {
-                    matchedRow = r;
-                    break;
+                for (let i = 0; i < Math.min(r.c.length, 3); i++) {
+                    const val = r.c[i]?.v;
+                    if (val && Utils.normalize(String(val)) === targetName) {
+                        matchedRow = r;
+                        break;
+                    }
                 }
+                if (matchedRow) break;
             }
 
             if (!matchedRow) return null;
             
-            // 3. Process Columns (With strict filtering)
+            // --- UPDATED LOGIC FOR COLUMN FILTERING & COMMENT PAIRING ---
             const infoData = [];
-            const BANNED_KEYS = ["DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIMEN", "NAME", "NAMA", "OBJECTID", "ID", "SENARAI", "LIST", "ALL"];
+            // Daftar lajur yang ingin DIABAIKAN/DIBUANG dari paparan
+            const BANNED_KEYS = ["DISTRICT", "DAERAH", "DUN", "PARLIAMENT", "PARLIMEN", "NAME", "NAMA", "OBJECTID", "ID"];
+            
+            // Temporary storage for processing pairs
+            // We iterate through all columns to build a raw map first
             const processedCols = [];
             
             cols.forEach((colName, idx) => {
                 if (!colName) return;
                 const val = matchedRow.c[idx] ? matchedRow.c[idx].v : null;
-                
-                // --- FIX: Prevent showing huge text blocks that are not comments ---
-                // If value length > 200 chars AND column name doesn't imply it's a note/comment, skip it.
-                // This filters out "Validation Lists" or "Summary Lists" that accidentally got read.
-                const isLikelyComment = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
-                if (val && String(val).length > 200 && !isLikelyComment) {
-                     return; // Skip this column, it's likely a data dump
-                }
-
+                // Simpan semua column yang ada nilai
                 if (val !== null && val !== "") {
                     processedCols.push({ 
                         idx: idx,
@@ -964,38 +934,53 @@ const DataManager = {
                 }
             });
 
-            // Iterate and pair logic (Same as before but with cleaner data)
+            // Iterate and pair logic: 
+            // Look for columns that are "Comments" (contain SUMBER/CATATAN/NOTE).
+            // Try to attach them to the immediately preceding non-comment column.
+            
             for (let i = 0; i < processedCols.length; i++) {
                 const current = processedCols[i];
                 
+                // If this is a banned key, skip completely (unless it acts as a join key, but here we just want to hide it from display)
                 if (BANNED_KEYS.includes(current.normLabel)) continue;
 
+                // Check if this column itself looks like a comment/note column
                 const isCommentType = current.normLabel.includes("SUMBER") || 
                                       current.normLabel.includes("CATATAN") || 
                                       current.normLabel.includes("NOTE") ||
                                       current.normLabel.includes("KOMEN");
 
                 if (isCommentType) {
+                    // It's a standalone comment, or belongs to previous. 
+                    // Since we are iterating, if we found a "Source" col, and the previous item pushed was a data item, update it.
                     if (infoData.length > 0) {
                          const lastItem = infoData[infoData.length - 1];
+                         // Check if last item doesn't already have a comment
                          if (!lastItem.comment) {
-                             lastItem.comment = current.value;
+                             lastItem.comment = current.value; // Attach as comment to previous card
                          } else {
+                             // If last item already has comment, maybe add another line or treat as new item?
+                             // Let's treat as new item but mark it as full width or simple text
                              infoData.push({ label: current.label, value: current.value, isPureComment: true });
                          }
                     } else {
+                        // If it's the very first item, just show it
                         infoData.push({ label: current.label, value: current.value, isPureComment: true });
                     }
                 } else {
+                    // It's a regular data column. Check if the NEXT column is a "Source/Note" for this one.
+                    // (Forward lookahead optimization)
                     let associatedComment = null;
                     if (i + 1 < processedCols.length) {
                         const next = processedCols[i+1];
                         const nextIsComment = next.normLabel.includes("SUMBER") || 
                                               next.normLabel.includes("CATATAN") || 
                                               next.normLabel.includes("NOTE");
+                        // Also check if name similarity? E.g. "POPULASI" and "POPULASI_SUMBER"
+                        // Or just simplistic "Next column is a note"
                         if (nextIsComment) {
                              associatedComment = next.value;
-                             i++; 
+                             i++; // Skip next column in main loop since we consumed it here
                         }
                     }
                     
