@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.3</title>
+  <title>Web GIS Projek Sabah v7.8</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -875,7 +875,7 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FIXED FUNCTION FOR LAYER INFO V7.3 ---
+    // --- UPDATED FUNCTION V7.8: SEPARATE COMMENTS FROM CELL VALUE ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
@@ -901,7 +901,7 @@ const DataManager = {
             const cols = table.cols.map(c => c ? c.label : "");
             const targetName = Utils.normalize(featureName);
 
-            // 1. Identify Key Column (same as before)
+            // 1. Identify Key Column
             const layerKeys = {
                 district: ["DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH", "NAME", "NAMA"],
                 dun: ["DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "NAME", "NAMA", "KOD DUN"],
@@ -918,9 +918,7 @@ const DataManager = {
                 }
             }
 
-            // Fallback
             if (keyIndex === -1 && cols.length > 0) keyIndex = 0;
-
             if (keyIndex === -1) return null;
 
             // 2. Find row
@@ -930,12 +928,10 @@ const DataManager = {
                 if (!val) continue;
                 const strVal = Utils.normalize(String(val));
                 
-                // Exact
                 if (strVal === targetName) {
                     matchedRow = r;
                     break;
                 }
-                // Partial
                 if (strVal.length > 3 && targetName.length > 3) {
                      if (strVal.includes(targetName) || targetName.includes(strVal)) {
                          matchedRow = r;
@@ -945,9 +941,8 @@ const DataManager = {
 
             if (!matchedRow) return null;
             
-            // 3. Process Columns (UPDATED LOGIC V7.3)
+            // 3. Process Columns (USE FORMATTED VALUE PREFERENCE)
             const infoData = [];
-            // LIST OF BANNED KEYS - includes "LAYER" and specific ID keys
             const BANNED_KEYS = [
                 "LAYER", "TIER", "LEVEL", "KOD",
                 "DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH",
@@ -956,71 +951,45 @@ const DataManager = {
                 "NAME", "NAMA", "OBJECTID", "ID", "SENARAI", "LIST", "ALL"
             ];
             
-            const processedCols = [];
-            
             cols.forEach((colName, idx) => {
                 if (!colName) return;
-                const val = matchedRow.c[idx] ? matchedRow.c[idx].v : null;
-                
-                // --- Logic: Only include if valid value and NOT empty ---
-                if (val !== null && val !== "" && String(val).trim() !== "") {
-                    // Safety check for huge text dumps
-                    const isLikelyComment = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
-                    if (String(val).length > 300 && !isLikelyComment) return;
+                const cell = matchedRow.c[idx];
+                if (!cell) return;
 
-                    processedCols.push({ 
-                        idx: idx,
-                        label: colName, 
-                        normLabel: Utils.normalize(colName),
-                        value: val 
-                    });
+                // --- LOGIC PEMISAHAN KOMEN v7.8 ---
+                // 1. Ambil nilai format (jika ada) atau nilai mentah
+                let rawString = (cell.f) ? String(cell.f) : String(cell.v);
+                
+                // Skip if empty or banned
+                if (rawString === null || rawString === "" || rawString.trim() === "") return;
+                const normLabel = Utils.normalize(colName);
+                if (BANNED_KEYS.some(ban => normLabel === ban || normLabel.includes(ban + " "))) return;
+
+                // Safety check for huge text dumps
+                const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
+                if (rawString.length > 300 && !isLikelyNote) return;
+
+                let finalValue = rawString;
+                let finalComment = null;
+
+                // 2. Regex untuk mengesan teks dalam kurungan di hujung ayat
+                // Contoh: "34534 (sumber: DOSM)" atau "Projek A (Fasa 1)"
+                // Regex ini menangkap sebarang teks dalam kurungan yang berada di akhir string
+                // [\s\n]+ bermaksud ia mesti dipisahkan oleh 'space' atau 'newline'
+                const commentRegex = /[\s\n]+(\(.*\))$/;
+                const match = rawString.match(commentRegex);
+
+                if (match) {
+                    finalComment = match[1]; // Ambil teks kurungan: "(sumber: DOSM)"
+                    finalValue = rawString.replace(match[0], '').trim(); // Buang komen dari nilai utama
                 }
+
+                infoData.push({ 
+                    label: colName, 
+                    value: finalValue, 
+                    comment: finalComment 
+                });
             });
-
-            // Iterate and Filter
-            for (let i = 0; i < processedCols.length; i++) {
-                const current = processedCols[i];
-                
-                // --- STRICT FILTERING ---
-                // If the column name matches ANY banned key, skip it
-                if (BANNED_KEYS.some(ban => current.normLabel === ban || current.normLabel.includes(ban + " "))) continue;
-
-                const isCommentType = current.normLabel.includes("SUMBER") || 
-                                      current.normLabel.includes("CATATAN") || 
-                                      current.normLabel.includes("NOTE") ||
-                                      current.normLabel.includes("KOMEN");
-
-                if (isCommentType) {
-                    if (infoData.length > 0) {
-                         const lastItem = infoData[infoData.length - 1];
-                         if (!lastItem.comment) {
-                             lastItem.comment = current.value;
-                         } else {
-                             infoData.push({ label: current.label, value: current.value, isPureComment: true });
-                         }
-                    } else {
-                        infoData.push({ label: current.label, value: current.value, isPureComment: true });
-                    }
-                } else {
-                    let associatedComment = null;
-                    if (i + 1 < processedCols.length) {
-                        const next = processedCols[i+1];
-                        const nextIsComment = next.normLabel.includes("SUMBER") || 
-                                              next.normLabel.includes("CATATAN") || 
-                                              next.normLabel.includes("NOTE");
-                        if (nextIsComment) {
-                             associatedComment = next.value;
-                             i++; 
-                        }
-                    }
-                    
-                    infoData.push({
-                        label: current.label,
-                        value: current.value,
-                        comment: associatedComment
-                    });
-                }
-            }
             
             return infoData;
         } catch (e) {
