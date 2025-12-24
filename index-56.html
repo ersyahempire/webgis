@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.8</title>
+  <title>Web GIS Projek Sabah v7.7</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -875,7 +875,7 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FUNCTION V7.8: SEPARATE COMMENTS FROM CELL VALUE ---
+    // --- UPDATED FUNCTION V7.7: SMART COMMENT EXTRACTION FROM FORMATTED STRING ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
@@ -956,38 +956,49 @@ const DataManager = {
                 const cell = matchedRow.c[idx];
                 if (!cell) return;
 
-                // --- LOGIC PEMISAHAN KOMEN v7.8 ---
-                // 1. Ambil nilai format (jika ada) atau nilai mentah
-                let rawString = (cell.f) ? String(cell.f) : String(cell.v);
+                const val = cell.v; // Raw Value (e.g., 34534 or 0.9025)
+                const fmt = cell.f; // Formatted Value (e.g., "34534 (sumber: DOSM)" or "90.25%")
                 
                 // Skip if empty or banned
-                if (rawString === null || rawString === "" || rawString.trim() === "") return;
+                if (val === null || val === "" || String(val).trim() === "") return;
                 const normLabel = Utils.normalize(colName);
                 if (BANNED_KEYS.some(ban => normLabel === ban || normLabel.includes(ban + " "))) return;
 
-                // Safety check for huge text dumps
+                // Safety: Hide massive text dumps unless explicitly marked
                 const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
-                if (rawString.length > 300 && !isLikelyNote) return;
+                if (String(val).length > 300 && !isLikelyNote) return;
 
-                let finalValue = rawString;
-                let finalComment = null;
+                // --- NEW LOGIC V7.7: USE FORMATTED STRING AS TRUTH, THEN EXTRACT COMMENTS ---
+                let displayValue = val; 
+                let displayComment = null;
 
-                // 2. Regex untuk mengesan teks dalam kurungan di hujung ayat
-                // Contoh: "34534 (sumber: DOSM)" atau "Projek A (Fasa 1)"
-                // Regex ini menangkap sebarang teks dalam kurungan yang berada di akhir string
-                // [\s\n]+ bermaksud ia mesti dipisahkan oleh 'space' atau 'newline'
-                const commentRegex = /[\s\n]+(\(.*\))$/;
-                const match = rawString.match(commentRegex);
-
-                if (match) {
-                    finalComment = match[1]; // Ambil teks kurungan: "(sumber: DOSM)"
-                    finalValue = rawString.replace(match[0], '').trim(); // Buang komen dari nilai utama
+                if (fmt) {
+                    const strFmt = String(fmt);
+                    // 1. Check for comment pattern in PARENTHESES at the end
+                    // Regex searches for (...) containing letters/text at end of string
+                    const commentMatch = strFmt.match(/(\([a-zA-Z\s:0-9]+\))$/); 
+                    
+                    if (commentMatch) {
+                        // Found a comment like "(sumber: DOSM)"
+                        const fullComment = commentMatch[1]; 
+                        
+                        // Set comment
+                        displayComment = fullComment;
+                        
+                        // Remove comment from value string to get clean value
+                        let cleanValue = strFmt.replace(fullComment, "").trim();
+                        displayValue = cleanValue;
+                    } else {
+                        // No comment found, use the full formatted string as value
+                        // This ensures percentages like 90.25% are displayed correctly
+                        displayValue = strFmt;
+                    }
                 }
 
                 infoData.push({ 
                     label: colName, 
-                    value: finalValue, 
-                    comment: finalComment 
+                    value: displayValue, 
+                    comment: displayComment 
                 });
             });
             
