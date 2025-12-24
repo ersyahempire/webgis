@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.5</title>
+  <title>Web GIS Projek Sabah v7.6</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -969,31 +969,42 @@ const DataManager = {
                 if (String(val).length > 300 && !isLikelyNote) return;
 
                 // --- DETECT "EMBEDDED" COMMENTS ---
-                // Logic: If formatted string is significantly longer than value string, the extra part is the comment.
                 let comment = null;
                 
-                if (fmt && typeof fmt === 'string') {
-                    const strVal = String(val);
-                    // Check if formatted value contains the raw value
-                    if (fmt.includes(strVal) && fmt.length > strVal.length) {
-                        // Extract the difference
-                        let diff = fmt.replace(strVal, "").trim();
-                        // Clean up standard separators if any (like newlines)
-                        diff = diff.replace(/^[\n\r]+/, "");
-                        
-                        if (diff.length > 0) {
-                            comment = diff;
+                if (fmt && typeof fmt === 'string' && fmt !== String(val)) {
+                    // Strategy: Find text in 'fmt' that is NOT in 'val'
+                    // Focus on Parentheses as per example
+                    const parenRegex = /\((.*?)\)/g;
+                    let match;
+                    while ((match = parenRegex.exec(fmt)) !== null) {
+                        // content of parens
+                        const content = match[0]; // e.g. "(sumber: ...)"
+                        // ensure this content isn't just part of the raw string (e.g. if raw value was text "(A)")
+                        if (!String(val).includes(content)) {
+                            comment = content; // Found it
+                            break; 
                         }
                     }
-                    // Fallback: If val is number but fmt is text that doesn't contain the number (rare case of direct replacement)
-                    else if (typeof val === 'number' && isNaN(parseFloat(fmt)) && fmt.length > 0) {
-                         comment = fmt;
+                    
+                    // Fallback: If no parens, check if fmt is significantly longer and contains text
+                    if (!comment) {
+                         // remove the value string from fmt (approximate)
+                         const cleanFmt = fmt.replace(/[0-9.,]/g, '').trim(); 
+                         // If remaining text is long enough and not just symbols
+                         if (cleanFmt.length > 2 && /[a-zA-Z]/.test(cleanFmt)) {
+                             // Try to isolate it. 
+                             // If fmt contains val
+                             const strVal = String(val);
+                             if (fmt.includes(strVal)) {
+                                 comment = fmt.replace(strVal, '').trim();
+                             }
+                         }
                     }
                 }
 
                 infoData.push({ 
                     label: colName, 
-                    value: val, 
+                    value: val, // AMBIL VALUE SEBENAR SAHAJA
                     comment: comment 
                 });
             });
