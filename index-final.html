@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9 (Updated Popup)</title>
+  <title>Web GIS Projek Sabah v7.9.1 (Formatted Data)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -91,11 +91,24 @@ body {
 .popup-divider { margin: 16px 0 10px; padding-top: 10px; border-top: 1px dashed #e5e7eb; font-size: 10px; font-weight: 800; color: #6b7280; letter-spacing: 1px; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
 .popup-divider::before { content: '•'; color: var(--primary-light); font-size: 14px; }
 
-.popup-extra-container { background: #f9fafb; padding: 8px; border-radius: 8px; border: 1px solid #f3f4f6; }
+/* Scrollable Extra Info Container */
+.popup-extra-container { 
+    background: #f9fafb; 
+    padding: 8px; 
+    border-radius: 8px; 
+    border: 1px solid #f3f4f6;
+    max-height: 250px; /* Limit height to prevent popup from going offscreen */
+    overflow-y: auto;  /* Enable scrolling */
+}
+/* Scrollbar styling for popup */
+.popup-extra-container::-webkit-scrollbar { width: 4px; }
+.popup-extra-container::-webkit-scrollbar-track { background: #f1f1f1; }
+.popup-extra-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
 .popup-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
 .popup-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
-.popup-label { font-weight: 600; color: #6b7280; }
-.popup-value { font-weight: 700; color: #111827; text-align: right; max-width: 60%; }
+.popup-label { font-weight: 600; color: #6b7280; flex: 1; margin-right: 10px; }
+.popup-value { font-weight: 700; color: #111827; text-align: right; max-width: 65%; word-wrap: break-word; }
 
 
 /* ----- LOADING SCREEN ----- */
@@ -690,7 +703,7 @@ const APP_CONFIG = {
     GAS_API_URL: "https://script.google.com/macros/s/AKfycbzDL6FOdwJhzA7Tt3ijuWWN2jMWJfbUEa2iE1DCJRWAX4Lxbut9FT1mphYeSUqDCu40iA/exec",
 
     SETTINGS: {
-        MAX_EXTRA_INFO_COLUMNS: 15,
+        MAX_EXTRA_INFO_COLUMNS: 15, // Increased limit to show ALL columns
         REFRESH_INTERVAL_MS: 900000, // 15 Minit
         DEFAULT_MAP_CENTER: [5.9804, 116.0735],
         DEFAULT_ZOOM: 8
@@ -845,7 +858,11 @@ const DataManager = {
         }
     },
     processSheetData(table, config) {
-        const cols = table.cols.map(c => c ? Utils.normalize(c.label) : "");
+        // Original headers for display in popup
+        const originalCols = table.cols.map(c => c ? c.label.trim() : "");
+        // Normalized headers for internal logic
+        const cols = originalCols.map(c => Utils.normalize(c));
+
         const rows = table.rows;
         const STD_HEADERS = {
             SITE_NAME: ["SITE_NAME", "SITE NAME", "SITE", "NAMA_TAPAK"],
@@ -859,6 +876,8 @@ const DataManager = {
         return rows.map(r => {
             const rowData = {};
             const extraDetails = [];
+            
+            // Helper to get raw value for logic
             const getValue = (headerKeys) => {
                 for (let key of headerKeys) {
                     const idx = cols.indexOf(key);
@@ -866,6 +885,8 @@ const DataManager = {
                 }
                 return "";
             };
+
+            // Logic for Filter
             if (config.filter) {
                 const filterColIdx = cols.indexOf(Utils.normalize(config.filter.col));
                 if (filterColIdx > -1) {
@@ -873,6 +894,8 @@ const DataManager = {
                     if (Utils.normalize(val) !== Utils.normalize(config.filter.val)) return null;
                 }
             }
+
+            // Extract Standard Data for Map Logic
             rowData.SITE_NAME = String(getValue(STD_HEADERS.SITE_NAME) || "N/A").trim();
             rowData.DISTRICT = String(getValue(STD_HEADERS.DISTRICT)).trim();
             rowData.DUN = String(getValue(STD_HEADERS.DUN)).trim();
@@ -882,18 +905,33 @@ const DataManager = {
             rowData.LONGITUDE = Utils.cleanFloat(getValue(STD_HEADERS.LNG));
             rowData._type = config.type;
             rowData._validCoord = (rowData.LATITUDE !== 0 && rowData.LONGITUDE !== 0);
+            
             if (rowData.SITE_NAME === "N/A") return null;
+
+            // --- ALL COLUMN EXTRACTION LOGIC (UPDATED) ---
             let count = 0;
             const usedKeys = Object.values(STD_HEADERS).flat();
-            cols.forEach((colName, idx) => {
+            
+            cols.forEach((colKey, idx) => {
                 if (count >= APP_CONFIG.SETTINGS.MAX_EXTRA_INFO_COLUMNS) return;
-                if (!colName || usedKeys.includes(colName)) return;
-                const val = r.c[idx]?.v;
+                
+                // Skip standard columns from extra details to prevent duplication in popup
+                if (!colKey || usedKeys.includes(colKey)) return;
+
+                const cell = r.c[idx];
+                if (!cell) return;
+
+                // KEY CHANGE: PRIORITIZE FORMATTED VALUE (.f) OVER RAW VALUE (.v)
+                // This ensures dates and formatted numbers appear exactly as in Google Sheets
+                const val = (cell.f !== undefined && cell.f !== null) ? cell.f : cell.v;
+
                 if (val !== null && val !== undefined && val !== "") {
-                    extraDetails.push({ label: colName, value: String(val).trim() });
+                    // Use ORIGINAL column name for display
+                    extraDetails.push({ label: originalCols[idx], value: String(val).trim() });
                     count++;
                 }
             });
+
             rowData._extra_details = extraDetails;
             rowData._id = Utils.generateId(rowData, config.type);
             return rowData;
@@ -1654,20 +1692,20 @@ const UI = {
                                     let commentHtml = '';
                                     if (comments[key]) {
                                         commentHtml = `
-                                              <div class="comment-box">
-                                                  <span class="comment-icon">💬</span>
-                                                  <span>${comments[key]}</span>
-                                              </div>
-                                          `;
+                                                <div class="comment-box">
+                                                    <span class="comment-icon">💬</span>
+                                                    <span>${comments[key]}</span>
+                                                </div>
+                                            `;
                                     }
 
                                     const item = document.createElement('div');
                                     item.className = 'data-row';
                                     item.innerHTML = `
-                                          <span class="label">${key}:</span>
-                                          <span class="value">${value}</span>
-                                          ${commentHtml}
-                                      `;
+                                            <span class="label">${key}:</span>
+                                            <span class="value">${value}</span>
+                                            ${commentHtml}
+                                        `;
                                     infoContent.appendChild(item);
                                 }
                             }
@@ -1739,18 +1777,18 @@ const UI = {
                  subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic; padding: 8px 0;">Tiada projek dalam kategori ini.</div>`;
              } else {
                  APP_CONFIG.PROJECT_TYPES.forEach(t => {
-                     const tCount = itemData.details[t.type] || 0;
-                     if (tCount > 0) {
-                         const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
-                         const tConfig = Utils.getTypeConfig(t.type);
-                         subHtml += `
+                      const tCount = itemData.details[t.type] || 0;
+                      if (tCount > 0) {
+                          const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
+                          const tConfig = Utils.getTypeConfig(t.type);
+                          subHtml += `
                             <div class="sub-stat-row">
                                  <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
                                  <span>${tCount}</span>
                             </div>
                             <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
-                         `;
-                     }
+                          `;
+                      }
                  });
              }
 
@@ -1837,12 +1875,12 @@ const UI = {
             let boundsToFit = null;
             boundaryGroup.eachLayer(l => {
                  if (l.eachLayer) { 
-                     l.eachLayer(featLayer => {
-                         const name = Utils.normalize(featLayer.feature.properties.NAME || featLayer.feature.properties.name || featLayer.feature.properties.DISTRICT || featLayer.feature.properties.DAERAH || featLayer.feature.properties.DUN || featLayer.feature.properties.PARLIAMENT);
-                         if (name === AppState.activeFeatureName) {
-                             boundsToFit = featLayer.getBounds();
-                         }
-                     });
+                      l.eachLayer(featLayer => {
+                          const name = Utils.normalize(featLayer.feature.properties.NAME || featLayer.feature.properties.name || featLayer.feature.properties.DISTRICT || featLayer.feature.properties.DAERAH || featLayer.feature.properties.DUN || featLayer.feature.properties.PARLIAMENT);
+                          if (name === AppState.activeFeatureName) {
+                              boundsToFit = featLayer.getBounds();
+                          }
+                      });
                  }
             });
             
