@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.7 (Enhanced)</title>
+  <title>Web GIS Projek Sabah v7.8 (GAS Integrated)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,18 +28,13 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);        
+  --glass-border: rgba(255, 255, 255, 0.8);       
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
   --glass-blur: 20px;                             
   --text-main: #111827;       /* Gray 900 */
   --text-sub: #6b7280;        /* Gray 500 */
   --radius: 20px;             
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Comment Box Vars (From Merged Code) */
-  --comment-bg: #fffbeb;      /* Amber 50 */
-  --comment-border: #f59e0b;  /* Amber 500 */
-  --comment-text: #92400e;    /* Amber 800 */
 }
 
 * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
@@ -279,7 +274,7 @@ body {
 .header-title h2 { font-size: 2.2rem; font-weight: 800; margin: 5px 0 0 0; line-height: 1.1; color: #fff; }
 .header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-right: 40px; }
 
-/* --- BUTTONS --- */
+/* --- DOWNLOAD BUTTON & SHARE --- */
 .action-buttons { display: flex; gap: 10px; align-items: center; }
 
 .btn-download-main, .btn-share {
@@ -314,13 +309,13 @@ body {
 .chart-card { height: 480px; padding: 20px; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.65); overflow: hidden; }
 .chart-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; color: #111827; border-bottom: 1px solid rgba(0,0,0,0.05); }
 
-/* --- MAIN CONTENT (MAP & STATUS) --- */
+/* --- MAIN CONTENT FIXES (MAP & STATUS AUTO HEIGHT) --- */
 .main-content { 
     display: grid; 
     grid-template-columns: 2fr 1fr; 
     gap: 20px; 
     height: auto; 
-    align-items: stretch;
+    align-items: stretch; /* Ensure both columns stretch to the height of the tallest */
 }
 
 .map-container { 
@@ -337,7 +332,7 @@ body {
 #report-map { 
     width: 100%; 
     min-height: 550px; 
-    flex: 1;
+    flex: 1; /* Grow to fill container */
     background: #e5e7eb; 
     z-index: 1;
     position: relative;
@@ -370,9 +365,11 @@ body {
 .bottom-card { height: 480px; padding: 20px; background: rgba(255, 255, 255, 0.65); display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; border: 1px solid rgba(255,255,255,0.6); }
 .bottom-card-header { margin-bottom: 15px; flex-shrink: 0; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 10px;}
 .bottom-card-body { flex: 1; min-height: 0; width: 100%; overflow-y: auto;}
+.district-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed rgba(0,0,0,0.1); font-size: 13px;}
+.district-name { font-weight: 600; color: #374151; }
+.district-val { font-weight: 800; color: var(--primary); }
 
-
-/* --- LAYER INFO CARD (ENHANCED - MERGED STYLES) --- */
+/* --- LAYER INFO CARD (NEW STYLES FOR GAS INTEGRATION) --- */
 .layer-info-card {
     background: rgba(255, 255, 255, 0.65);
     border-radius: 16px;
@@ -394,62 +391,47 @@ body {
 }
 .layer-info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 20px;
 }
-.layer-info-item {
-    background: rgba(255, 255, 255, 0.7);
-    padding: 15px;
+.data-row {
+    background: rgba(255, 255, 255, 0.5);
+    padding: 12px 15px;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     display: flex;
     flex-direction: column;
-    /* GAYA BARU: Top Border seperti 'Card' pada kod kedua */
-    border-top: 4px solid var(--primary); 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s;
 }
-.layer-info-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
-    background: #fff;
-}
-.layer-info-label {
+.label {
     font-size: 0.75rem;
     color: #6b7280;
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
 }
-.layer-info-value {
+.value {
     font-size: 1rem;
     color: #111827;
     font-weight: 700;
-    word-break: break-word; 
+    word-break: break-word;
 }
-
-/* GAYA BARU: Comment Box (Daripada kod kedua) */
+/* Comment Box Styling from GAS Script */
 .comment-box {
-    margin-top: 10px;
-    background-color: var(--comment-bg);
-    border-left: 3px solid var(--comment-border);
-    padding: 8px 12px;
+    margin-top: 8px;
+    padding: 8px;
+    background-color: rgba(255, 243, 205, 0.6); /* Light yellow, glassy */
+    border: 1px solid rgba(255, 238, 186, 0.8);
+    border-radius: 8px;
     font-size: 0.85rem;
-    color: var(--comment-text);
-    font-style: italic;
+    color: #856404;
     display: flex;
     align-items: flex-start;
-    border-radius: 0 6px 6px 0;
+    gap: 6px;
 }
+.comment-icon { font-size: 1rem; }
 
-.comment-icon {
-    margin-right: 8px;
-    font-style: normal;
-    font-size: 14px;
-}
-
-/* --- FOOTER --- */
+/* --- FOOTER STYLES --- */
 footer {
     margin-top: 30px;
     padding: 25px 20px;
@@ -458,7 +440,7 @@ footer {
     color: rgba(31, 41, 55, 0.85);
     font-size: 0.9rem;
     background: rgba(255, 255, 255, 0.4);
-    border-radius: 0 0 20px 20px; 
+    border-radius: 0 0 20px 20px; /* Match modal bottom radius */
     font-weight: 500;
     display: flex;
     flex-direction: column;
@@ -625,12 +607,13 @@ footer span#footer-date {
                   </div>
               </div>
 
-              <!-- LAYER INFO CARD (ENHANCED SECTION) -->
+              <!-- LAYER INFO CARD (GAS INTEGRATED) -->
               <div id="layer-info-section" style="display:none;">
-                  <div class="card layer-info-card">
+                  <div class="layer-info-card">
                       <div class="layer-info-title">
                           <i class="fas fa-info-circle"></i> Maklumat Kawasan: <span id="layer-info-name"></span>
                       </div>
+                      <!-- KANDUNGAN AKAN DIJANA OLEH JAVASCRIPT -->
                       <div class="layer-info-grid" id="layer-info-content"></div>
                   </div>
               </div>
@@ -638,7 +621,7 @@ footer span#footer-date {
               <!-- BOTTOM GRID (DYNAMIC BAR CHARTS) -->
               <div class="bottom-grid" id="dynamic-bottom-grid"></div>
 
-              <!-- UPDATED FOOTER -->
+              <!-- FOOTER -->
               <footer>
                   <div>Sistem Maklumat Geografi (GIS) Projek Sabah | © MCMC Tawau</div>
                   <div style="font-size: 0.8rem; color: #666;">Dijana secara automatik pada <span id="footer-date"></span></div>
@@ -651,7 +634,7 @@ footer span#footer-date {
 <script>
 /**
  * =============================================================================
- * 1. CONFIGURATION (WAJIB - USER BOLEH UBAH)
+ * 1. CONFIGURATION
  * =============================================================================
  */
 const APP_CONFIG = {
@@ -674,14 +657,8 @@ const APP_CONFIG = {
     
     DEFAULT_STATUS_COLOR: "#cbd5e1",
 
-    LAYER_INFO: {
-        sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
-        sheets: {
-            district: "district",
-            dun: "dun",
-            parliament: "parliament"
-        }
-    },
+    // --- GOOGLE APPS SCRIPT URL ---
+    GAS_API_URL: "https://script.google.com/macros/s/AKfycbzDL6FOdwJhzA7Tt3ijuWWN2jMWJfbUEa2iE1DCJRWAX4Lxbut9FT1mphYeSUqDCu40iA/exec",
 
     SETTINGS: {
         MAX_EXTRA_INFO_COLUMNS: 15,
@@ -800,18 +777,16 @@ const DataManager = {
                 const bKey = params.get('layer');
                 const bName = params.get('name');
                 if (bKey && bName && AppState.dataLayers[bKey]) {
-                    // Try to find the layer and click it
                     let found = false;
                     AppState.dataLayers[bKey].eachLayer(l => {
                         const lName = MapManager.extractGeoName(l.feature);
                         if (lName === Utils.normalize(bName)) {
-                            // Programmatic selection
                             MapManager.switchBoundary(bKey, (bKey === 'district' ? 'toggle-daerah' : (bKey === 'dun' ? 'toggle-dun' : 'toggle-parliament')));
                             MapManager.highlightBoundary(bKey, l, lName);
                             found = true;
                         }
                     });
-                    if(found) UI.openReport(); // Auto open report if shared
+                    if(found) UI.openReport();
                 }
             });
         } catch (error) {
@@ -895,136 +870,53 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    // --- UPDATED FUNCTION V7.7: SMART COMMENT EXTRACTION FROM FORMATTED STRING ---
-    async fetchLayerInfo(layerType, featureName) {
+
+    // --- FUNGSI BARU UNTUK FETCH DATA DARI GOOGLE APPS SCRIPT ---
+    async fetchLayerInfoGAS(layerType, featureName) {
         if (!layerType || !featureName) return null;
-        
-        const sheetName = APP_CONFIG.LAYER_INFO.sheets[layerType];
-        if (!sheetName) return null;
-        
-        const url = `https://docs.google.com/spreadsheets/d/${APP_CONFIG.LAYER_INFO.sheetId}/gviz/tq?sheet=${sheetName}&tqx=out:json`;
+
+        // Pemetaan nama sheet yang dijangka oleh Skrip GAS
+        const sheetMap = {
+            'district': 'district',
+            'dun': 'dun',
+            'parliament': 'parliament'
+        };
+
+        const sheetName = sheetMap[layerType] || layerType;
+        const url = `${APP_CONFIG.GAS_API_URL}?sheet=${sheetName}`;
 
         try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error("Layer Info Fetch Failed");
-            const text = await res.text();
-            
-            const jsonStart = text.indexOf('{');
-            const jsonEnd = text.lastIndexOf('}');
-            if (jsonStart === -1 || jsonEnd === -1) return null;
-            
-            const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
-            const table = json.table;
-            
-            if (!table || !table.cols || !table.rows) return null;
+            const response = await fetch(url);
+            const data = await response.json();
 
-            const cols = table.cols.map(c => c ? c.label : "");
+            if (data.error) {
+                console.error("GAS Error:", data.error);
+                return null;
+            }
+
+            // CLIENT SIDE FILTERING: 
+            // Skrip GAS memulangkan SEMUA data dalam sheet tersebut.
+            // Kita perlu cari row yang sepadan dengan featureName (contoh: "TAWAU").
             const targetName = Utils.normalize(featureName);
 
-            // 1. Identify Key Column
-            const layerKeys = {
-                district: ["DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH", "NAME", "NAMA"],
-                dun: ["DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "NAME", "NAMA", "KOD DUN"],
-                parliament: ["PARLIAMENT", "PARLIMEN", "NAMA PARLIMEN", "NAMA_PARLIMEN", "NAME", "NAMA", "KOD PARLIMEN"]
-            };
-
-            const possibleKeys = layerKeys[layerType] || ["NAME"];
-            
-            let keyIndex = -1;
-            for (let i = 0; i < cols.length; i++) {
-                if (possibleKeys.includes(Utils.normalize(cols[i]))) {
-                    keyIndex = i;
-                    break;
+            // Cari row yang sepadan. Kita semak column 'LAYER' dahulu jika ada.
+            const matchedRow = data.find(row => {
+                // Jika ada column khusus bernama 'LAYER', gunakannya untuk padanan
+                if (row['LAYER'] && Utils.normalize(row['LAYER']) === targetName) {
+                    return true;
                 }
-            }
-
-            if (keyIndex === -1 && cols.length > 0) keyIndex = 0;
-            if (keyIndex === -1) return null;
-
-            // 2. Find row
-            let matchedRow = null;
-            for (let r of table.rows) {
-                const val = r.c[keyIndex]?.v;
-                if (!val) continue;
-                const strVal = Utils.normalize(String(val));
-                
-                if (strVal === targetName) {
-                    matchedRow = r;
-                    break;
-                }
-                if (strVal.length > 3 && targetName.length > 3) {
-                      if (strVal.includes(targetName) || targetName.includes(strVal)) {
-                          matchedRow = r;
-                      }
-                }
-            }
-
-            if (!matchedRow) return null;
-            
-            // 3. Process Columns (USE FORMATTED VALUE PREFERENCE)
-            const infoData = [];
-            const BANNED_KEYS = [
-                "LAYER", "TIER", "LEVEL", "KOD",
-                "DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH",
-                "DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "KOD DUN",
-                "PARLIAMENT", "PARLIMEN", "NAMA PARLIMEN", "NAMA_PARLIMEN", "KOD PARLIMEN",
-                "NAME", "NAMA", "OBJECTID", "ID", "SENARAI", "LIST", "ALL"
-            ];
-            
-            cols.forEach((colName, idx) => {
-                if (!colName) return;
-                const cell = matchedRow.c[idx];
-                if (!cell) return;
-
-                const val = cell.v; // Raw Value (e.g., 34534 or 0.9025)
-                const fmt = cell.f; // Formatted Value (e.g., "34534 (sumber: DOSM)" or "90.25%")
-                
-                // Skip if empty or banned
-                if (val === null || val === "" || String(val).trim() === "") return;
-                const normLabel = Utils.normalize(colName);
-                if (BANNED_KEYS.some(ban => normLabel === ban || normLabel.includes(ban + " "))) return;
-
-                // Safety: Hide massive text dumps unless explicitly marked
-                const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
-                if (String(val).length > 300 && !isLikelyNote) return;
-
-                // --- NEW LOGIC V7.7: USE FORMATTED STRING AS TRUTH, THEN EXTRACT COMMENTS ---
-                let displayValue = val; 
-                let displayComment = null;
-
-                if (fmt) {
-                    const strFmt = String(fmt);
-                    // 1. Check for comment pattern in PARENTHESES at the end
-                    // Regex searches for (...) containing letters/text at end of string
-                    const commentMatch = strFmt.match(/(\([a-zA-Z\s:0-9]+\))$/); 
-                    
-                    if (commentMatch) {
-                        // Found a comment like "(sumber: DOSM)"
-                        const fullComment = commentMatch[1]; 
-                        
-                        // Set comment
-                        displayComment = fullComment.replace(/^\(|\)$/g, ''); // Remove parenthesis for cleaner display in box
-                        
-                        // Remove comment from value string to get clean value
-                        let cleanValue = strFmt.replace(fullComment, "").trim();
-                        displayValue = cleanValue;
-                    } else {
-                        // No comment found, use the full formatted string as value
-                        displayValue = strFmt;
-                    }
-                }
-
-                infoData.push({ 
-                    label: colName, 
-                    value: displayValue, 
-                    comment: displayComment,
-                    isPureComment: isLikelyNote
-                });
+                // Fallback: Semak jika mana-mana value dalam row sepadan dengan nama kawasan
+                // Ini berguna jika header sheet anda "DAERAH", "NAMA", dll.
+                return Object.values(row).some(val => 
+                    typeof val === 'string' && Utils.normalize(val) === targetName
+                );
             });
-            
-            return infoData;
-        } catch (e) {
-            console.error("Error fetching layer info:", e);
+
+            // Kembalikan dalam bentuk array untuk konsistensi dengan UI renderer
+            return matchedRow ? [matchedRow] : [];
+
+        } catch (error) {
+            console.error("Error fetching data from GAS:", error);
             return null;
         }
     }
@@ -1619,6 +1511,8 @@ const UI = {
         AppState.activeStatusFilter = (AppState.activeStatusFilter === status) ? null : status;
         FilterManager.applyFilters();
     },
+    
+    // --- UPDATED REPORT MODAL WITH GAS LOGIC ---
     async openReport() {
         const data = (AppState.currentFilteredList && AppState.currentFilteredList.length > 0) ? AppState.currentFilteredList : AppState.allProjects;
         
@@ -1628,7 +1522,6 @@ const UI = {
         document.getElementById('report-total-count').textContent = data.length;
         this.updateClock();
         
-        // --- UPDATED FOOTER DATE FORMAT ---
         const footerDate = new Date();
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
         document.getElementById('footer-date').textContent = footerDate.toLocaleDateString('ms-MY', options);
@@ -1649,6 +1542,7 @@ const UI = {
             this.initReportMap(data);
         }, 300);
 
+        // --- GAS INTEGRATION FOR LAYER INFO ---
         const infoSection = document.getElementById('layer-info-section');
         const infoContent = document.getElementById('layer-info-content');
         const infoTitle = document.getElementById('layer-info-name');
@@ -1656,51 +1550,57 @@ const UI = {
         infoSection.style.display = 'none'; 
         infoContent.innerHTML = ''; 
 
+        // Only fetch if a specific area is selected
         if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
             UI.showLoading(true, "MEMUATKAN MAKLUMAT KAWASAN...");
             
             setTimeout(async () => {
                 try {
-                    const layerInfo = await DataManager.fetchLayerInfo(AppState.activeBoundaryKey, AppState.activeFeatureName);
+                    // Call the new GAS fetcher
+                    const layerDataArray = await DataManager.fetchLayerInfoGAS(AppState.activeBoundaryKey, AppState.activeFeatureName);
                     
-                    if (layerInfo && layerInfo.length > 0) {
+                    if (layerDataArray && layerDataArray.length > 0) {
                         infoTitle.textContent = AppState.activeFeatureName;
                         
-                        layerInfo.forEach(info => {
-                            const item = document.createElement('div');
-                            item.className = 'layer-info-item';
-                            // Logic: Render Value. If there is a comment/note attached, render it in a styled box below.
-                            
-                            let html = `
-                                <div class="layer-info-label">${info.label}</div>
-                                <div class="layer-info-value">${info.value}</div>
-                            `;
-                            
-                            // If this specific item IS a pure comment (based on column name), style it differently
-                            if (info.isPureComment) {
-                                html = `
-                                    <div class="layer-info-label" style="color:#6b7280; font-style:italic;">CATATAN / NOTA</div>
-                                    <div class="layer-info-value" style="font-size:0.9rem; font-style:italic;">${info.value}</div>
-                                `;
-                            } 
-                            // If it has an attached comment (from parsing "Value (Comment)")
-                            else if (info.comment) {
-                                html += `
-                                    <div class="comment-box">
-                                        <span class="comment-icon">💬</span>
-                                        <span>${info.comment}</span>
-                                    </div>
-                                `;
-                            }
+                        // We assume filter returned 1 row, but handle array just in case
+                        layerDataArray.forEach(row => {
+                            const comments = row['_comments'] || {};
 
-                            item.innerHTML = html;
-                            infoContent.appendChild(item);
+                            // Render Card Content (Similar to your renderCards function)
+                            for (const [key, value] of Object.entries(row)) {
+                                if (key !== 'LAYER' && key !== '_comments' && value !== "") {
+                                    
+                                    let commentHtml = '';
+                                    if (comments[key]) {
+                                        commentHtml = `
+                                            <div class="comment-box">
+                                                <span class="comment-icon">💬</span>
+                                                <span>${comments[key]}</span>
+                                            </div>
+                                        `;
+                                    }
+
+                                    const item = document.createElement('div');
+                                    item.className = 'data-row';
+                                    item.innerHTML = `
+                                        <span class="label">${key}:</span>
+                                        <span class="value">${value}</span>
+                                        ${commentHtml}
+                                    `;
+                                    infoContent.appendChild(item);
+                                }
+                            }
                         });
                         
                         infoSection.style.display = 'block';
+                    } else {
+                        // Optional: Show empty state if needed
+                        console.log("Tiada data tambahan dijumpai untuk kawasan ini.");
                     }
                 } catch (err) {
                     console.error("Failed to load layer info", err);
+                    infoContent.innerHTML = `<div style="color:red; font-size:0.9rem;">Gagal memuatkan maklumat kawasan.</div>`;
+                    infoSection.style.display = 'block';
                 } finally {
                     UI.showLoading(false);
                 }
