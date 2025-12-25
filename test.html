@@ -3,505 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Projek Sabah</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <title>Sistem Paparan Layer Info</title>
     <style>
         :root {
-            --bg-gradient: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
-            --glass-bg: rgba(255, 255, 255, 0.25);
-            --glass-border: rgba(255, 255, 255, 0.5);
-            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-            --text-primary: #333;
-            --text-secondary: #666;
-            
-            /* Warna Status */
-            --color-wifi: #2ecc71;
-            --color-nadi: #3498db;
-            --color-pop: #f1c40f;
-            --color-menara: #e74c3c;
-            --color-vsat: #9b59b6;
-            --color-telefon: #e67e22;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --primary-color: #2563eb;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+            --comment-bg: #fffbeb;
+            --comment-border: #fcd34d;
         }
 
         body {
-            background: #e0eafc; /* Fallback */
-            background: linear-gradient(to bottom right, #dbeafe, #ddd6fe, #fbcfe8);
-            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
             padding: 20px;
-            color: var(--text-primary);
+            color: var(--text-color);
         }
 
-        /* Container Utama */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        /* Gaya Umum Kad (Glassmorphism) */
-        .card {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 15px;
-            padding: 15px;
-            box-shadow: var(--glass-shadow);
-        }
-
-        /* --- HEADER --- */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            padding: 5px 10px;
-        }
-
-        .header-title h1 { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; }
-        .header-title h2 { font-size: 1.5rem; color: #4f46e5; font-weight: 700; }
-        
-        .header-info { text-align: right; }
-        .btn-download {
-            background: rgba(255,255,255,0.6);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            border: 1px solid #fff;
-            margin-bottom: 5px;
-            display: inline-block;
-        }
-        .current-time { font-size: 0.9rem; color: #555; }
-
-        /* --- TOP STATS ROW --- */
-        .top-row {
-            display: grid;
-            grid-template-columns: 250px 1fr; /* Kiri besar, kanan grid kecil */
-            gap: 15px;
-        }
-
-        .main-stat {
-            background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(200,220,255,0.8));
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+        .controls {
+            margin-bottom: 20px;
             text-align: center;
         }
-        .main-stat h1 { font-size: 3rem; color: #333; line-height: 1; }
-        .main-stat p { font-size: 0.9rem; font-weight: 600; }
-        .badge {
-            background: #dbeafe; color: #4f46e5;
-            padding: 4px 12px; border-radius: 12px;
-            font-size: 0.7rem; margin-top: 5px;
-            font-weight: bold;
-        }
 
-        .mini-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 10px;
-        }
-
-        .mini-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255,255,255,0.6);
-            border-radius: 10px;
-            padding: 10px 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border-top: 4px solid #ccc; /* Default border color */
-        }
-        
-        /* Warna Border Atas Mini Card */
-        .mini-card.wifi { border-color: var(--color-wifi); }
-        .mini-card.nadi { border-color: var(--color-nadi); }
-        .mini-card.pop { border-color: var(--color-pop); }
-        .mini-card.menara { border-color: var(--color-menara); }
-        .mini-card.vsat { border-color: var(--color-vsat); }
-        .mini-card.telefon { border-color: var(--color-telefon); }
-
-        .mini-card h3 { font-size: 1.5rem; color: #e74c3c; margin-bottom: 2px; }
-        .mini-card.wifi h3 { color: var(--color-wifi); }
-        .mini-card.nadi h3 { color: var(--color-nadi); }
-        .mini-card.pop h3 { color: var(--color-pop); }
-        .mini-card.menara h3 { color: var(--color-menara); }
-        .mini-card.vsat h3 { color: var(--color-vsat); }
-        .mini-card.telefon h3 { color: var(--color-telefon); }
-        
-        .mini-card span { font-size: 0.7rem; font-weight: bold; color: #555; text-transform: uppercase; }
-
-        /* --- CHARTS ROW --- */
-        .charts-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-        }
-        
-        .chart-card {
-            position: relative;
-            min-height: 120px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .chart-icon {
-            width: 35px; height: 35px;
+        select {
+            padding: 10px 20px;
+            font-size: 16px;
             border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 1.2rem;
-            margin-bottom: 5px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            width: 100%;
+            max-width: 300px;
         }
-        .bg-purple { background: linear-gradient(135deg, #a855f7, #6366f1); }
-        .bg-blue { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
-        .bg-pink { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
 
-        .chart-title { font-size: 1.1rem; font-weight: 600; text-align: center; }
-        
-        /* Simulated Wave Chart using SVG */
-        .wave-chart { width: 100%; height: 50px; opacity: 0.6; }
+        #loading {
+            text-align: center;
+            display: none;
+            font-style: italic;
+            color: var(--primary-color);
+        }
 
-        /* --- MAIN CONTENT (MAP & STATUS) --- */
-        .main-content {
+        /* Grid Layout untuk Kad */
+        .container-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr; /* Map lebih luas */
-            gap: 15px;
-            min-height: 350px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
         }
 
-        /* Map Section */
-        .map-container {
-            position: relative;
-            overflow: hidden;
-            padding: 0; /* Remove padding for image */
-            background-color: #a5d8ff; /* Sea color placeholder */
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Sabah_relief_map.png/640px-Sabah_relief_map.png'); /* Placeholder Map of Sabah */
-            background-size: cover;
-            background-position: center;
-        }
-        /* Overlay grid lines on map to simulate the look */
-        .map-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCI+PHBhdGggZD0iTTEgMGwwIDUwIE0w 1bDUwIDAiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjMiIGZpbGw9Im5vbmUiLz48L3N2Zz4=');
-            opacity: 0.3;
-            pointer-events: none;
-        }
-
-        /* Status Section */
-        .status-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            background: rgba(255, 255, 255, 0.7);
-        }
-        .status-header {
-            font-size: 0.8rem; font-weight: bold; text-transform: uppercase; color: #555;
-            margin-bottom: 5px;
-        }
-        
-        .status-group { margin-bottom: 10px; }
-        .status-label-row {
-            display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; margin-bottom: 3px;
-        }
-        .progress-track {
-            background: #e5e7eb; height: 6px; border-radius: 3px; width: 100%; overflow: hidden;
-        }
-        .progress-fill { height: 100%; border-radius: 3px; }
-        
-        .fill-green { background-color: #2ecc71; }
-        .fill-blue { background-color: #3498db; }
-        .fill-yellow { background-color: #f1c40f; }
-        .fill-purple { background-color: #9b59b6; }
-        .fill-red { background-color: #e74c3c; }
-
-        .sub-status {
-            margin-top: 4px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-        .sub-item {
-            display: flex; align-items: center; justify-content: space-between; font-size: 0.65rem; color: #666;
-        }
-        .sub-track { flex-grow: 1; height: 3px; background: #eee; margin: 0 8px; border-radius: 2px; }
-
-        /* --- BOTTOM GRID --- */
-        .bottom-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-        }
-        
-        .bottom-card {
-            display: flex;
-            align-items: center;
+        /* Rekabentuk Kad */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            gap: 15px;
+            transition: transform 0.2s;
+            border-top: 5px solid var(--primary-color);
         }
-        .icon-box {
-            width: 45px; height: 45px;
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 1.2rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .icon-wifi { background: linear-gradient(135deg, #2ecc71, #27ae60); }
-        .icon-nadi { background: linear-gradient(135deg, #3498db, #2980b9); }
-        .icon-pop { background: linear-gradient(135deg, #f1c40f, #f39c12); }
-        .icon-menara { background: linear-gradient(135deg, #e74c3c, #c0392b); }
-        .icon-vsat { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
-        .icon-tel { background: linear-gradient(135deg, #e67e22, #d35400); }
 
-        .bottom-text h4 { font-size: 0.9rem; color: #333; }
-        .bottom-text h3 { font-size: 1.2rem; font-weight: 700; color: #222; }
-
-        /* Footer */
-        footer {
-            text-align: right; font-size: 0.75rem; color: #555; margin-top: 10px;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
+
+        .card-header {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            color: var(--primary-color);
+            text-transform: uppercase;
+        }
+
+        .data-row {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .label {
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .value {
+            color: #111827;
+        }
+
+        /* Reka bentuk Komen */
+        .comment-box {
+            margin-top: 4px;
+            background-color: var(--comment-bg);
+            border-left: 3px solid var(--comment-border);
+            padding: 5px 10px;
+            font-size: 0.85rem;
+            color: #92400e;
+            font-style: italic;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .comment-icon {
+            margin-right: 5px;
+        }
+
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <div class="header-title">
-                <h1>Dashboard Projek</h1>
-                <h2>NAMA LAYER</h2>
-            </div>
-            <div class="header-info">
-                <button class="btn-download">muat turun pdf</button>
-                <div class="current-time" id="clock">Friday, 19 Dec 2025 6:51 PM</div>
-            </div>
-        </header>
+    <h1 style="text-align: center;">Maklumat Layer</h1>
 
-        <div class="top-row">
-            <div class="card main-stat">
-                <h1>855</h1>
-                <p>JUMLAH PROJEK</p>
-                <div class="badge">SELURUH SABAH</div>
-            </div>
-
-            <div class="mini-stats-grid">
-                <div class="mini-card wifi">
-                    <h3>16</h3>
-                    <span>WIFI</span>
-                </div>
-                <div class="mini-card nadi">
-                    <h3>23</h3>
-                    <span>NADI</span>
-                </div>
-                <div class="mini-card pop">
-                    <h3>86</h3>
-                    <span>POP</span>
-                </div>
-                <div class="mini-card menara">
-                    <h3>181</h3>
-                    <span>MENARA</span>
-                </div>
-                <div class="mini-card vsat">
-                    <h3>463</h3>
-                    <span>VSAT</span>
-                </div>
-                <div class="mini-card telefon">
-                    <h3>86</h3>
-                    <span>TELEFON</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="charts-row">
-            <div class="card chart-card">
-                <div class="chart-icon bg-purple"><i class="fa-solid fa-wifi"></i></div>
-                <div class="chart-title">CARTA 01</div>
-                <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
-                    <path d="M0,25 L0,15 Q25,0 50,15 T100,15 L100,25 Z" fill="#a855f7" />
-                    <path d="M0,25 L0,20 Q25,10 50,20 T100,20 L100,25 Z" fill="#6366f1" opacity="0.5"/>
-                </svg>
-            </div>
-            <div class="card chart-card">
-                <div class="chart-icon bg-blue"><i class="fa-solid fa-broadcast-tower"></i></div>
-                <div class="chart-title">CARTA 02</div>
-                <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
-                    <path d="M0,25 L0,10 Q25,20 50,5 T100,15 L100,25 Z" fill="#3b82f6" />
-                    <path d="M0,25 L0,15 Q25,25 50,10 T100,20 L100,25 Z" fill="#06b6d4" opacity="0.5"/>
-                </svg>
-            </div>
-            <div class="card chart-card">
-                <div class="chart-icon bg-pink"><i class="fa-solid fa-phone"></i></div>
-                <div class="chart-title">CARTA 03</div>
-                <svg class="wave-chart" viewBox="0 0 100 25" preserveAspectRatio="none">
-                    <path d="M0,25 L0,12 Q20,0 40,15 T80,5 T100,15 L100,25 Z" fill="#ec4899" />
-                    <path d="M0,25 L0,18 Q20,10 40,20 T80,10 T100,20 L100,25 Z" fill="#8b5cf6" opacity="0.5"/>
-                </svg>
-            </div>
-        </div>
-
-        <div class="main-content">
-            <div class="card map-container">
-                <div class="map-overlay"></div>
-                </div>
-
-            <div class="card status-container">
-                <div class="status-header">STATUS KEMAJUAN</div>
-
-                <div class="status-group">
-                    <div class="status-label-row">
-                        <span>SIAP</span>
-                        <span>79 (71%)</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill fill-green" style="width: 71%;"></div>
-                    </div>
-                    <div class="sub-status">
-                        <div class="sub-item">
-                            <span>Menara</span>
-                            <div class="sub-track"><div class="progress-fill fill-red" style="width: 72%;"></div></div>
-                            <span>67 (72%)</span>
-                        </div>
-                        <div class="sub-item">
-                            <span>VSAT</span>
-                            <div class="sub-track"><div class="progress-fill fill-purple" style="width: 20%;"></div></div>
-                            <span>16 (20%)</span>
-                        </div>
-                        <div class="sub-item">
-                            <span>NADI</span>
-                            <div class="sub-track"><div class="progress-fill fill-blue" style="width: 4%;"></div></div>
-                            <span>3 (4%)</span>
-                        </div>
-                         <div class="sub-item">
-                            <span>POP</span>
-                            <div class="sub-track"><div class="progress-fill fill-yellow" style="width: 4%;"></div></div>
-                            <span>3 (4%)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="status-group">
-                    <div class="status-label-row">
-                        <span>PEMBINAAN</span>
-                        <span>27 (24%)</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill fill-blue" style="width: 24%;"></div>
-                    </div>
-                    <div class="sub-status">
-                        <div class="sub-item">
-                            <span>POP</span>
-                            <div class="sub-track"><div class="progress-fill fill-yellow" style="width: 97%;"></div></div>
-                            <span>10 (97%)</span>
-                        </div>
-                         <div class="sub-item">
-                            <span>WIFI</span>
-                            <div class="sub-track"><div class="progress-fill fill-green" style="width: 15%;"></div></div>
-                            <span>8 (15%)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="status-group">
-                    <div class="status-label-row">
-                        <span>PERANCANGAN</span>
-                        <span>5 (9%)</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill fill-yellow" style="width: 9%;"></div>
-                    </div>
-                    <div class="sub-status">
-                        <div class="sub-item">
-                            <span>VSAT</span>
-                            <div class="sub-track"><div class="progress-fill fill-purple" style="width: 100%;"></div></div>
-                            <span>5 (100%)</span>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <div class="bottom-grid">
-            <div class="card bottom-card">
-                <div class="icon-box icon-wifi"><i class="fa-solid fa-wifi"></i></div>
-                <div class="bottom-text">
-                    <h4>CARTA 04</h4>
-                    <h3>WIFI</h3>
-                </div>
-            </div>
-            <div class="card bottom-card">
-                <div class="icon-box icon-nadi"><i class="fa-solid fa-heart-pulse"></i></div>
-                <div class="bottom-text">
-                    <h4>CARTA 05</h4>
-                    <h3>NADI</h3>
-                </div>
-            </div>
-            <div class="card bottom-card">
-                <div class="icon-box icon-pop"><i class="fa-solid fa-gear"></i></div>
-                <div class="bottom-text">
-                    <h4>CARTA 06</h4>
-                    <h3>POP</h3>
-                </div>
-            </div>
-            <div class="card bottom-card">
-                <div class="icon-box icon-menara"><i class="fa-solid fa-broadcast-tower"></i></div>
-                <div class="bottom-text">
-                    <h4>CARTA 07</h4>
-                    <h3>MENARA</h3>
-                </div>
-            </div>
-            <div class="card bottom-card">
-                <div class="icon-box icon-vsat"><i class="fa-solid fa-satellite-dish"></i></div>
-                <div class="bottom-text">
-                    <h4>CARTA 08</h4>
-                    <h3>VSAT</h3>
-                </div>
-            </div>
-            <div class="card bottom-card">
-                <div class="icon-box icon-tel"><i class="fa-solid fa-phone"></i></div>
-                <div class="bottom-text">
-                    <h4>CARTA 09</h4>
-                    <h3>TELEFON</h3>
-                </div>
-            </div>
-        </div>
-
-        <footer>
-            system ini dibangunkan oleh MCMC Tawau
-        </footer>
+    <div class="controls">
+        <label for="sheetSelector">Pilih Layer:</label><br>
+        <select id="sheetSelector" onchange="fetchData()">
+            <option value="district">District</option>
+            <option value="dun">DUN</option>
+            <option value="parliament">Parliament</option>
+        </select>
     </div>
 
+    <div id="loading">Sedang memuatkan data...</div>
+    
+    <div id="contentArea" class="container-grid">
+        </div>
+
     <script>
-        // Script untuk kemaskini jam secara real-time
-        function updateClock() {
-            const now = new Date();
-            const options = { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric', 
-                hour: 'numeric', 
-                minute: 'numeric', 
-                second: 'numeric',
-                hour12: true 
-            };
-            const timeString = now.toLocaleDateString('en-US', options); // Bahasa Inggeris untuk format masa
-            document.getElementById('clock').innerText = timeString;
+        // MASUKKAN URL WEB APP ANDA DI SINI
+        const SCRIPT_URL = "AKD_SCRIPT_URL_ANDA_DISINI"; 
+
+        async function fetchData() {
+            const sheetName = document.getElementById('sheetSelector').value;
+            const container = document.getElementById('contentArea');
+            const loading = document.getElementById('loading');
+
+            // Reset paparan
+            container.innerHTML = '';
+            loading.style.display = 'block';
+
+            try {
+                // Panggil API Google Script
+                const response = await fetch(`${SCRIPT_URL}?sheet=${sheetName}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    alert("Ralat: " + data.error);
+                    return;
+                }
+
+                renderCards(data);
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                container.innerHTML = '<p style="text-align:center; color:red;">Gagal mengambil data. Sila pastikan URL Script betul.</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
         }
 
-        setInterval(updateClock, 1000);
-        updateClock();
+        function renderCards(data) {
+            const container = document.getElementById('contentArea');
+
+            data.forEach(row => {
+                // Pastikan layer wujud (header WAJIB)
+                const layerName = row['LAYER'] || 'Tiada Nama Layer';
+                const comments = row['_comments'] || {};
+
+                // Cipta elemen Kad
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                // Header Kad (Menggunakan column LAYER)
+                let htmlContent = `<div class="card-header">${layerName}</div>`;
+
+                // Loop semua column dalam row
+                for (const [key, value] of Object.entries(row)) {
+                    // Abaikan column LAYER (sebab dah jadi tajuk) dan _comments
+                    if (key !== 'LAYER' && key !== '_comments') {
+                        
+                        let commentHtml = '';
+                        
+                        // LOGIK PENGESANAN KOMEN:
+                        // Jika wujud komen untuk column ini, paparkan ia
+                        if (comments[key]) {
+                            commentHtml = `
+                                <div class="comment-box">
+                                    <span class="comment-icon">💬</span>
+                                    <span>${comments[key]}</span>
+                                </div>
+                            `;
+                        }
+
+                        // Masukkan data ke dalam kad
+                        htmlContent += `
+                            <div class="data-row">
+                                <span class="label">${key}:</span>
+                                <span class="value">${value}</span>
+                                ${commentHtml}
+                            </div>
+                        `;
+                    }
+                }
+
+                card.innerHTML = htmlContent;
+                container.appendChild(card);
+            });
+        }
+
+        // Jalankan sekali pada permulaan
+        fetchData();
+
     </script>
 </body>
 </html>
