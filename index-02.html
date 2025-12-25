@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.8 (Fixed Layer Info)</title>
+  <title>Web GIS Projek Sabah v7.7</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);        
+  --glass-border: rgba(255, 255, 255, 0.8);       
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
   --glass-blur: 20px;                             
   --text-main: #111827;       /* Gray 900 */
@@ -685,19 +685,6 @@ const APP_CONFIG = {
 const Utils = {
     escapeHtml: (str) => String(str || "").replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
     normalize: (str) => String(str || "").trim().toUpperCase(),
-    
-    // --- NEW: AGGRESSIVE NORMALIZATION FOR LAYER MATCHING ---
-    // Removes "DAERAH", "PARLIMEN", "DUN", "N.", dots, spaces, special chars
-    // Example: "DAERAH TAWAU" -> "TAWAU", "N.61 SEGAMA" -> "61SEGAMA"
-    normalizeKey: (str) => {
-        if (!str) return "";
-        let s = String(str).toUpperCase();
-        // Remove specific administrative prefixes to ensure matches like "Daerah Tawau" == "Tawau"
-        s = s.replace(/^DAERAH\s+|^PARLIMEN\s+|^DUN\s+|^N\.?\s*|^P\.?\s*|^KAWASAN\s+/, "");
-        // Keep only alphanumeric (A-Z, 0-9). Remove dots, spaces, dashes.
-        return s.replace(/[^A-Z0-9]/g, "");
-    },
-
     cleanFloat: (val) => {
         if (typeof val === 'number') return val;
         if (!val) return 0;
@@ -888,15 +875,13 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-    
-    // --- UPDATED V7.8: FIXED FETCH LAYER INFO (STRICT LAYER COLUMN MATCHING) ---
+    // --- UPDATED FUNCTION V7.7: SMART COMMENT EXTRACTION FROM FORMATTED STRING ---
     async fetchLayerInfo(layerType, featureName) {
         if (!layerType || !featureName) return null;
         
         const sheetName = APP_CONFIG.LAYER_INFO.sheets[layerType];
         if (!sheetName) return null;
         
-        // Use GVIZ API to fetch the specific sheet for this layer type
         const url = `https://docs.google.com/spreadsheets/d/${APP_CONFIG.LAYER_INFO.sheetId}/gviz/tq?sheet=${sheetName}&tqx=out:json`;
 
         try {
@@ -913,101 +898,107 @@ const DataManager = {
             
             if (!table || !table.cols || !table.rows) return null;
 
-            // 1. FIND THE 'LAYER' COLUMN (MANDATORY)
-            // We search for a column specifically named "LAYER" (case-insensitive)
-            let layerColIndex = -1;
-            for (let i = 0; i < table.cols.length; i++) {
-                if (table.cols[i] && table.cols[i].label.toUpperCase() === 'LAYER') {
-                    layerColIndex = i;
+            const cols = table.cols.map(c => c ? c.label : "");
+            const targetName = Utils.normalize(featureName);
+
+            // 1. Identify Key Column
+            const layerKeys = {
+                district: ["DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH", "NAME", "NAMA"],
+                dun: ["DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "NAME", "NAMA", "KOD DUN"],
+                parliament: ["PARLIAMENT", "PARLIMEN", "NAMA PARLIMEN", "NAMA_PARLIMEN", "NAME", "NAMA", "KOD PARLIMEN"]
+            };
+
+            const possibleKeys = layerKeys[layerType] || ["NAME"];
+            
+            let keyIndex = -1;
+            for (let i = 0; i < cols.length; i++) {
+                if (possibleKeys.includes(Utils.normalize(cols[i]))) {
+                    keyIndex = i;
                     break;
                 }
             }
 
-            // If no LAYER column found, we cannot match safely. Abort.
-            if (layerColIndex === -1) {
-                console.warn(`Column 'LAYER' not found in sheet: ${sheetName}`);
-                return null;
-            }
+            if (keyIndex === -1 && cols.length > 0) keyIndex = 0;
+            if (keyIndex === -1) return null;
 
-            // 2. NORMALIZE THE TARGET FEATURE NAME (from GeoJSON)
-            // Remove "DAERAH", "N.", dots, etc. to get raw matching key
-            const targetKey = Utils.normalizeKey(featureName);
-
-            // 3. FIND THE MATCHING ROW
+            // 2. Find row
             let matchedRow = null;
-            
             for (let r of table.rows) {
-                // Get value from LAYER column
-                const cell = r.c[layerColIndex];
-                if (!cell || !cell.v) continue;
+                const val = r.c[keyIndex]?.v;
+                if (!val) continue;
+                const strVal = Utils.normalize(String(val));
                 
-                const sheetValRaw = String(cell.v);
-                const sheetKey = Utils.normalizeKey(sheetValRaw);
-
-                // MATCH LOGIC: 
-                // A. Exact Normalized Match (Primary) -> "N61SEGAMA" === "N61SEGAMA"
-                // B. Contains Match (Fallback) -> "DAERAHTAWAU".includes("TAWAU") to handle "DAERAH TAWAU" vs "TAWAU"
-                if (sheetKey === targetKey) {
+                if (strVal === targetName) {
                     matchedRow = r;
                     break;
                 }
-                
-                // Additional safe check: If key is long enough (>3 chars), check if one contains the other
-                if (sheetKey.length > 3 && targetKey.length > 3) {
-                     if (sheetKey.includes(targetKey) || targetKey.includes(sheetKey)) {
+                if (strVal.length > 3 && targetName.length > 3) {
+                     if (strVal.includes(targetName) || targetName.includes(strVal)) {
                          matchedRow = r;
-                         break;
                      }
                 }
             }
 
             if (!matchedRow) return null;
             
-            // 4. EXTRACT ALL OTHER COLUMNS (DYNAMIC)
+            // 3. Process Columns (USE FORMATTED VALUE PREFERENCE)
             const infoData = [];
+            const BANNED_KEYS = [
+                "LAYER", "TIER", "LEVEL", "KOD",
+                "DISTRICT", "DAERAH", "NAMA DAERAH", "NAMA_DAERAH",
+                "DUN", "DEWAN UNDANGAN NEGERI", "NAMA DUN", "NAMA_DUN", "KOD DUN",
+                "PARLIAMENT", "PARLIMEN", "NAMA PARLIMEN", "NAMA_PARLIMEN", "KOD PARLIMEN",
+                "NAME", "NAMA", "OBJECTID", "ID", "SENARAI", "LIST", "ALL"
+            ];
             
-            table.cols.forEach((col, idx) => {
-                // Skip the LAYER column itself or if column is empty
-                if (idx === layerColIndex || !col || !col.label) return;
-                
-                const colLabel = col.label;
-                
-                // Skip system columns or likely internal IDs if needed, usually we show everything else
-                if (colLabel.toUpperCase() === 'ID' || colLabel.toUpperCase() === 'OBJECTID') return;
-
+            cols.forEach((colName, idx) => {
+                if (!colName) return;
                 const cell = matchedRow.c[idx];
                 if (!cell) return;
 
-                const val = cell.v; 
-                const fmt = cell.f; 
+                const val = cell.v; // Raw Value (e.g., 34534 or 0.9025)
+                const fmt = cell.f; // Formatted Value (e.g., "34534 (sumber: DOSM)" or "90.25%")
                 
+                // Skip if empty or banned
                 if (val === null || val === "" || String(val).trim() === "") return;
+                const normLabel = Utils.normalize(colName);
+                if (BANNED_KEYS.some(ban => normLabel === ban || normLabel.includes(ban + " "))) return;
 
-                // --- FORMATTED STRING & COMMENT EXTRACTION LOGIC ---
+                // Safety: Hide massive text dumps unless explicitly marked
+                const isLikelyNote = /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colName);
+                if (String(val).length > 300 && !isLikelyNote) return;
+
+                // --- NEW LOGIC V7.7: USE FORMATTED STRING AS TRUTH, THEN EXTRACT COMMENTS ---
                 let displayValue = val; 
                 let displayComment = null;
 
                 if (fmt) {
                     const strFmt = String(fmt);
-                    // Check for comment pattern: ends with "(...)"
+                    // 1. Check for comment pattern in PARENTHESES at the end
+                    // Regex searches for (...) containing letters/text at end of string
                     const commentMatch = strFmt.match(/(\([a-zA-Z\s:0-9]+\))$/); 
                     
                     if (commentMatch) {
+                        // Found a comment like "(sumber: DOSM)"
                         const fullComment = commentMatch[1]; 
+                        
+                        // Set comment
                         displayComment = fullComment;
-                        // Clean value
-                        displayValue = strFmt.replace(fullComment, "").trim();
+                        
+                        // Remove comment from value string to get clean value
+                        let cleanValue = strFmt.replace(fullComment, "").trim();
+                        displayValue = cleanValue;
                     } else {
+                        // No comment found, use the full formatted string as value
+                        // This ensures percentages like 90.25% are displayed correctly
                         displayValue = strFmt;
                     }
                 }
 
                 infoData.push({ 
-                    label: colLabel, 
+                    label: colName, 
                     value: displayValue, 
-                    comment: displayComment,
-                    // Check if the label itself implies it's a note field
-                    isPureComment: /CATATAN|NOTE|KOMEN|SUMBER|SOURCE|DESCRIPTION/i.test(colLabel)
+                    comment: displayComment 
                 });
             });
             
