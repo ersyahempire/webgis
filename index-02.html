@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.8 (GAS Integrated)</title>
+  <title>Web GIS Projek Sabah v7.9 (Updated Popup)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
   --primary-light: #818cf8;   /* Indigo 400 */
   --glass-bg: rgba(255, 255, 255, 0.90); 
   --glass-bg-hover: rgba(255, 255, 255, 0.98);    
-  --glass-border: rgba(255, 255, 255, 0.8);       
+  --glass-border: rgba(255, 255, 255, 0.8);        
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
   --glass-blur: 20px;                             
   --text-main: #111827;       /* Gray 900 */
@@ -68,6 +68,35 @@ body {
     border-radius: 4px;
 }
 .leaflet-interactive { cursor: pointer; }
+
+/* ----- CUSTOM POPUP STYLES (NEW) ----- */
+.leaflet-popup-content-wrapper { border-radius: 16px; padding: 0; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.8); }
+.leaflet-popup-content { margin: 0; width: 100% !important; }
+.custom-popup-wrapper { padding: 18px; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+.popup-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.popup-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.popup-title { font-weight: 800; font-size: 15px; line-height: 1.3; color: #1f2937; margin-top: 2px; }
+
+.popup-status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 16px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+.popup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+.popup-item { display: flex; flex-direction: column; }
+.popup-item.full-width { grid-column: span 2; }
+
+.popup-label-mini { font-size: 9px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px; }
+.popup-value-main { font-size: 12px; font-weight: 700; color: #374151; word-break: break-word; line-height: 1.4; }
+.popup-value-mono { font-size: 11px; font-family: 'Courier New', monospace; font-weight: 600; color: #4b5563; background: #f3f4f6; padding: 4px 8px; border-radius: 6px; display: block; border: 1px solid #e5e7eb; text-align: center; }
+
+.popup-divider { margin: 16px 0 10px; padding-top: 10px; border-top: 1px dashed #e5e7eb; font-size: 10px; font-weight: 800; color: #6b7280; letter-spacing: 1px; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+.popup-divider::before { content: '•'; color: var(--primary-light); font-size: 14px; }
+
+.popup-extra-container { background: #f9fafb; padding: 8px; border-radius: 8px; border: 1px solid #f3f4f6; }
+.popup-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+.popup-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.popup-label { font-weight: 600; color: #6b7280; }
+.popup-value { font-weight: 700; color: #111827; text-align: right; max-width: 60%; }
+
 
 /* ----- LOADING SCREEN ----- */
 .loading-overlay {
@@ -623,7 +652,7 @@ footer span#footer-date {
 
               <!-- FOOTER -->
               <footer>
-                  <div>Sistem Maklumat Geografi (GIS) Projek Sabah | © MCMC Tawau</div>
+                  <div>Sistem Maklumat Geografi (GIS) Projek Sabah | dibangunkan oleh © MCMC Tawau</div>
                   <div style="font-size: 0.8rem; color: #666;">Dijana secara automatik pada <span id="footer-date"></span></div>
               </footer>
           </div>
@@ -1024,32 +1053,84 @@ const MapManager = {
         AppState.map.fitBounds(layer.getBounds());
         FilterManager.applyFilters();
     },
+    
+    // --- UPDATED POPUP CREATION LOGIC ---
     createMarker(project) {
         if (!project._validCoord) return null;
         const config = Utils.getTypeConfig(project._type);
         const statusColor = Utils.getStatusColor(project.STATUS);
+        
+        // 1. Generate Extra HTML
         let extraHtml = project._extra_details.map(d => 
-            `<div class="sub-stat-row"><span class="sub-stat-label">${Utils.escapeHtml(d.label)}</span><span class="sub-stat-val">${Utils.escapeHtml(d.value)}</span></div>`
+            `<div class="popup-row">
+                <span class="popup-label">${Utils.escapeHtml(d.label)}</span>
+                <span class="popup-value">${Utils.escapeHtml(d.value)}</span>
+             </div>`
         ).join('');
-        if (extraHtml) extraHtml = `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed #ccc; font-weight:700; font-size:11px;">MAKLUMAT TERPERINCI</div>` + extraHtml;
+
+        if (extraHtml) {
+            extraHtml = `
+                <div class="popup-divider">MAKLUMAT TERPERINCI</div>
+                <div class="popup-extra-container">${extraHtml}</div>
+            `;
+        }
+
+        // 2. Build the Complete Popup
         const popupContent = `
-            <div style="font-family:'Plus Jakarta Sans'; min-width:200px;">
-                <div style="font-weight:800; font-size:14px; margin-bottom:5px; color:var(--primary);">${config.icon} ${Utils.escapeHtml(project.SITE_NAME)}</div>
-                <div style="font-size:12px; color:#555;">
-                    <div><b>Kategori:</b> ${config.label}</div>
-                    <div><b>Daerah:</b> ${Utils.escapeHtml(project.DISTRICT)}</div>
-                    <div><b>Status:</b> <span style="color:${statusColor}; font-weight:700;">${Utils.escapeHtml(project.STATUS)}</span></div>
-                    ${extraHtml}
+            <div class="custom-popup-wrapper">
+                <!-- Header -->
+                <div class="popup-header">
+                    <div class="popup-icon" style="background:${config.color}20; color:${config.color}">${config.icon}</div>
+                    <div class="popup-title">${Utils.escapeHtml(project.SITE_NAME)}</div>
                 </div>
-            </div>`;
-            
+
+                <!-- Status Badge -->
+                <div class="popup-status-badge" style="background:${statusColor}20; color:${statusColor}; border:1px solid ${statusColor}">
+                    ${Utils.escapeHtml(project.STATUS)}
+                </div>
+
+                <!-- Main Info Grid (Updated with DUN, Parliament, Coords) -->
+                <div class="popup-grid">
+                    <div class="popup-item">
+                        <span class="popup-label-mini">KATEGORI</span>
+                        <span class="popup-value-main" style="color:${config.color}">${config.label}</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label-mini">DAERAH</span>
+                        <span class="popup-value-main">${Utils.escapeHtml(project.DISTRICT)}</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label-mini">DUN</span>
+                        <span class="popup-value-main">${Utils.escapeHtml(project.DUN || '-')}</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label-mini">PARLIMEN</span>
+                        <span class="popup-value-main">${Utils.escapeHtml(project.PARLIAMENT || '-')}</span>
+                    </div>
+                    <div class="popup-item full-width">
+                        <span class="popup-label-mini">KOORDINAT</span>
+                        <span class="popup-value-mono">${project.LATITUDE.toFixed(5)}, ${project.LONGITUDE.toFixed(5)}</span>
+                    </div>
+                </div>
+
+                <!-- Extra Details -->
+                ${extraHtml}
+            </div>
+        `;
+
         const marker = L.circleMarker([project.LATITUDE, project.LONGITUDE], {
             pane: 'overlayPane',
             radius: 6, fillColor: config.color, color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
-        }).bindPopup(popupContent);
+        }).bindPopup(popupContent, {
+            minWidth: 260,
+            maxWidth: 300
+        });
+        
         marker._meta = project;
         return marker;
     },
+    // --- END UPDATED POPUP LOGIC ---
+
     renderMarkersInBatches(projects, onComplete) {
         const total = projects.length; 
         let i = 0;
@@ -1573,20 +1654,20 @@ const UI = {
                                     let commentHtml = '';
                                     if (comments[key]) {
                                         commentHtml = `
-                                            <div class="comment-box">
-                                                <span class="comment-icon">💬</span>
-                                                <span>${comments[key]}</span>
-                                            </div>
-                                        `;
+                                              <div class="comment-box">
+                                                  <span class="comment-icon">💬</span>
+                                                  <span>${comments[key]}</span>
+                                              </div>
+                                          `;
                                     }
 
                                     const item = document.createElement('div');
                                     item.className = 'data-row';
                                     item.innerHTML = `
-                                        <span class="label">${key}:</span>
-                                        <span class="value">${value}</span>
-                                        ${commentHtml}
-                                    `;
+                                          <span class="label">${key}:</span>
+                                          <span class="value">${value}</span>
+                                          ${commentHtml}
+                                      `;
                                     infoContent.appendChild(item);
                                 }
                             }
