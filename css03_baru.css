@@ -1,6 +1,6 @@
 /* =============================================================================
    WEB GIS SABAH - MODERN UI/UX STYLESHEET
-   Version: 8.0 (Refined)
+   Version: 8.1 (Logo & Layout Update)
    =============================================================================
 */
 
@@ -55,6 +55,24 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+}
+
+/* --- LOGO OVERLAY (NEW) --- */
+/* Menambah Logo MCMC di atas peta tanpa mengubah HTML */
+body::after {
+  content: "";
+  position: fixed;
+  top: 24px;
+  left: 90px; /* Diletakkan di sebelah butang toggle sidebar */
+  width: 140px;
+  height: 60px;
+  background-image: url('https://ersyahempire.github.io/webgis/MCMC_Logo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center left;
+  z-index: 2000; /* Di atas peta */
+  pointer-events: none; /* Membenarkan klik tembus ke peta jika perlu */
+  filter: drop-shadow(0 2px 4px rgba(255,255,255,0.8));
 }
 
 /* Scrollbar Styling */
@@ -526,7 +544,7 @@ body {
   text-transform: uppercase;
 }
 
-/* Status List */
+/* Status List (UPDATED FOR SPACING) */
 .status-section-title {
   font-size: 11px;
   font-weight: 800;
@@ -534,6 +552,10 @@ body {
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 12px;
+}
+
+.status-wrapper {
+  margin-bottom: 16px; /* Jarak tambahan antara kad status */
 }
 
 .status-item {
@@ -545,15 +567,18 @@ body {
   transition: var(--transition-fast);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02); /* Bayang lembut untuk efek kad terpisah */
 }
 .status-item:hover {
   border-color: #cbd5e1;
-  transform: translateX(2px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 .status-item.selected {
   border-color: var(--primary);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   background: #fafafa;
+  box-shadow: none;
 }
 .status-header {
   display: flex;
@@ -586,6 +611,7 @@ body {
   padding: 16px;
   display: none;
   font-size: 12px;
+  margin-top: -1px; /* Connect with item above */
 }
 .status-details.show {
   display: block;
@@ -928,7 +954,7 @@ body {
   margin-top: 4px;
 }
 
-/* Charts */
+/* --- CHARTS (UPDATED FOR FULL WIDTH/HEIGHT) --- */
 .charts-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -936,18 +962,27 @@ body {
   margin-bottom: 24px;
 }
 .chart-card {
-  height: 400px;
+  height: 420px; /* Sedikit lebih tinggi */
   display: flex;
   flex-direction: column;
+  padding: 16px; /* Padding dikurangkan untuk ruang graf maksimum */
 }
 .chart-title {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-light);
   text-transform: uppercase;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0; /* Tajuk tidak mengecil */
+}
+/* Memastikan div carta mengisi ruang baki */
+.chart-card > div:not(.chart-title) {
+  flex: 1;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
 }
 
 /* Map & Status Split */
@@ -1047,7 +1082,7 @@ body {
   gap: 8px;
 }
 
-/* Bottom Grid */
+/* --- BOTTOM GRID (UPDATED FOR FULL WIDTH/HEIGHT) --- */
 .bottom-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1057,7 +1092,7 @@ body {
 .bottom-card {
   background: #fff;
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 16px; /* Kurangkan padding */
   height: 400px;
   display: flex;
   flex-direction: column;
@@ -1066,9 +1101,22 @@ body {
 .bottom-card-header {
   font-weight: 700;
   font-size: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
+  flex-shrink: 0;
+}
+.bottom-card-body {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Elak scrollbar berganda */
+}
+/* Memastikan div dalaman carta memenuhi ruang */
+.bottom-card-body > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
 }
 
 /* Footer */
@@ -1099,6 +1147,19 @@ footer {
 }
 
 @media (max-width: 768px) {
+  /* Logo adjustment for mobile */
+  body::after {
+    top: auto;
+    bottom: 24px;
+    left: 24px;
+    background-color: rgba(255,255,255,0.9);
+    padding: 5px;
+    border-radius: 8px;
+    height: 50px;
+    width: 120px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+
   /* Dashboard */
   .dashboard-panel {
     width: calc(100% - 48px);
