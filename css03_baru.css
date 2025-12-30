@@ -1,6 +1,6 @@
 /* =============================================================================
    WEB GIS SABAH - MODERN UI/UX STYLESHEET
-   Version: 8.2 (Logo Right & Chart Layout Fixes)
+   Version: 8.3 (Logo & Map View Aligned)
    =============================================================================
 */
 
@@ -57,12 +57,12 @@ body {
   overflow: hidden;
 }
 
-/* --- LOGO OVERLAY (UPDATED: TOP RIGHT) --- */
+/* --- LOGO OVERLAY (UPDATED: ALIGNED WITH MAP VIEW) --- */
 body::after {
   content: "";
   position: fixed;
-  top: 24px;
-  right: 80px; /* Diletakkan di sebelah kanan, elak bertindih layer control */
+  top: 12px;   /* Diselaraskan dengan butang map view */
+  right: 160px; /* Digerakkan ke kiri sedikit untuk memberi ruang kepada butang map */
   width: 140px;
   height: 60px;
   background-image: url('https://ersyahempire.github.io/webgis/MCMC_Logo.png');
@@ -131,7 +131,8 @@ body::after {
   box-shadow: var(--glass-shadow) !important;
   padding: 8px !important;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  margin-top: 80px !important; /* Turunkan sedikit supaya tak kena logo */
+  margin-top: 12px !important; /* Dinaikkan semula supaya sebaris dengan logo */
+  margin-right: 12px !important;
 }
 
 /* Tooltips */
