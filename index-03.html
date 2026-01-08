@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9.7 (Robust Info Marker)</title>
+  <title>Web GIS Projek Sabah v7.9.9</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -306,9 +306,9 @@ const APP_CONFIG = {
     BOUNDARY_INFO_CONFIG: {
         sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
         layers: {
-            daerah: { sheetName: "district", keyColumn: "district_name" },
-            dun: { sheetName: "dun", keyColumn: "dun_name" },
-            parlimen: { sheetName: "parlimen", keyColumn: "parlimen_name" }
+            daerah: { sheetName: "district", keyColumn: "name" },
+            dun: { sheetName: "dun", keyColumn: "name" },
+            parlimen: { sheetName: "parlimen", keyColumn: "name" }
         }
     },
 
@@ -661,32 +661,51 @@ const MapManager = {
                                 return `<div style="text-align:center; padding:5px; color:#999; font-style:italic;">Data sedang dimuatkan atau tiada.</div>`;
                             }
 
-                            // CARIAN ROBUST
-                            const attrData = targetArray.find(row => {
-                                // 1. Semakan ketat (Strict Check)
-                                if (row._key === name) return true;
-                                
-                                // 2. Semakan Luas
-                                return Object.values(row).some(val => 
-                                    typeof val === 'string' && Utils.normalize(val) === name
-                                );
-                            });
+                            // 1. CARIAN (DIPERBAIKI UNTUK MENGELAK "MASSIVE STRING" & KESALAHAN DATA)
+                            // Sebelum ini: "Broad Check" (Object.values.some) menyebabkan sistem terambil 
+                            // baris yang mengandungi senarai panjang semua DUN/Parlimen.
+                            // Sekarang: Kita HANYA mencari berdasarkan kunci utama (_key) untuk ketepatan.
+                            const attrData = targetArray.find(row => row._key === name);
 
                             if (attrData) {
                                 // Iterate semua kunci dalam data atribut
                                 Object.keys(attrData).forEach(col => {
                                     // Tapis kunci sistem dalaman
-                                    if (col !== '_key' && col !== 'LAYER' && col !== '_comments') {
-                                        const val = attrData[col];
-                                        if (val !== "" && val !== null && val !== undefined) {
-                                            infoHtml += `
-                                                <div class="tooltip-row">
-                                                    <span class="tooltip-label">${col}</span>
-                                                    <span class="tooltip-val">${val}</span>
-                                                </div>
-                                            `;
-                                        }
+                                    if (col === '_key' || col === 'LAYER' || col === '_comments') return;
+
+                                    const val = attrData[col];
+                                    if (val === "" || val === null || val === undefined) return;
+
+                                    // ARAHAN: Tapis Nama Layer dari Body untuk mengelak redundansi
+                                    // (Kerana nama layer sudah ada pada header tooltip)
+                                    const colLower = col.toLowerCase();
+                                    const keyLower = key.toLowerCase(); // 'daerah', 'dun', 'parlimen'
+                                    
+                                    let isRedundant = false;
+
+                                    // Tapis perkataan asas 'name'/'nama'
+                                    if (colLower === 'name' || colLower === 'nama' || colLower === 'site_name') isRedundant = true;
+
+                                    // Tapis mengikut jenis layer
+                                    if (keyLower === 'daerah') {
+                                        if (colLower.includes('district') || colLower.includes('daerah')) isRedundant = true;
                                     }
+                                    if (keyLower === 'dun') {
+                                        if (colLower === 'dun' || colLower.includes('nama_dun') || colLower.includes('dun_name')) isRedundant = true;
+                                    }
+                                    if (keyLower === 'parlimen') {
+                                        if (colLower.includes('parlimen') || colLower.includes('parliament')) isRedundant = true;
+                                    }
+
+                                    if (isRedundant) return;
+
+                                    // Jika lulus semua tapisan, paparkan
+                                    infoHtml += `
+                                        <div class="tooltip-row">
+                                            <span class="tooltip-label">${col}</span>
+                                            <span class="tooltip-val">${val}</span>
+                                        </div>
+                                    `;
                                 });
                             }
 
