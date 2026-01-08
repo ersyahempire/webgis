@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9.5 (Sticky Info & Data Fix)</title>
+  <title>Web GIS Projek Sabah v7.9.6 (Dynamic Info Marker)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,9 +12,6 @@
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-  <!-- Turf.js (Standard Kawasanku DOSM) -->
-  <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css03_baru.css">
@@ -93,7 +90,7 @@
         background: #ccc;
         border-radius: 2px;
     }
-    /* Style untuk Sticky Popup (Klik Kanan) - Sama dengan tooltip tapi ada close button */
+    /* Style untuk Sticky Popup (Klik Kanan) */
     .leaflet-popup-content-wrapper {
         border-radius: 8px;
         padding: 0;
@@ -307,37 +304,14 @@ const APP_CONFIG = {
     GAS_API_URL: "https://script.google.com/macros/s/AKfycbzDL6FOdwJhzA7Tt3ijuWWN2jMWJfbUEa2iE1DCJRWAX4Lxbut9FT1mphYeSUqDCu40iA/exec",
 
     // --- KONFIGURASI LOKASI DATA BOUNDARY & INFO MARKER (DIKEMASKINI) ---
+    // Logik 'displayColumns' telah dibuang, sistem kini akan memaparkan 
+    // semua column yang ada dalam sheet secara dinamik (kecuali column sistem).
     BOUNDARY_INFO_CONFIG: {
         sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
         layers: {
-            // Standard Name: daerah
-            daerah: {
-                sheetName: "district",
-                keyColumn: "name",
-                // Masukkan semua column yang diminta
-                displayColumns: [
-                    "dosm_code", "Populasi Terkini", "SAIZ_DAERAH", "Land Area (km2)",
-                    "cebol", "POLGOS", "NADI", "POP", "TOWER", "USJ", "SAMB"
-                ]
-            },
-            // Standard Name: dun
-            dun: {
-                sheetName: "dun",
-                keyColumn: "name",
-                displayColumns: [
-                    "name2", "DUN_CODE", "spr_code", "Land Area (km2)", "PENDUDUK",
-                    "cebol", "POLGOS", "NADI", "POP", "TOWER", "USJ", "SAMB"
-                ]
-            },
-            // Standard Name: parlimen
-            parlimen: {
-                sheetName: "parlimen",
-                keyColumn: "name",
-                displayColumns: [
-                    "name2", "PARLIAMENT_CODE", "spr_code", "Land Area (km2)", "NAMA_YB",
-                    "cebol", "POLGOS", "NADI", "POP", "TOWER", "USJ", "SAMB"
-                ]
-            }
+            daerah: { sheetName: "district", keyColumn: "name" },
+            dun: { sheetName: "dun", keyColumn: "name" },
+            parlimen: { sheetName: "parlimen", keyColumn: "name" }
         }
     },
 
@@ -399,28 +373,6 @@ const Utils = {
         const s = Utils.normalize(statusKey);
         const idx = APP_CONFIG.STATUS_MAPPING.findIndex(config => config.keywords.some(k => s.includes(k) || s === k));
         return idx !== -1 ? idx : 999;
-    },
-    
-    // --- FUNGSI PENGIRAAN KELUASAN (STANDARD KAWASANKU DOSM) ---
-    // Menggunakan turf.area() untuk Geodesic Area
-    // Unit: meter persegi -> km persegi
-    kiraKeluasanKm2: (geojsonFeature) => {
-        if (!geojsonFeature || !geojsonFeature.geometry) return 0;
-        
-        try {
-            // Kaedah sebenar (Standard Kawasanku DOSM)
-            const area_m2 = turf.area(geojsonFeature);
-            const area_km2 = area_m2 / 1000000;
-            
-            // Console log untuk debugging (seperti diminta)
-            const name = geojsonFeature.properties.name || geojsonFeature.properties.district || "Unknown";
-            // console.log(`Kawasan: ${name} | Keluasan: ${area_km2.toFixed(2)} km²`);
-            
-            return area_km2.toFixed(2);
-        } catch (e) {
-            console.error("Ralat pengiraan Turf.js:", e);
-            return "0.00";
-        }
     }
 };
 
@@ -527,23 +479,19 @@ const DataManager = {
             const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
             
             if (json.table && json.table.rows) {
-                // FIXED: Normalise headers to handle case sensitivity and spaces
+                // Normalise headers
                 const headers = json.table.cols.map(c => c ? c.label.trim() : "");
                 
                 const data = json.table.rows.map(row => {
                     let obj = {};
                     row.c.forEach((cell, idx) => {
                         if (headers[idx]) {
-                            // Store with exact header name
                             obj[headers[idx]] = (cell && (cell.v !== null)) ? cell.v : "";
-                            
-                            // ALSO Store with lower case for robust lookup
-                            obj[headers[idx].toLowerCase()] = obj[headers[idx]];
                         }
                     });
                     
-                    // Gunakan normalize untuk key juga
-                    const rawKey = obj[layerConfig.keyColumn] || obj[layerConfig.keyColumn.toLowerCase()];
+                    // Generate Normalized Key for lookup
+                    const rawKey = obj[layerConfig.keyColumn];
                     obj._key = Utils.normalize(rawKey);
                     
                     return obj;
@@ -645,7 +593,7 @@ const DataManager = {
     async fetchLayerInfoGAS(layerType, featureName) {
         if (!layerType || !featureName) return null;
         const config = APP_CONFIG.BOUNDARY_INFO_CONFIG;
-        const layerConfig = config.layers[layerType]; // Standard Keys used here
+        const layerConfig = config.layers[layerType]; 
         if(!layerConfig) return null;
 
         const url = `${APP_CONFIG.GAS_API_URL}?sheet=${layerConfig.sheetName}`;
@@ -689,7 +637,6 @@ const MapManager = {
         this.loadBoundaries();
     },
     async loadBoundaries() {
-        // Standardized Keys: daerah, dun, parlimen
         const loadLayer = async (key, url) => {
             try {
                 const res = await fetch(url);
@@ -701,51 +648,36 @@ const MapManager = {
                     onEachFeature: (feature, layer) => {
                         const name = this.extractGeoName(feature);
                         
-                        // --- 1. PENGIRAAN KELUASAN AUTOMATIK (Standard Kawasanku DOSM) ---
-                        const areaKm2 = Utils.kiraKeluasanKm2(feature);
-                        
-                        // Fungsi Helper untuk generate HTML Content
+                        // Fungsi Helper Dynamic Info (Menyamai struktur Report)
                         const getInfoHtml = () => {
                             let infoHtml = '';
-                            const layerConfig = APP_CONFIG.BOUNDARY_INFO_CONFIG.layers[key];
                             const attrData = AppState.boundaryAttributes[key].find(r => r._key === name);
 
-                            if (layerConfig) {
-                                layerConfig.displayColumns.forEach(col => {
-                                    // Cuba cari data dengan key yang sama ATAU key lower case
-                                    let val = "N/A";
-                                    if (attrData) {
-                                        if (attrData[col] !== undefined) val = attrData[col];
-                                        else if (attrData[col.toLowerCase()] !== undefined) val = attrData[col.toLowerCase()];
-                                    }
-
-                                    // Guna auto-calc jika tiada dalam sheet untuk column khusus ini
-                                    if (col === "Land Area (km2)" && (val === "N/A" || val === "")) {
-                                        val = areaKm2 + " (Auto)";
-                                    }
-                                    if (val && val !== "N/A" && val !== "0" && val !== "") {
-                                        infoHtml += `
-                                            <div class="tooltip-row">
-                                                <span class="tooltip-label">${col}</span>
-                                                <span class="tooltip-val">${val}</span>
-                                            </div>
-                                        `;
+                            if (attrData) {
+                                // Iterate semua kunci dalam data atribut
+                                Object.keys(attrData).forEach(col => {
+                                    // Tapis kunci sistem dalaman
+                                    if (col !== '_key' && col !== 'LAYER' && col !== '_comments') {
+                                        const val = attrData[col];
+                                        if (val !== "" && val !== null && val !== undefined) {
+                                            infoHtml += `
+                                                <div class="tooltip-row">
+                                                    <span class="tooltip-label">${col}</span>
+                                                    <span class="tooltip-val">${val}</span>
+                                                </div>
+                                            `;
+                                        }
                                     }
                                 });
                             }
 
                             if (!infoHtml) {
-                                infoHtml = `
-                                    <div class="tooltip-row">
-                                        <span class="tooltip-label">Land Area (Turf.js)</span>
-                                        <span class="tooltip-val">${areaKm2} km²</span>
-                                    </div>
-                                `;
+                                infoHtml = `<div style="text-align:center; padding:5px; color:#999; font-style:italic;">Tiada Maklumat Tambahan</div>`;
                             }
                             return infoHtml;
                         };
 
-                        // --- 2. EVENTS ---
+                        // --- EVENTS ---
                         
                         // Left Click: Pilih Kawasan
                         layer.on('click', (e) => {
@@ -819,8 +751,6 @@ const MapManager = {
             }
         };
 
-        // Menggunakan kunci standard
-        // Menggunakan Promise berasingan supaya kegagalan/kelewatan satu layer tidak menghalang yang lain
         const p1 = loadLayer('daerah', APP_CONFIG.GEOJSON_URLS.daerah);
         const p2 = loadLayer('dun', APP_CONFIG.GEOJSON_URLS.dun);
         const p3 = loadLayer('parlimen', APP_CONFIG.GEOJSON_URLS.parlimen);
