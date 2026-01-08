@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9.7 (Robust Info Marker)</title>
+  <title>Web GIS Projek Sabah v7.9.10 (Robust Info Marker)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -306,9 +306,9 @@ const APP_CONFIG = {
     BOUNDARY_INFO_CONFIG: {
         sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
         layers: {
-            daerah: { sheetName: "district", keyColumn: "district_name" }, // Key updated
-            dun: { sheetName: "dun", keyColumn: "name2" }, // Key updated
-            parlimen: { sheetName: "parlimen", keyColumn: "name2" } // Key updated
+            daerah: { sheetName: "district", keyColumn: "district_name" }, 
+            dun: { sheetName: "dun", keyColumn: "name2" }, // Guna name2 sebagai default, tapi akan di-override oleh Smart Search
+            parlimen: { sheetName: "parlimen", keyColumn: "name2" } 
         }
     },
 
@@ -413,7 +413,6 @@ const DataManager = {
         UI.showLoading(true, "MENGHUBUNGI GOOGLE SHEETS...");
         try {
             // Load Project Data (Promise.allSettled untuk robustness)
-            // Jika satu sheet gagal, app tidak akan crash sepenuhnya.
             const projectPromises = APP_CONFIG.PROJECT_TYPES.map(config => this.fetchSingleSheet(config));
             
             // Load Boundary Attributes Data (Info Marker)
@@ -448,7 +447,6 @@ const DataManager = {
                     AppState.dataLayers[bKey].eachLayer(l => {
                         const lName = MapManager.extractGeoName(l.feature);
                         if (lName === Utils.normalize(bName)) {
-                            // Map btnId based on standardized key
                             const btnId = bKey === 'daerah' ? 'toggle-daerah' : (bKey === 'dun' ? 'toggle-dun' : 'toggle-parliament');
                             MapManager.switchBoundary(bKey, btnId);
                             MapManager.highlightBoundary(bKey, l, lName);
@@ -504,7 +502,7 @@ const DataManager = {
             }
         } catch (e) {
             console.warn(`Gagal memuatkan atribut untuk ${layerType}`, e);
-            AppState.boundaryAttributes[layerType] = []; // Fallback to empty array
+            AppState.boundaryAttributes[layerType] = []; 
         }
     },
 
@@ -523,7 +521,7 @@ const DataManager = {
             return (json.table && json.table.rows) ? this.processSheetData(json.table, config) : [];
         } catch (e) {
             console.warn(`Gagal memuatkan sheet: ${config.label}`, e);
-            throw e; // Rethrow to be caught by allSettled
+            throw e; 
         }
     },
     processSheetData(table, config) {
@@ -651,52 +649,69 @@ const MapManager = {
                     onEachFeature: (feature, layer) => {
                         const name = this.extractGeoName(feature);
                         
-                        // Fungsi Helper Dynamic Info (Menyamai struktur Report)
+                        // --- UPDATED: SMART LOOKUP LOGIC ---
                         const getInfoHtml = () => {
                             let infoHtml = '';
                             
-                            // SAFETY CHECK: Ensure array exists before finding
                             const targetArray = AppState.boundaryAttributes[key];
                             if (!targetArray || !Array.isArray(targetArray)) {
                                 return `<div style="text-align:center; padding:5px; color:#999; font-style:italic;">Data sedang dimuatkan atau tiada.</div>`;
                             }
 
-                            // 1. CARIAN (Strict Matching berdasarkan Key yang dikemaskini)
-                            const attrData = targetArray.find(row => row._key === name);
+                            // HELPER: Get value from row by column name (Case Insensitive)
+                            const getValueCI = (row, colName) => {
+                                const k = Object.keys(row).find(k => k.toLowerCase() === colName.toLowerCase());
+                                return k ? row[k] : null;
+                            };
+
+                            // SMART SEARCH: Try multiple identify columns
+                            // This fixes the issue where GeoJSON might use "BANGGI" but Sheet uses "N.01 BANGGI"
+                            const targetName = Utils.normalize(name);
+                            
+                            const attrData = targetArray.find(row => {
+                                // 1. Strict Key Match (Primary)
+                                if (row._key === targetName) return true;
+
+                                // 2. Fallback Match based on Layer Type
+                                if (key === 'dun') {
+                                    const n1 = Utils.normalize(getValueCI(row, 'dun_name'));
+                                    const n2 = Utils.normalize(getValueCI(row, 'name2'));
+                                    const n3 = Utils.normalize(getValueCI(row, 'spr_code')); // e.g. N.01
+                                    return (n1 === targetName || n2 === targetName || n3 === targetName);
+                                }
+                                if (key === 'parlimen') {
+                                    const p1 = Utils.normalize(getValueCI(row, 'parlimen_name'));
+                                    const p2 = Utils.normalize(getValueCI(row, 'name2'));
+                                    const p3 = Utils.normalize(getValueCI(row, 'parliament_code'));
+                                    return (p1 === targetName || p2 === targetName || p3 === targetName);
+                                }
+                                if (key === 'daerah') {
+                                    const d1 = Utils.normalize(getValueCI(row, 'district_name'));
+                                    return (d1 === targetName);
+                                }
+                                return false;
+                            });
 
                             if (attrData) {
-                                // Iterate semua kunci dalam data atribut
                                 Object.keys(attrData).forEach(col => {
-                                    // Tapis kunci sistem dalaman
                                     if (col === '_key' || col === 'LAYER' || col === '_comments') return;
 
                                     const val = attrData[col];
                                     if (val === "" || val === null || val === undefined) return;
 
-                                    // ARAHAN: Tapis Nama Layer dari Body untuk mengelak redundansi
-                                    // (Kerana nama layer sudah ada pada header tooltip)
+                                    // REDUNDANCY FILTER
                                     const colLower = col.toLowerCase();
-                                    const keyLower = key.toLowerCase(); // 'daerah', 'dun', 'parlimen'
-                                    
+                                    const keyLower = key.toLowerCase(); 
                                     let isRedundant = false;
 
-                                    // Tapis perkataan asas 'name'/'nama'/'name2'
                                     if (['name', 'nama', 'site_name', 'name2'].includes(colLower)) isRedundant = true;
 
-                                    // Tapis mengikut jenis layer (Header names specific to your sheets)
-                                    if (keyLower === 'daerah') {
-                                        if (colLower === 'district_name') isRedundant = true;
-                                    }
-                                    if (keyLower === 'dun') {
-                                        if (colLower === 'dun_name') isRedundant = true;
-                                    }
-                                    if (keyLower === 'parlimen') {
-                                        if (colLower === 'parlimen_name') isRedundant = true;
-                                    }
+                                    if (keyLower === 'daerah' && colLower === 'district_name') isRedundant = true;
+                                    if (keyLower === 'dun' && colLower === 'dun_name') isRedundant = true;
+                                    if (keyLower === 'parlimen' && colLower === 'parlimen_name') isRedundant = true;
 
                                     if (isRedundant) return;
 
-                                    // Jika lulus semua tapisan, paparkan
                                     infoHtml += `
                                         <div class="tooltip-row">
                                             <span class="tooltip-label">${col}</span>
@@ -713,14 +728,11 @@ const MapManager = {
                         };
 
                         // --- EVENTS ---
-                        
-                        // Left Click: Pilih Kawasan
                         layer.on('click', (e) => {
                             L.DomEvent.stopPropagation(e);
                             this.highlightBoundary(key, layer, name);
                         });
                         
-                        // Right Click: STICKY POPUP
                         layer.on('contextmenu', (e) => {
                             L.DomEvent.stopPropagation(e);
                             L.DomEvent.preventDefault(e);
@@ -736,39 +748,23 @@ const MapManager = {
                                 </div>
                             `;
                             
-                            L.popup({
-                                className: 'sticky-popup',
-                                minWidth: 260,
-                                maxWidth: 300
-                            })
-                            .setLatLng(e.latlng)
-                            .setContent(popupContent)
-                            .openOn(AppState.map);
+                            L.popup({ className: 'sticky-popup', minWidth: 260, maxWidth: 300 })
+                            .setLatLng(e.latlng).setContent(popupContent).openOn(AppState.map);
                         });
                         
-                        // Mouseover: Hover Tooltip
                         layer.on('mouseover', (e) => {
                             if (AppState.activeFeatureName !== name) {
                                 e.target.setStyle({ fillColor: Utils.getRandomColor(), fillOpacity: 0.5, weight: 2, color: '#333' });
                             }
-
                             const infoHtml = getInfoHtml();
                             const tooltipContent = `
                                 <div class="tooltip-header">
                                     <span>${name}</span>
                                     <i class="fas fa-map-marker-alt" style="opacity:0.8"></i>
                                 </div>
-                                <div class="tooltip-body">
-                                    ${infoHtml}
-                                </div>
+                                <div class="tooltip-body">${infoHtml}</div>
                             `;
-
-                            layer.bindTooltip(tooltipContent, {
-                                sticky: true,
-                                direction: 'top',
-                                className: 'custom-hover-tooltip',
-                                opacity: 1
-                            }).openTooltip();
+                            layer.bindTooltip(tooltipContent, { sticky: true, direction: 'top', className: 'custom-hover-tooltip', opacity: 1 }).openTooltip();
                         });
                         
                         layer.on('mouseout', (e) => {
@@ -801,13 +797,11 @@ const MapManager = {
     
     extractGeoName(feature) {
         const props = feature.properties || {};
-        // Support all variations
         if (props.district) return Utils.normalize(props.district);
         if (props.daerah) return Utils.normalize(props.daerah);
         if (props.dun) return Utils.normalize(props.dun);
         if (props.parlimen) return Utils.normalize(props.parlimen);
         if (props.parliament) return Utils.normalize(props.parliament);
-        
         return Utils.normalize(props.NAME || props.name || props.DISTRICT || props.DAERAH || props.DUN || props.PARLIAMENT || "Sabah");
     },
     
