@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9.2 (DOSM Integration)</title>
+  <title>Web GIS Projek Sabah v7.9.3 (Standardized & Turf.js)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,6 +12,9 @@
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Turf.js untuk Pengiraan Keluasan Tepat (Standard DOSM) -->
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css03_baru.css">
@@ -26,36 +29,43 @@
   <style>
     /* Tambahan Style untuk Custom Tooltip (Info Marker) */
     .leaflet-tooltip.custom-hover-tooltip {
-        background-color: rgba(255, 255, 255, 0.95);
+        background-color: rgba(255, 255, 255, 0.98);
         border: 1px solid var(--border);
         border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
         padding: 0;
         font-family: 'Plus Jakarta Sans', sans-serif;
-        font-size: 12px;
+        font-size: 11px;
         color: #333;
-        white-space: normal; /* Allow text wrap */
-        min-width: 200px;
-        max-width: 250px;
+        white-space: normal;
+        min-width: 240px;
+        max-width: 280px;
+        z-index: 1000;
     }
     .tooltip-header {
         background: var(--primary);
         color: white;
-        padding: 8px 12px;
+        padding: 10px 12px;
         font-weight: 700;
         border-radius: 8px 8px 0 0;
         font-size: 13px;
         text-transform: uppercase;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     .tooltip-body {
         padding: 8px 12px;
+        max-height: 300px;
+        overflow-y: auto;
     }
     .tooltip-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 4px;
+        align-items: center;
+        margin-bottom: 5px;
         border-bottom: 1px dashed #eee;
-        padding-bottom: 4px;
+        padding-bottom: 5px;
     }
     .tooltip-row:last-child {
         border-bottom: none;
@@ -65,11 +75,23 @@
         font-weight: 600;
         color: #666;
         margin-right: 10px;
+        text-transform: capitalize;
     }
     .tooltip-val {
         text-align: right;
-        font-weight: 500;
-        color: #000;
+        font-weight: 700;
+        color: #1e293b;
+    }
+    /* Scrollbar untuk tooltip */
+    .tooltip-body::-webkit-scrollbar {
+        width: 4px;
+    }
+    .tooltip-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    .tooltip-body::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 2px;
     }
   </style>
 </head>
@@ -259,51 +281,62 @@ const APP_CONFIG = {
     ],
     
     STATUS_MAPPING: [
-        { keywords: ["SIAP"], color: "#86efac" }, // Hijau
-        { keywords: ["PEMBINAAN"], color: "#fde047" }, // Kuning
-        { keywords: ["PERANCANGAN"], color: "#fca5a5" }, // Merah
-        { keywords: ["TIADA STATUS", "UNKNOWN"], color: "#cbd5e1" } // Kelabu
+        { keywords: ["SIAP"], color: "#86efac" },
+        { keywords: ["PEMBINAAN"], color: "#fde047" },
+        { keywords: ["PERANCANGAN"], color: "#fca5a5" },
+        { keywords: ["TIADA STATUS", "UNKNOWN"], color: "#cbd5e1" }
     ],
     
     DEFAULT_STATUS_COLOR: "#cbd5e1",
-
-    // --- GOOGLE APPS SCRIPT URL ---
     GAS_API_URL: "https://script.google.com/macros/s/AKfycbzDL6FOdwJhzA7Tt3ijuWWN2jMWJfbUEa2iE1DCJRWAX4Lxbut9FT1mphYeSUqDCu40iA/exec",
 
-    // --- KONFIGURASI LOKASI DATA BOUNDARY & INFO MARKER ---
+    // --- KONFIGURASI LOKASI DATA BOUNDARY & INFO MARKER (DIKEMASKINI) ---
     BOUNDARY_INFO_CONFIG: {
-        sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA", // ID Sheet Baru
+        sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
         layers: {
-            district: {
+            // Standard Name: daerah
+            daerah: {
                 sheetName: "district",
-                keyColumn: "name", // Column untuk match dengan nama polygon
-                displayColumns: ["dosm_code", "Populasi Terkini", "SAIZ_DAERAH", "cebol", "Land Area (km2)"]
+                keyColumn: "name",
+                // Masukkan semua column termasuk projek
+                displayColumns: [
+                    "dosm_code", "Populasi Terkini", "SAIZ_DAERAH", "Land Area (km2)",
+                    "BWA", "NADI", "POP", "TOWER", "CEBOL", "USJ", "SAMB"
+                ]
             },
+            // Standard Name: dun
             dun: {
                 sheetName: "dun",
                 keyColumn: "name",
-                displayColumns: ["name2", "DUN_CODE", "spr_code", "Land Area (km2)", "PENDUDUK"]
+                displayColumns: [
+                    "name2", "DUN_CODE", "spr_code", "Land Area (km2)", "PENDUDUK",
+                    "BWA", "NADI", "POP", "TOWER", "CEBOL", "USJ", "SAMB"
+                ]
             },
-            parliament: {
+            // Standard Name: parlimen
+            parlimen: {
                 sheetName: "parlimen",
                 keyColumn: "name",
-                displayColumns: ["name2", "PARLIAMENT_CODE", "spr_code", "Land Area (km2)", "NAMA_YB"]
+                displayColumns: [
+                    "name2", "PARLIAMENT_CODE", "spr_code", "Land Area (km2)", "NAMA_YB",
+                    "BWA", "NADI", "POP", "TOWER", "CEBOL", "USJ", "SAMB"
+                ]
             }
         }
     },
 
     SETTINGS: {
         MAX_EXTRA_INFO_COLUMNS: 15,
-        REFRESH_INTERVAL_MS: 900000, // 15 Minit
+        REFRESH_INTERVAL_MS: 900000,
         DEFAULT_MAP_CENTER: [5.9804, 116.0735],
         DEFAULT_ZOOM: 8
     },
     
-    // --- DIKEMASKINI: NAMA FAIL GEOJSON ---
+    // --- NAMA FAIL GEOJSON (DIKEMASKINI: STANDARD NAME & TYPO FIXED) ---
     GEOJSON_URLS: {
-        district: "dosm_district.json",
-        dun: "dsom_dun.json",
-        parliament: "dosm_parlimen.json"
+        daerah: "dosm_district.json",
+        dun: "dosm_dun.json", // Fixed typo (was dsom_dun.json)
+        parlimen: "dosm_parlimen.json"
     }
 };
 
@@ -343,52 +376,32 @@ const Utils = {
     getTypeConfig: (typeKey) => APP_CONFIG.PROJECT_TYPES.find(t => t.type === typeKey) || { color: "#666", icon: "❓", label: typeKey },
     getStatusColor: (statusKey) => {
         const s = Utils.normalize(statusKey);
-        const found = APP_CONFIG.STATUS_MAPPING.find(config => {
-            return config.keywords.some(k => s.includes(k) || s === k);
-        });
+        const found = APP_CONFIG.STATUS_MAPPING.find(config => config.keywords.some(k => s.includes(k) || s === k));
         return found ? found.color : APP_CONFIG.DEFAULT_STATUS_COLOR;
     },
     getStatusSortIndex: (statusKey) => {
         const s = Utils.normalize(statusKey);
-        const idx = APP_CONFIG.STATUS_MAPPING.findIndex(config => {
-            return config.keywords.some(k => s.includes(k) || s === k);
-        });
+        const idx = APP_CONFIG.STATUS_MAPPING.findIndex(config => config.keywords.some(k => s.includes(k) || s === k));
         return idx !== -1 ? idx : 999;
     },
     
-    // --- FUNGSI PENGIRAAN KELUASAN (Geodesic Area) ---
+    // --- FUNGSI PENGIRAAN KELUASAN (STANDARD DOSM MENGGUNAKAN @TURF/TURF) ---
     calculatePolygonArea: (feature) => {
         if (!feature || !feature.geometry) return 0;
         
-        // Membantu mengira luas dalam meter persegi kemudian tukar ke km2
-        const earthRadius = 6378137; // Radius bumi dalam meter
-        
-        const area = (coords) => {
-            let area = 0;
-            if (coords.length > 2) {
-                for (let i = 0; i < coords.length - 1; i++) {
-                    const p1 = coords[i];
-                    const p2 = coords[i + 1];
-                    area += (p2[0] - p1[0]) * (2 + Math.sin(p1[1] * Math.PI / 180) + Math.sin(p2[1] * Math.PI / 180));
-                }
-                area = area * earthRadius * earthRadius / 2;
-            }
-            return Math.abs(area);
-        };
-
-        let totalArea = 0;
-        const geom = feature.geometry;
-        
-        if (geom.type === 'Polygon') {
-            totalArea = area(geom.coordinates[0]);
-        } else if (geom.type === 'MultiPolygon') {
-            for (let i = 0; i < geom.coordinates.length; i++) {
-                totalArea += area(geom.coordinates[i][0]);
-            }
+        try {
+            // Kaedah Standard: Geodesic Area menggunakan Turf.js
+            // Unit asal: meter persegi (m²)
+            const areaM2 = turf.area(feature);
+            
+            // Penukaran: m² -> km² (bahagi 1,000,000)
+            const areaKm2 = areaM2 / 1000000;
+            
+            return areaKm2.toFixed(2);
+        } catch (e) {
+            console.error("Ralat pengiraan Turf.js:", e);
+            return "0.00";
         }
-        
-        // Convert m2 to km2
-        return (totalArea / 1000000).toFixed(2);
     }
 };
 
@@ -401,15 +414,15 @@ const AppState = {
     map: null,
     reportMap: null,
     markersLayerGroup: null,
-    reportMarkerLayer: null,
     allProjects: [],
     currentFilteredList: [],
     visibleProjects: [],
     markersBySite: new Map(),
-    dataLayers: { district: null, dun: null, parliament: null },
+    // Standardized Keys: daerah, dun, parlimen
+    dataLayers: { daerah: null, dun: null, parlimen: null },
     
     // Menyimpan data atribut dari Google Sheets (Info Marker)
-    boundaryAttributes: { district: [], dun: [], parliament: [] },
+    boundaryAttributes: { daerah: [], dun: [], parlimen: [] },
 
     activeBoundaryKey: null,
     activeFeatureName: null,
@@ -434,7 +447,7 @@ const DataManager = {
             // Load Project Data
             const promises = APP_CONFIG.PROJECT_TYPES.map(config => this.fetchSingleSheet(config));
             
-            // Load Boundary Attributes Data (Info Marker)
+            // Load Boundary Attributes Data (Info Marker) using Standard Keys
             const boundaryPromises = Object.keys(APP_CONFIG.BOUNDARY_INFO_CONFIG.layers).map(type => 
                 this.fetchBoundaryAttributes(type)
             );
@@ -446,24 +459,25 @@ const DataManager = {
 
             AppState.allProjects = projectResults.flat();
             
-            if (AppState.allProjects.length === 0) {
-                 console.warn("Tiada data ditemui dalam Google Sheets.");
-            }
+            if (AppState.allProjects.length === 0) console.warn("Tiada data ditemui dalam Google Sheets.");
             
             MapManager.renderMarkersInBatches(AppState.allProjects, () => {
                 FilterManager.applyFilters();
                 UI.showLoading(false);
                 
-                // --- URL PARAMETER HANDLING FOR SHARING ---
+                // --- URL PARAMETER HANDLING ---
                 const params = new URLSearchParams(window.location.search);
-                const bKey = params.get('layer');
+                const bKey = params.get('layer'); // expects daerah, dun, parlimen
                 const bName = params.get('name');
+                
                 if (bKey && bName && AppState.dataLayers[bKey]) {
                     let found = false;
                     AppState.dataLayers[bKey].eachLayer(l => {
                         const lName = MapManager.extractGeoName(l.feature);
                         if (lName === Utils.normalize(bName)) {
-                            MapManager.switchBoundary(bKey, (bKey === 'district' ? 'toggle-daerah' : (bKey === 'dun' ? 'toggle-dun' : 'toggle-parliament')));
+                            // Map btnId based on standardized key
+                            const btnId = bKey === 'daerah' ? 'toggle-daerah' : (bKey === 'dun' ? 'toggle-dun' : 'toggle-parliament');
+                            MapManager.switchBoundary(bKey, btnId);
                             MapManager.highlightBoundary(bKey, l, lName);
                             found = true;
                         }
@@ -474,17 +488,15 @@ const DataManager = {
         } catch (error) {
             console.error("Critical Data Load Error:", error);
             UI.showLoading(false);
-            alert("Ralat memuatkan data. Sila pastikan Google Sheets 'Published to Web'.");
+            alert("Ralat memuatkan data. Sila pastikan sambungan internet stabil.");
         }
     },
     
-    // --- FUNGSI BARU: Fetch Info Marker Data dari Sheet Khas ---
     async fetchBoundaryAttributes(layerType) {
         const config = APP_CONFIG.BOUNDARY_INFO_CONFIG;
         const layerConfig = config.layers[layerType];
-        
-        // Gunakan Google Visualization API untuk fetch data sheet
-        // Select semua column
+        if (!layerConfig) return;
+
         const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:json&sheet=${layerConfig.sheetName}`;
         
         try {
@@ -496,9 +508,7 @@ const DataManager = {
             const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
             
             if (json.table && json.table.rows) {
-                // Map headers
                 const headers = json.table.cols.map(c => c ? c.label : "");
-                
                 const data = json.table.rows.map(row => {
                     let obj = {};
                     row.c.forEach((cell, idx) => {
@@ -506,7 +516,6 @@ const DataManager = {
                             obj[headers[idx]] = (cell && (cell.v !== null)) ? cell.v : "";
                         }
                     });
-                    // Normalize Key untuk carian mudah
                     obj._key = Utils.normalize(obj[layerConfig.keyColumn]);
                     return obj;
                 });
@@ -530,19 +539,16 @@ const DataManager = {
             const jsonEnd = text.lastIndexOf('}');
             if (jsonStart === -1 || jsonEnd === -1) return [];
             
-            const jsonString = text.substring(jsonStart, jsonEnd + 1);
-            const json = JSON.parse(jsonString);
-            
+            const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
             return (json.table && json.table.rows) ? this.processSheetData(json.table, config) : [];
         } catch (e) {
-            console.warn(`Gagal memuatkan sheet: ${config.label}. ID: ${config.sheetId}`, e);
+            console.warn(`Gagal memuatkan sheet: ${config.label}`, e);
             return [];
         }
     },
     processSheetData(table, config) {
         const originalCols = table.cols.map(c => c ? c.label.trim() : "");
         const cols = originalCols.map(c => Utils.normalize(c));
-
         const rows = table.rows;
         const STD_HEADERS = {
             SITE_NAME: ["SITE_NAME", "SITE NAME", "SITE", "NAMA_TAPAK"],
@@ -594,9 +600,7 @@ const DataManager = {
 
                 const cell = r.c[idx];
                 if (!cell) return;
-
                 const val = (cell.f !== undefined && cell.f !== null) ? cell.f : cell.v;
-
                 if (val !== null && val !== undefined && val !== "") {
                     extraDetails.push({ label: originalCols[idx], value: String(val).trim() });
                     count++;
@@ -609,12 +613,13 @@ const DataManager = {
         }).filter(item => item !== null);
     },
     
-    // Fallback GAS fetcher
     async fetchLayerInfoGAS(layerType, featureName) {
         if (!layerType || !featureName) return null;
-        const sheetMap = { 'district': 'district', 'dun': 'dun', 'parliament': 'parliament' };
-        const sheetName = sheetMap[layerType] || layerType;
-        const url = `${APP_CONFIG.GAS_API_URL}?sheet=${sheetName}`;
+        const config = APP_CONFIG.BOUNDARY_INFO_CONFIG;
+        const layerConfig = config.layers[layerType]; // Standard Keys used here
+        if(!layerConfig) return null;
+
+        const url = `${APP_CONFIG.GAS_API_URL}?sheet=${layerConfig.sheetName}`;
 
         try {
             const response = await fetch(url);
@@ -655,6 +660,7 @@ const MapManager = {
         this.loadBoundaries();
     },
     async loadBoundaries() {
+        // Standardized Keys: daerah, dun, parlimen
         const loadLayer = async (key, url) => {
             try {
                 const res = await fetch(url);
@@ -666,39 +672,34 @@ const MapManager = {
                     onEachFeature: (feature, layer) => {
                         const name = this.extractGeoName(feature);
                         
-                        // --- 1. PENGIRAAN KELUASAN AUTOMATIK ---
+                        // --- 1. PENGIRAAN KELUASAN AUTOMATIK (TURF.JS) ---
                         const areaKm2 = Utils.calculatePolygonArea(feature);
                         
-                        // --- 2. TOOLTIP BIASA (Nama Shj) ---
-                        // layer.bindTooltip(name, { sticky: true, interactive: false, direction: 'center', className: 'leaflet-tooltip' });
-                        
-                        // --- 3. CUSTOM HOVER INFO MARKER ---
+                        // --- 2. CUSTOM HOVER INFO MARKER ---
                         layer.on('click', (e) => {
                             L.DomEvent.stopPropagation(e);
                             this.highlightBoundary(key, layer, name);
                         });
                         
                         layer.on('mouseover', (e) => {
-                            // Style Highlight
                             if (AppState.activeFeatureName !== name) {
                                 e.target.setStyle({ fillColor: Utils.getRandomColor(), fillOpacity: 0.5, weight: 2, color: '#333' });
                             }
 
-                            // Dapatkan Data Atribut dari Sheet
+                            // Dapatkan Data Atribut
                             const attrData = AppState.boundaryAttributes[key].find(r => r._key === name);
                             
-                            // Bina HTML Tooltip
                             let infoHtml = '';
                             const layerConfig = APP_CONFIG.BOUNDARY_INFO_CONFIG.layers[key];
                             
                             if (layerConfig) {
                                 layerConfig.displayColumns.forEach(col => {
                                     let val = attrData ? attrData[col] : "N/A";
-                                    // Jika data sheet tiada untuk keluasan, guna kiraan auto
+                                    // Guna auto-calc jika tiada dalam sheet untuk column khusus ini
                                     if (col === "Land Area (km2)" && (val === "N/A" || val === "")) {
-                                        val = areaKm2 + " (Auto-Calc)";
+                                        val = areaKm2 + " (DOSM Auto)";
                                     }
-                                    if (val && val !== "N/A") {
+                                    if (val && val !== "N/A" && val !== "0") {
                                         infoHtml += `
                                             <div class="tooltip-row">
                                                 <span class="tooltip-label">${col}</span>
@@ -709,18 +710,20 @@ const MapManager = {
                                 });
                             }
 
-                            // Jika tiada data sheet, paparkan keluasan auto sekurang-kurangnya
                             if (!infoHtml) {
                                 infoHtml = `
                                     <div class="tooltip-row">
-                                        <span class="tooltip-label">Land Area (Calc)</span>
+                                        <span class="tooltip-label">Land Area (Turf.js)</span>
                                         <span class="tooltip-val">${areaKm2} km²</span>
                                     </div>
                                 `;
                             }
 
                             const tooltipContent = `
-                                <div class="tooltip-header">${name}</div>
+                                <div class="tooltip-header">
+                                    <span>${name}</span>
+                                    <i class="fas fa-map-marker-alt" style="opacity:0.8"></i>
+                                </div>
                                 <div class="tooltip-body">
                                     ${infoHtml}
                                 </div>
@@ -732,9 +735,6 @@ const MapManager = {
                                 className: 'custom-hover-tooltip',
                                 opacity: 1
                             }).openTooltip();
-                            
-                            // Console Log untuk semakan user (Data Entry Helper)
-                            // console.log(`Area Data | Layer: ${key} | Name: ${name} | Area: ${areaKm2} km2`);
                         });
                         
                         layer.on('mouseout', (e) => {
@@ -751,28 +751,30 @@ const MapManager = {
                 AppState.dataLayers[key] = L.layerGroup(); 
             }
         };
+
+        // Menggunakan kunci standard
         await Promise.all([
-            loadLayer('district', APP_CONFIG.GEOJSON_URLS.district),
+            loadLayer('daerah', APP_CONFIG.GEOJSON_URLS.daerah),
             loadLayer('dun', APP_CONFIG.GEOJSON_URLS.dun),
-            loadLayer('parliament', APP_CONFIG.GEOJSON_URLS.parliament)
+            loadLayer('parlimen', APP_CONFIG.GEOJSON_URLS.parlimen)
         ]);
         
-        document.getElementById('toggle-daerah').onclick = () => this.switchBoundary('district', 'toggle-daerah');
+        document.getElementById('toggle-daerah').onclick = () => this.switchBoundary('daerah', 'toggle-daerah');
         document.getElementById('toggle-dun').onclick = () => this.switchBoundary('dun', 'toggle-dun');
-        document.getElementById('toggle-parliament').onclick = () => this.switchBoundary('parliament', 'toggle-parliament');
+        document.getElementById('toggle-parliament').onclick = () => this.switchBoundary('parlimen', 'toggle-parliament');
         
-        setTimeout(() => this.switchBoundary('district', 'toggle-daerah'), 500);
+        setTimeout(() => this.switchBoundary('daerah', 'toggle-daerah'), 500);
     },
     
-    // --- DIKEMASKINI: LOGIK NAMA DOSM BARU ---
     extractGeoName(feature) {
         const props = feature.properties || {};
-        // Keutamaan kepada property DOSM yang baru
+        // Support all variations
         if (props.district) return Utils.normalize(props.district);
+        if (props.daerah) return Utils.normalize(props.daerah);
         if (props.dun) return Utils.normalize(props.dun);
         if (props.parlimen) return Utils.normalize(props.parlimen);
+        if (props.parliament) return Utils.normalize(props.parliament);
         
-        // Fallback lama
         return Utils.normalize(props.NAME || props.name || props.DISTRICT || props.DAERAH || props.DUN || props.PARLIAMENT || "Sabah");
     },
     
@@ -794,7 +796,7 @@ const MapManager = {
     highlightBoundary(key, layer, name) {
         AppState.dataLayers[key].eachLayer(l => {
             AppState.dataLayers[key].resetStyle(l);
-            l.unbindTooltip(); // Reset custom tooltip
+            l.unbindTooltip(); 
             l.closeTooltip();
         });
         const color = Utils.getRandomColor();
@@ -863,10 +865,7 @@ const MapManager = {
         const marker = L.circleMarker([project.LATITUDE, project.LONGITUDE], {
             pane: 'overlayPane',
             radius: 6, fillColor: config.color, color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
-        }).bindPopup(popupContent, {
-            minWidth: 350,
-            maxWidth: 420
-        });
+        }).bindPopup(popupContent, { minWidth: 350, maxWidth: 420 });
         
         marker._meta = project;
         return marker;
@@ -1086,9 +1085,9 @@ const FilterManager = {
         if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
             const boundaryName = AppState.activeFeatureName;
             list = list.filter(p => {
-                if (AppState.activeBoundaryKey === 'district') return Utils.normalize(p.DISTRICT) === boundaryName;
+                if (AppState.activeBoundaryKey === 'daerah') return Utils.normalize(p.DISTRICT) === boundaryName;
                 if (AppState.activeBoundaryKey === 'dun') return Utils.normalize(p.DUN) === boundaryName;
-                if (AppState.activeBoundaryKey === 'parliament') return Utils.normalize(p.PARLIAMENT) === boundaryName;
+                if (AppState.activeBoundaryKey === 'parlimen') return Utils.normalize(p.PARLIAMENT) === boundaryName;
                 return false;
             });
         }
@@ -1390,7 +1389,7 @@ const UI = {
 
                             // Render Card Content (Similar to your renderCards function)
                             for (const [key, value] of Object.entries(row)) {
-                                if (key !== 'LAYER' && key !== '_comments' && value !== "") {
+                                if (key !== 'LAYER' && key !== '_comments' && key !== '_key' && value !== "") {
                                     
                                     let commentHtml = '';
                                     if (comments[key]) {
