@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9.4 (Turf.js Official Method)</title>
+  <title>Web GIS Projek Sabah v7.9.5 (Sticky Info & Data Fix)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -92,6 +92,22 @@
     .tooltip-body::-webkit-scrollbar-thumb {
         background: #ccc;
         border-radius: 2px;
+    }
+    /* Style untuk Sticky Popup (Klik Kanan) - Sama dengan tooltip tapi ada close button */
+    .leaflet-popup-content-wrapper {
+        border-radius: 8px;
+        padding: 0;
+        overflow: hidden;
+    }
+    .leaflet-popup-content {
+        margin: 0;
+        width: 280px !important;
+    }
+    .leaflet-popup-close-button {
+        color: white !important;
+        top: 8px !important;
+        right: 8px !important;
+        font-size: 16px !important;
     }
   </style>
 </head>
@@ -511,15 +527,25 @@ const DataManager = {
             const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
             
             if (json.table && json.table.rows) {
-                const headers = json.table.cols.map(c => c ? c.label : "");
+                // FIXED: Normalise headers to handle case sensitivity and spaces
+                const headers = json.table.cols.map(c => c ? c.label.trim() : "");
+                
                 const data = json.table.rows.map(row => {
                     let obj = {};
                     row.c.forEach((cell, idx) => {
                         if (headers[idx]) {
+                            // Store with exact header name
                             obj[headers[idx]] = (cell && (cell.v !== null)) ? cell.v : "";
+                            
+                            // ALSO Store with lower case for robust lookup
+                            obj[headers[idx].toLowerCase()] = obj[headers[idx]];
                         }
                     });
-                    obj._key = Utils.normalize(obj[layerConfig.keyColumn]);
+                    
+                    // Gunakan normalize untuk key juga
+                    const rawKey = obj[layerConfig.keyColumn] || obj[layerConfig.keyColumn.toLowerCase()];
+                    obj._key = Utils.normalize(rawKey);
+                    
                     return obj;
                 });
                 
@@ -678,31 +704,26 @@ const MapManager = {
                         // --- 1. PENGIRAAN KELUASAN AUTOMATIK (Standard Kawasanku DOSM) ---
                         const areaKm2 = Utils.kiraKeluasanKm2(feature);
                         
-                        // --- 2. CUSTOM HOVER INFO MARKER ---
-                        layer.on('click', (e) => {
-                            L.DomEvent.stopPropagation(e);
-                            this.highlightBoundary(key, layer, name);
-                        });
-                        
-                        layer.on('mouseover', (e) => {
-                            if (AppState.activeFeatureName !== name) {
-                                e.target.setStyle({ fillColor: Utils.getRandomColor(), fillOpacity: 0.5, weight: 2, color: '#333' });
-                            }
-
-                            // Dapatkan Data Atribut
-                            const attrData = AppState.boundaryAttributes[key].find(r => r._key === name);
-                            
+                        // Fungsi Helper untuk generate HTML Content
+                        const getInfoHtml = () => {
                             let infoHtml = '';
                             const layerConfig = APP_CONFIG.BOUNDARY_INFO_CONFIG.layers[key];
-                            
+                            const attrData = AppState.boundaryAttributes[key].find(r => r._key === name);
+
                             if (layerConfig) {
                                 layerConfig.displayColumns.forEach(col => {
-                                    let val = attrData ? attrData[col] : "N/A";
+                                    // Cuba cari data dengan key yang sama ATAU key lower case
+                                    let val = "N/A";
+                                    if (attrData) {
+                                        if (attrData[col] !== undefined) val = attrData[col];
+                                        else if (attrData[col.toLowerCase()] !== undefined) val = attrData[col.toLowerCase()];
+                                    }
+
                                     // Guna auto-calc jika tiada dalam sheet untuk column khusus ini
                                     if (col === "Land Area (km2)" && (val === "N/A" || val === "")) {
                                         val = areaKm2 + " (Auto)";
                                     }
-                                    if (val && val !== "N/A" && val !== "0") {
+                                    if (val && val !== "N/A" && val !== "0" && val !== "") {
                                         infoHtml += `
                                             <div class="tooltip-row">
                                                 <span class="tooltip-label">${col}</span>
@@ -721,7 +742,50 @@ const MapManager = {
                                     </div>
                                 `;
                             }
+                            return infoHtml;
+                        };
 
+                        // --- 2. EVENTS ---
+                        
+                        // Left Click: Pilih Kawasan
+                        layer.on('click', (e) => {
+                            L.DomEvent.stopPropagation(e);
+                            this.highlightBoundary(key, layer, name);
+                        });
+                        
+                        // Right Click: STICKY POPUP
+                        layer.on('contextmenu', (e) => {
+                            L.DomEvent.stopPropagation(e);
+                            L.DomEvent.preventDefault(e);
+
+                            const infoHtml = getInfoHtml();
+                            const popupContent = `
+                                <div class="tooltip-header">
+                                    <span>${name}</span>
+                                    <i class="fas fa-thumbtack"></i>
+                                </div>
+                                <div class="tooltip-body">
+                                    ${infoHtml}
+                                </div>
+                            `;
+                            
+                            L.popup({
+                                className: 'sticky-popup',
+                                minWidth: 260,
+                                maxWidth: 300
+                            })
+                            .setLatLng(e.latlng)
+                            .setContent(popupContent)
+                            .openOn(AppState.map);
+                        });
+                        
+                        // Mouseover: Hover Tooltip
+                        layer.on('mouseover', (e) => {
+                            if (AppState.activeFeatureName !== name) {
+                                e.target.setStyle({ fillColor: Utils.getRandomColor(), fillOpacity: 0.5, weight: 2, color: '#333' });
+                            }
+
+                            const infoHtml = getInfoHtml();
                             const tooltipContent = `
                                 <div class="tooltip-header">
                                     <span>${name}</span>
