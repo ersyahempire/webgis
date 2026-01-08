@@ -303,10 +303,6 @@ const APP_CONFIG = {
     DEFAULT_STATUS_COLOR: "#cbd5e1",
     GAS_API_URL: "https://script.google.com/macros/s/AKfycbzDL6FOdwJhzA7Tt3ijuWWN2jMWJfbUEa2iE1DCJRWAX4Lxbut9FT1mphYeSUqDCu40iA/exec",
 
-    // --- KONFIGURASI LOKASI DATA BOUNDARY & INFO MARKER (DIKEMASKINI) ---
-    // Logik 'displayColumns' telah dibuang, sistem kini akan memaparkan 
-    // semua column yang ada dalam sheet secara dinamik (kecuali column sistem).
-    // keyColumn kekal sebagai fallback, tetapi pencarian adalah meluas.
     BOUNDARY_INFO_CONFIG: {
         sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
         layers: {
@@ -416,22 +412,27 @@ const DataManager = {
     async loadAllData() {
         UI.showLoading(true, "MENGHUBUNGI GOOGLE SHEETS...");
         try {
-            // Load Project Data
-            const promises = APP_CONFIG.PROJECT_TYPES.map(config => this.fetchSingleSheet(config));
+            // Load Project Data (Promise.allSettled untuk robustness)
+            // Jika satu sheet gagal, app tidak akan crash sepenuhnya.
+            const projectPromises = APP_CONFIG.PROJECT_TYPES.map(config => this.fetchSingleSheet(config));
             
-            // Load Boundary Attributes Data (Info Marker) using Standard Keys
+            // Load Boundary Attributes Data (Info Marker)
             const boundaryPromises = Object.keys(APP_CONFIG.BOUNDARY_INFO_CONFIG.layers).map(type => 
                 this.fetchBoundaryAttributes(type)
             );
 
             const [projectResults, boundaryResults] = await Promise.all([
-                Promise.all(promises),
-                Promise.all(boundaryPromises)
+                Promise.allSettled(projectPromises),
+                Promise.allSettled(boundaryPromises)
             ]);
 
-            AppState.allProjects = projectResults.flat();
+            // Combine only successful project data
+            AppState.allProjects = projectResults
+                .filter(r => r.status === 'fulfilled')
+                .map(r => r.value)
+                .flat();
             
-            if (AppState.allProjects.length === 0) console.warn("Tiada data ditemui dalam Google Sheets.");
+            if (AppState.allProjects.length === 0) console.warn("Amaran: Tiada data projek berjaya dimuatkan.");
             
             MapManager.renderMarkersInBatches(AppState.allProjects, () => {
                 FilterManager.applyFilters();
@@ -503,6 +504,7 @@ const DataManager = {
             }
         } catch (e) {
             console.warn(`Gagal memuatkan atribut untuk ${layerType}`, e);
+            AppState.boundaryAttributes[layerType] = []; // Fallback to empty array
         }
     },
 
@@ -521,7 +523,7 @@ const DataManager = {
             return (json.table && json.table.rows) ? this.processSheetData(json.table, config) : [];
         } catch (e) {
             console.warn(`Gagal memuatkan sheet: ${config.label}`, e);
-            return [];
+            throw e; // Rethrow to be caught by allSettled
         }
     },
     processSheetData(table, config) {
@@ -653,13 +655,18 @@ const MapManager = {
                         const getInfoHtml = () => {
                             let infoHtml = '';
                             
-                            // CARIAN ROBUST (Sama seperti Report Modal)
-                            // Cari baris di mana mana-mana nilai string sepadan dengan nama GeoJSON
-                            const attrData = AppState.boundaryAttributes[key].find(row => {
+                            // SAFETY CHECK: Ensure array exists before finding
+                            const targetArray = AppState.boundaryAttributes[key];
+                            if (!targetArray || !Array.isArray(targetArray)) {
+                                return `<div style="text-align:center; padding:5px; color:#999; font-style:italic;">Data sedang dimuatkan atau tiada.</div>`;
+                            }
+
+                            // CARIAN ROBUST
+                            const attrData = targetArray.find(row => {
                                 // 1. Semakan ketat (Strict Check)
                                 if (row._key === name) return true;
                                 
-                                // 2. Semakan Luas (Broad Check - cari dalam semua column)
+                                // 2. Semakan Luas
                                 return Object.values(row).some(val => 
                                     typeof val === 'string' && Utils.normalize(val) === name
                                 );
@@ -1581,6 +1588,7 @@ const UI = {
             }
         });
 
+        // BUGFIX: Must invalidate size after container is visible
         AppState.reportMap.invalidateSize();
 
         if (AppState.activeFeatureName && boundaryAdded) {
@@ -1645,9 +1653,17 @@ const UI = {
         }
         
         let fStatus = AppState.activeStatusFilter ? AppState.activeStatusFilter.replace(/\s+/g, '_') : "Semua_Status";
+        
+        // BUGFIX: Use local Malaysia time, not UTC
         const now = new Date();
-        const fDate = now.toISOString().slice(0,10).replace(/-/g, ''); 
-        const fTime = now.toTimeString().slice(0,5).replace(/:/g, ''); 
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hour = String(now.getHours()).padStart(2, '0');
+        const minute = String(now.getMinutes()).padStart(2, '0');
+        
+        const fDate = `${year}${month}${day}`;
+        const fTime = `${hour}${minute}`;
         
         const fileName = `data_gis_${fLayer}_${fProject}_${fStatus}_${fDate}_${fTime}.csv`;
 
@@ -1720,11 +1736,11 @@ async function shareReport() {
         document.querySelector('.modal-close-btn').style.display = 'none';
         document.querySelector('.action-buttons').style.visibility = 'hidden';
 
-        // 5. Capture with html2canvas
+        // 5. Capture with html2canvas (CRITICAL FIX: allowTaint: false, useCORS: true)
         const canvas = await html2canvas(captureElement, { 
             scale: 2, // High quality
             useCORS: true,
-            allowTaint: true,
+            allowTaint: false, // Must be false for toDataURL to work
             backgroundColor: '#eef2f5', 
             logging: false,
             windowHeight: captureElement.scrollHeight,
@@ -1844,10 +1860,11 @@ function generateExport() {
 
     // Use Try-Catch-Finally to prevent "Stuck" state
     setTimeout(() => {
+        // CRITICAL FIX: allowTaint: false, useCORS: true
         html2canvas(captureElement, { 
             scale: 1.5, // Standard quality for PDF
             useCORS: true,
-            allowTaint: true,
+            allowTaint: false, 
             backgroundColor: '#eef2f5', 
             logging: false,
             windowHeight: captureElement.scrollHeight,
@@ -1859,7 +1876,10 @@ function generateExport() {
             const fileName = `Laporan_Projek_${layerName}_${now.toISOString().slice(0,10)}`;
 
             const imgData = canvas.toDataURL('image/jpeg', 0.85);
-            const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); 
+            
+            // BUGFIX: Access jsPDF from UMD global
+            const { jsPDF } = window.jspdf; 
+            const pdf = new jsPDF('l', 'mm', 'a3'); 
             
             const pdfW = pdf.internal.pageSize.getWidth();
             const pdfH = pdf.internal.pageSize.getHeight();
