@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9.6 (Dynamic Info Marker)</title>
+  <title>Web GIS Projek Sabah v7.9.7 (Robust Info Marker)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -306,6 +306,7 @@ const APP_CONFIG = {
     // --- KONFIGURASI LOKASI DATA BOUNDARY & INFO MARKER (DIKEMASKINI) ---
     // Logik 'displayColumns' telah dibuang, sistem kini akan memaparkan 
     // semua column yang ada dalam sheet secara dinamik (kecuali column sistem).
+    // keyColumn kekal sebagai fallback, tetapi pencarian adalah meluas.
     BOUNDARY_INFO_CONFIG: {
         sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA",
         layers: {
@@ -651,7 +652,18 @@ const MapManager = {
                         // Fungsi Helper Dynamic Info (Menyamai struktur Report)
                         const getInfoHtml = () => {
                             let infoHtml = '';
-                            const attrData = AppState.boundaryAttributes[key].find(r => r._key === name);
+                            
+                            // CARIAN ROBUST (Sama seperti Report Modal)
+                            // Cari baris di mana mana-mana nilai string sepadan dengan nama GeoJSON
+                            const attrData = AppState.boundaryAttributes[key].find(row => {
+                                // 1. Semakan ketat (Strict Check)
+                                if (row._key === name) return true;
+                                
+                                // 2. Semakan Luas (Broad Check - cari dalam semua column)
+                                return Object.values(row).some(val => 
+                                    typeof val === 'string' && Utils.normalize(val) === name
+                                );
+                            });
 
                             if (attrData) {
                                 // Iterate semua kunci dalam data atribut
