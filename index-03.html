@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah v7.9.1 (Formatted Data3)</title>
+  <title>Web GIS Projek Sabah v7.9.2 (DOSM Integration)</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -24,311 +24,52 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    /* Inline CSS for immediate styling */
-    :root {
-        --primary: #2563eb;
-        --surface: #ffffff;
-        --bg: #f8fafc;
-        --text: #1e293b;
-        --border: #e2e8f0;
-        --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    /* Tambahan Style untuk Custom Tooltip (Info Marker) */
+    .leaflet-tooltip.custom-hover-tooltip {
+        background-color: rgba(255, 255, 255, 0.95);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        padding: 0;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 12px;
+        color: #333;
+        white-space: normal; /* Allow text wrap */
+        min-width: 200px;
+        max-width: 250px;
     }
-
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background: var(--bg); color: var(--text); }
-
-    /* Map */
-    #map { height: 100vh; width: 100vw; z-index: 1; }
-
-    /* Loading Overlay */
-    .loading-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(255,255,255,0.95); z-index: 9999;
-        display: flex; flex-direction: column; justify-content: center; align-items: center;
-        transition: opacity 0.3s;
+    .tooltip-header {
+        background: var(--primary);
+        color: white;
+        padding: 8px 12px;
+        font-weight: 700;
+        border-radius: 8px 8px 0 0;
+        font-size: 13px;
+        text-transform: uppercase;
     }
-    .loading-overlay.hide { opacity: 0; pointer-events: none; }
-    .spinner {
-        width: 40px; height: 40px; border: 4px solid #e2e8f0;
-        border-top-color: var(--primary); border-radius: 50%;
-        animation: spin 1s linear infinite; margin-bottom: 15px;
+    .tooltip-body {
+        padding: 8px 12px;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Search Bar */
-    .search-container {
-        position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-        z-index: 1000; width: 90%; max-width: 400px;
+    .tooltip-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        border-bottom: 1px dashed #eee;
+        padding-bottom: 4px;
     }
-    .search-box {
-        background: var(--surface); border-radius: 12px;
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        display: flex; align-items: center; padding: 12px 15px;
+    .tooltip-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
     }
-    .search-box i { color: #64748b; margin-right: 10px; }
-    .search-box input {
-        border: none; outline: none; width: 100%; font-size: 14px;
-        font-family: inherit; color: var(--text);
+    .tooltip-label {
+        font-weight: 600;
+        color: #666;
+        margin-right: 10px;
     }
-
-    /* Controls (Right Side) */
-    .controls-container {
-        position: absolute; top: 80px; right: 20px; z-index: 900;
-        display: flex; flex-direction: column; gap: 10px;
-    }
-    .control-card {
-        background: var(--surface); padding: 10px; border-radius: 12px;
-        box-shadow: var(--shadow); width: 50px; transition: width 0.3s ease;
-        overflow: hidden; white-space: nowrap; cursor: pointer;
-    }
-    .control-card:hover { width: 180px; }
-    .control-group-title {
-        font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
-        margin-bottom: 8px; opacity: 0; transition: opacity 0.2s;
-    }
-    .control-card:hover .control-group-title { opacity: 1; }
-    
-    .toggle-btn {
-        display: flex; align-items: center; width: 100%; padding: 8px;
-        border: none; background: transparent; cursor: pointer;
-        border-radius: 8px; color: #64748b; transition: all 0.2s; margin-bottom: 4px;
-        text-align: left;
-    }
-    .toggle-btn:hover { background: #f1f5f9; color: var(--text); }
-    .toggle-btn.active { background: #eff6ff; color: var(--primary); font-weight: 600; }
-    .icon-slot { width: 24px; display: flex; justify-content: center; }
-    .text-slot { margin-left: 10px; font-size: 13px; opacity: 0; transition: opacity 0.2s; }
-    .control-card:hover .text-slot { opacity: 1; }
-
-    /* Sidebar Dashboard */
-    .panel-toggle {
-        position: absolute; top: 20px; left: 20px; z-index: 1001;
-        width: 45px; height: 45px; background: var(--surface);
-        border: none; border-radius: 12px; box-shadow: var(--shadow);
-        cursor: pointer; color: var(--text); font-size: 18px;
-        display: flex; justify-content: center; align-items: center;
-        transition: transform 0.2s;
-    }
-    .panel-toggle:hover { transform: scale(1.05); }
-
-    .dashboard-panel {
-        position: absolute; top: 0; left: 0; height: 100%; width: 320px;
-        background: var(--surface); z-index: 1000;
-        box-shadow: 4px 0 24px rgba(0,0,0,0.1);
-        transform: translateX(0); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex; flex-direction: column;
-    }
-    .dashboard-panel.closed { transform: translateX(-100%); }
-
-    .panel-header {
-        padding: 25px 20px; border-bottom: 1px solid var(--border);
-        background: var(--bg);
-    }
-    .panel-header h2 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
-    
-    .panel-content { flex: 1; overflow-y: auto; padding: 20px; }
-
-    /* Stats */
-    .main-stat { text-align: center; padding: 20px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border-radius: 16px; color: white; margin-bottom: 25px; box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.4); }
-    .main-stat-value { font-size: 36px; font-weight: 800; line-height: 1; margin-bottom: 5px; }
-    .main-stat-label { font-size: 13px; opacity: 0.9; font-weight: 500; }
-    .area-badge {
-        display: inline-block; background: rgba(255,255,255,0.2);
-        padding: 4px 12px; border-radius: 20px; font-size: 11px;
-        margin-top: 10px; font-weight: 600;
-    }
-
-    .grid-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 25px; }
-    .mini-stat {
-        background: var(--bg); padding: 12px; border-radius: 12px;
-        border: 1px solid var(--border); cursor: pointer;
-        position: relative; overflow: hidden; transition: all 0.2s;
-    }
-    .mini-stat:hover { transform: translateY(-2px); border-color: var(--stat-color); }
-    .mini-stat.selected { background: #eff6ff; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary); }
-    .mini-stat::before {
-        content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
-        background: #ccc; /* fallback */
-    }
-    .mini-stat-val { font-size: 18px; font-weight: 700; margin-bottom: 2px; padding-left: 8px; }
-    .mini-stat-lbl { font-size: 11px; color: #64748b; padding-left: 8px; }
-
-    .status-section-title { font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-    
-    /* Status List */
-    .status-wrapper { margin-bottom: 12px; }
-    .status-item {
-        padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-        cursor: pointer; transition: all 0.2s; position: relative;
-    }
-    .status-item:hover { background: #f8fafc; }
-    .status-item.selected { border-color: var(--primary); background: #eff6ff; }
-    .status-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
-    .status-name { font-weight: 600; color: var(--text); }
-    .progress-bg { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 3px; }
-    
-    .status-details {
-        max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
-        padding-left: 10px; border-left: 2px solid #e2e8f0; margin-left: 10px;
-    }
-    .status-details.show { max-height: 500px; margin-top: 8px; }
-    .sub-stat-row { display: flex; justify-content: space-between; font-size: 11px; margin-top: 6px; color: #64748b; }
-    .sub-stat-bar-bg { height: 4px; background: #f1f5f9; border-radius: 2px; margin-top: 2px; width: 100%; }
-    .sub-stat-bar-fill { height: 100%; border-radius: 2px; }
-
-    .legend-mini { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
-    .legend-row { display: flex; align-items: center; font-size: 11px; color: #64748b; width: 48%; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-
-    /* Popups */
-    .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-    .leaflet-popup-content { margin: 0; width: 100% !important; }
-    .leaflet-container a.leaflet-popup-close-button { color: #fff; font-size: 20px; top: 10px; right: 10px; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-    
-    .custom-popup-wrapper { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .popup-header { background: #fff; padding: 20px 20px 10px 20px; display: flex; align-items: flex-start; gap: 12px; }
-    .popup-icon {
-        width: 40px; height: 40px; border-radius: 10px; display: flex;
-        justify-content: center; align-items: center; font-size: 18px; flex-shrink: 0;
-    }
-    .popup-title { font-weight: 700; font-size: 16px; line-height: 1.3; color: var(--text); }
-    .popup-status-badge {
-        margin: 0 20px 15px 20px; display: inline-block; padding: 4px 10px;
-        border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;
-    }
-    
-    .popup-grid {
-        display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
-        background: #f1f5f9; border-top: 1px solid #e2e8f0;
-    }
-    .popup-item { background: #fff; padding: 12px 20px; display: flex; flex-direction: column; }
-    .popup-item.full-width { grid-column: span 2; }
-    .popup-label-mini { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
-    .popup-value-main { font-size: 13px; font-weight: 600; color: var(--text); }
-    .popup-value-mono { font-family: monospace; font-size: 12px; color: #64748b; background: #f8fafc; padding: 2px 6px; border-radius: 4px; align-self: flex-start; }
-
-    .popup-divider { background: #f8fafc; padding: 8px 20px; font-size: 10px; font-weight: 700; color: #94a3b8; border-top: 1px solid #e2e8f0; letter-spacing: 0.5px; }
-    .popup-extra-container { padding: 10px 20px 20px 20px; background: #fff; }
-    .popup-row { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
-    .popup-row:last-child { border-bottom: none; }
-    .popup-label { color: #64748b; }
-    .popup-value { font-weight: 500; color: var(--text); text-align: right; max-width: 60%; }
-
-    /* Report Modal */
-    .report-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: var(--bg); z-index: 2000;
-        transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex; justify-content: center; overflow-y: auto;
-    }
-    .report-overlay.open { transform: translateY(0); }
-    .report-modal {
-        width: 100%; max-width: 1200px; background: #fff; min-height: 100vh;
-        box-shadow: 0 0 50px rgba(0,0,0,0.1); position: relative;
-    }
-    .modal-close-btn {
-        position: fixed; top: 20px; right: 20px; width: 40px; height: 40px;
-        background: rgba(0,0,0,0.5); border-radius: 50%; border: none;
-        color: white; font-size: 20px; cursor: pointer; z-index: 2100;
-        display: flex; justify-content: center; align-items: center;
-        transition: background 0.2s;
-    }
-    .modal-close-btn:hover { background: rgba(0,0,0,0.8); }
-
-    .report-container { padding: 40px; max-width: 1100px; margin: 0 auto; }
-    
-    .report-header-content {
-        display: flex; justify-content: space-between; align-items: flex-end;
-        margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px;
-    }
-    .header-title h1 { margin: 0; font-size: 28px; font-weight: 800; color: #000; text-transform: uppercase; }
-    .header-title h2 { margin: 5px 0 0 0; font-size: 16px; font-weight: 500; color: #666; }
-    .header-info { text-align: right; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
-    .current-time { font-family: monospace; font-size: 12px; color: #666; }
-    
-    .action-buttons { display: flex; gap: 10px; }
-    .btn-share, .btn-download-main {
-        padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px;
-        font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
-        transition: transform 0.1s;
-    }
-    .btn-share { background: #3b82f6; color: white; }
-    .btn-download-main { background: #10b981; color: white; }
-    .btn-share:hover, .btn-download-main:hover { transform: translateY(-1px); opacity: 0.9; }
-
-    /* Report Layout */
-    .top-row { display: grid; grid-template-columns: 250px 1fr; gap: 20px; margin-bottom: 30px; }
-    .card { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; }
-    
-    .report-main-stat {
-        background: #1e293b; color: white; border: none;
-        display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-    }
-    .report-main-stat h1 { font-size: 56px; margin: 0; line-height: 1; font-weight: 800; }
-    .report-main-stat p { margin: 10px 0; font-size: 12px; opacity: 0.7; font-weight: 600; }
-    .report-main-stat .badge { background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; font-size: 11px; }
-
-    .mini-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-    .mini-card {
-        background: #f8fafc; padding: 15px; border-radius: 8px;
-        border-top: 4px solid #ccc; text-align: center;
-    }
-    .mini-card h3 { margin: 0 0 5px 0; font-size: 24px; color: #1e293b; }
-    .mini-card span { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-
-    .charts-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px; height: 300px; }
-    .chart-card { display: flex; flex-direction: column; overflow: hidden; }
-    .chart-title { font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; }
-
-    .main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; height: 500px; }
-    .map-container { padding: 0; overflow: hidden; position: relative; }
-    #report-map { width: 100%; height: 100%; background: #e2e8f0; }
-    
-    .status-container { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
-    .status-header-fixed { padding: 15px; background: #f1f5f9; font-size: 12px; font-weight: 700; border-bottom: 1px solid #e2e8f0; }
-    .status-scroll-area { flex: 1; overflow-y: auto; padding: 15px; }
-
-    /* Layer Info Card */
-    .layer-info-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 30px; }
-    .layer-info-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
-    .layer-info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-    .data-row { padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
-    .data-row .label { font-size: 10px; color: #64748b; font-weight: 700; display: block; margin-bottom: 4px; text-transform: uppercase; }
-    .data-row .value { font-size: 14px; font-weight: 600; color: var(--text); }
-    .comment-box { margin-top: 8px; font-size: 12px; background: #fff9c4; padding: 6px; border-radius: 4px; display: flex; gap: 6px; border: 1px solid #fde047; color: #854d0e; }
-
-    .bottom-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 40px; }
-    .bottom-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; height: 180px; display: flex; flex-direction: column; }
-    .bottom-card-header { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; font-weight: 700; font-size: 12px; }
-    .bottom-card-body { flex: 1; }
-
-    footer { text-align: center; font-size: 11px; color: #94a3b8; padding-top: 20px; border-top: 1px solid #e2e8f0; }
-
-    /* Mobile Responsive */
-    @media (max-width: 768px) {
-        .dashboard-panel { width: 100%; transform: translateY(100%); bottom: 0; top: auto; height: 60vh; border-radius: 20px 20px 0 0; }
-        .dashboard-panel.closed { transform: translateY(100%); }
-        .dashboard-panel:not(.closed) { transform: translateY(0); }
-        
-        .controls-container { top: auto; bottom: 20px; right: 20px; flex-direction: row-reverse; }
-        .control-card { width: 45px; height: 45px; padding: 0; display: flex; justify-content: center; align-items: center; }
-        .control-card:hover { width: 45px; } /* Disable expand on mobile */
-        .control-group-title, .text-slot { display: none; }
-        .toggle-btn { padding: 0; margin: 0; justify-content: center; }
-        .icon-slot { width: auto; }
-        
-        .report-container { padding: 15px; }
-        .top-row { grid-template-columns: 1fr; }
-        .mini-stats-grid { grid-template-columns: repeat(2, 1fr); }
-        .charts-row { grid-template-columns: 1fr; height: auto; }
-        .chart-card { height: 250px; }
-        .main-content { grid-template-columns: 1fr; height: auto; }
-        .map-container { height: 300px; }
-        .bottom-grid { grid-template-columns: 1fr; }
-        
-        .report-header-content { flex-direction: column; align-items: flex-start; gap: 15px; }
-        .header-info { align-items: flex-start; text-align: left; }
+    .tooltip-val {
+        text-align: right;
+        font-weight: 500;
+        color: #000;
     }
   </style>
 </head>
@@ -358,7 +99,7 @@
   </button>
 
   <!-- Floating Dashboard -->
-  <div class="dashboard-panel closed" id="dashboard-panel">
+  <div class="dashboard-panel" id="dashboard-panel">
     <div class="panel-header">
       <h2><i class="fas fa-layer-group"></i> Statistik Projek</h2>
     </div>
@@ -483,7 +224,6 @@
                       <div class="layer-info-title">
                           <i class="fas fa-info-circle"></i> Maklumat Kawasan: <span id="layer-info-name"></span>
                       </div>
-                      <!-- KANDUNGAN AKAN DIJANA OLEH JAVASCRIPT -->
                       <div class="layer-info-grid" id="layer-info-content"></div>
                   </div>
               </div>
@@ -530,17 +270,39 @@ const APP_CONFIG = {
     // --- GOOGLE APPS SCRIPT URL ---
     GAS_API_URL: "https://script.google.com/macros/s/AKfycbzDL6FOdwJhzA7Tt3ijuWWN2jMWJfbUEa2iE1DCJRWAX4Lxbut9FT1mphYeSUqDCu40iA/exec",
 
+    // --- KONFIGURASI LOKASI DATA BOUNDARY & INFO MARKER ---
+    BOUNDARY_INFO_CONFIG: {
+        sheetId: "15iTUH5f5Nt_1MwOJxVIO6FI06cANRKDQu7WcSVjYoVA", // ID Sheet Baru
+        layers: {
+            district: {
+                sheetName: "district",
+                keyColumn: "name", // Column untuk match dengan nama polygon
+                displayColumns: ["dosm_code", "Populasi Terkini", "SAIZ_DAERAH", "Land Area (km2)"]
+            },
+            dun: {
+                sheetName: "dun",
+                keyColumn: "name",
+                displayColumns: ["name2", "DUN_CODE", "spr_code", "Land Area (km2)", "PENDUDUK"]
+            },
+            parliament: {
+                sheetName: "parlimen",
+                keyColumn: "name",
+                displayColumns: ["name2", "PARLIAMENT_CODE", "spr_code", "Land Area (km2)", "NAMA_YB"]
+            }
+        }
+    },
+
     SETTINGS: {
-        MAX_EXTRA_INFO_COLUMNS: 15, // Increased limit to show ALL columns
+        MAX_EXTRA_INFO_COLUMNS: 15,
         REFRESH_INTERVAL_MS: 900000, // 15 Minit
         DEFAULT_MAP_CENTER: [5.9804, 116.0735],
         DEFAULT_ZOOM: 8
     },
     
-    // UPDATED GEOJSON URLS
+    // --- DIKEMASKINI: NAMA FAIL GEOJSON ---
     GEOJSON_URLS: {
         district: "dosm_district.json",
-        dun: "dosm_dun.json",
+        dun: "dsom_dun.json",
         parliament: "dosm_parlimen.json"
     }
 };
@@ -592,6 +354,41 @@ const Utils = {
             return config.keywords.some(k => s.includes(k) || s === k);
         });
         return idx !== -1 ? idx : 999;
+    },
+    
+    // --- FUNGSI PENGIRAAN KELUASAN (Geodesic Area) ---
+    calculatePolygonArea: (feature) => {
+        if (!feature || !feature.geometry) return 0;
+        
+        // Membantu mengira luas dalam meter persegi kemudian tukar ke km2
+        const earthRadius = 6378137; // Radius bumi dalam meter
+        
+        const area = (coords) => {
+            let area = 0;
+            if (coords.length > 2) {
+                for (let i = 0; i < coords.length - 1; i++) {
+                    const p1 = coords[i];
+                    const p2 = coords[i + 1];
+                    area += (p2[0] - p1[0]) * (2 + Math.sin(p1[1] * Math.PI / 180) + Math.sin(p2[1] * Math.PI / 180));
+                }
+                area = area * earthRadius * earthRadius / 2;
+            }
+            return Math.abs(area);
+        };
+
+        let totalArea = 0;
+        const geom = feature.geometry;
+        
+        if (geom.type === 'Polygon') {
+            totalArea = area(geom.coordinates[0]);
+        } else if (geom.type === 'MultiPolygon') {
+            for (let i = 0; i < geom.coordinates.length; i++) {
+                totalArea += area(geom.coordinates[i][0]);
+            }
+        }
+        
+        // Convert m2 to km2
+        return (totalArea / 1000000).toFixed(2);
     }
 };
 
@@ -611,6 +408,9 @@ const AppState = {
     markersBySite: new Map(),
     dataLayers: { district: null, dun: null, parliament: null },
     
+    // Menyimpan data atribut dari Google Sheets (Info Marker)
+    boundaryAttributes: { district: [], dun: [], parliament: [] },
+
     activeBoundaryKey: null,
     activeFeatureName: null,
     searchTerm: "",
@@ -631,9 +431,20 @@ const DataManager = {
     async loadAllData() {
         UI.showLoading(true, "MENGHUBUNGI GOOGLE SHEETS...");
         try {
+            // Load Project Data
             const promises = APP_CONFIG.PROJECT_TYPES.map(config => this.fetchSingleSheet(config));
-            const results = await Promise.all(promises);
-            AppState.allProjects = results.flat();
+            
+            // Load Boundary Attributes Data (Info Marker)
+            const boundaryPromises = Object.keys(APP_CONFIG.BOUNDARY_INFO_CONFIG.layers).map(type => 
+                this.fetchBoundaryAttributes(type)
+            );
+
+            const [projectResults, boundaryResults] = await Promise.all([
+                Promise.all(promises),
+                Promise.all(boundaryPromises)
+            ]);
+
+            AppState.allProjects = projectResults.flat();
             
             if (AppState.allProjects.length === 0) {
                  console.warn("Tiada data ditemui dalam Google Sheets.");
@@ -666,6 +477,48 @@ const DataManager = {
             alert("Ralat memuatkan data. Sila pastikan Google Sheets 'Published to Web'.");
         }
     },
+    
+    // --- FUNGSI BARU: Fetch Info Marker Data dari Sheet Khas ---
+    async fetchBoundaryAttributes(layerType) {
+        const config = APP_CONFIG.BOUNDARY_INFO_CONFIG;
+        const layerConfig = config.layers[layerType];
+        
+        // Gunakan Google Visualization API untuk fetch data sheet
+        // Select semua column
+        const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:json&sheet=${layerConfig.sheetName}`;
+        
+        try {
+            const res = await fetch(url);
+            const text = await res.text();
+            const jsonStart = text.indexOf('{');
+            const jsonEnd = text.lastIndexOf('}');
+            if (jsonStart === -1 || jsonEnd === -1) return;
+            const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+            
+            if (json.table && json.table.rows) {
+                // Map headers
+                const headers = json.table.cols.map(c => c ? c.label : "");
+                
+                const data = json.table.rows.map(row => {
+                    let obj = {};
+                    row.c.forEach((cell, idx) => {
+                        if (headers[idx]) {
+                            obj[headers[idx]] = (cell && (cell.v !== null)) ? cell.v : "";
+                        }
+                    });
+                    // Normalize Key untuk carian mudah
+                    obj._key = Utils.normalize(obj[layerConfig.keyColumn]);
+                    return obj;
+                });
+                
+                AppState.boundaryAttributes[layerType] = data;
+                console.log(`Loaded ${data.length} attributes for ${layerType}`);
+            }
+        } catch (e) {
+            console.warn(`Gagal memuatkan atribut untuk ${layerType}`, e);
+        }
+    },
+
     async fetchSingleSheet(config) {
         const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:json&tq=`;
         try {
@@ -687,9 +540,7 @@ const DataManager = {
         }
     },
     processSheetData(table, config) {
-        // Original headers for display in popup
         const originalCols = table.cols.map(c => c ? c.label.trim() : "");
-        // Normalized headers for internal logic
         const cols = originalCols.map(c => Utils.normalize(c));
 
         const rows = table.rows;
@@ -706,7 +557,6 @@ const DataManager = {
             const rowData = {};
             const extraDetails = [];
             
-            // Helper to get raw value for logic
             const getValue = (headerKeys) => {
                 for (let key of headerKeys) {
                     const idx = cols.indexOf(key);
@@ -715,7 +565,6 @@ const DataManager = {
                 return "";
             };
 
-            // Logic for Filter
             if (config.filter) {
                 const filterColIdx = cols.indexOf(Utils.normalize(config.filter.col));
                 if (filterColIdx > -1) {
@@ -724,7 +573,6 @@ const DataManager = {
                 }
             }
 
-            // Extract Standard Data for Map Logic
             rowData.SITE_NAME = String(getValue(STD_HEADERS.SITE_NAME) || "N/A").trim();
             rowData.DISTRICT = String(getValue(STD_HEADERS.DISTRICT)).trim();
             rowData.DUN = String(getValue(STD_HEADERS.DUN)).trim();
@@ -737,25 +585,19 @@ const DataManager = {
             
             if (rowData.SITE_NAME === "N/A") return null;
 
-            // --- ALL COLUMN EXTRACTION LOGIC (UPDATED) ---
             let count = 0;
             const usedKeys = Object.values(STD_HEADERS).flat();
             
             cols.forEach((colKey, idx) => {
                 if (count >= APP_CONFIG.SETTINGS.MAX_EXTRA_INFO_COLUMNS) return;
-                
-                // Skip standard columns from extra details to prevent duplication in popup
                 if (!colKey || usedKeys.includes(colKey)) return;
 
                 const cell = r.c[idx];
                 if (!cell) return;
 
-                // KEY CHANGE: PRIORITIZE FORMATTED VALUE (.f) OVER RAW VALUE (.v)
-                // This ensures dates and formatted numbers appear exactly as in Google Sheets
                 const val = (cell.f !== undefined && cell.f !== null) ? cell.f : cell.v;
 
                 if (val !== null && val !== undefined && val !== "") {
-                    // Use ORIGINAL column name for display
                     extraDetails.push({ label: originalCols[idx], value: String(val).trim() });
                     count++;
                 }
@@ -766,51 +608,25 @@ const DataManager = {
             return rowData;
         }).filter(item => item !== null);
     },
-
-    // --- FUNGSI BARU UNTUK FETCH DATA DARI GOOGLE APPS SCRIPT ---
+    
+    // Fallback GAS fetcher
     async fetchLayerInfoGAS(layerType, featureName) {
         if (!layerType || !featureName) return null;
-
-        // Pemetaan nama sheet yang dijangka oleh Skrip GAS
-        const sheetMap = {
-            'district': 'district',
-            'dun': 'dun',
-            'parliament': 'parliament'
-        };
-
+        const sheetMap = { 'district': 'district', 'dun': 'dun', 'parliament': 'parliament' };
         const sheetName = sheetMap[layerType] || layerType;
         const url = `${APP_CONFIG.GAS_API_URL}?sheet=${sheetName}`;
 
         try {
             const response = await fetch(url);
             const data = await response.json();
+            if (data.error) return null;
 
-            if (data.error) {
-                console.error("GAS Error:", data.error);
-                return null;
-            }
-
-            // CLIENT SIDE FILTERING: 
-            // Skrip GAS memulangkan SEMUA data dalam sheet tersebut.
-            // Kita perlu cari row yang sepadan dengan featureName (contoh: "TAWAU").
             const targetName = Utils.normalize(featureName);
-
-            // Cari row yang sepadan. Kita semak column 'LAYER' dahulu jika ada.
             const matchedRow = data.find(row => {
-                // Jika ada column khusus bernama 'LAYER', gunakannya untuk padanan
-                if (row['LAYER'] && Utils.normalize(row['LAYER']) === targetName) {
-                    return true;
-                }
-                // Fallback: Semak jika mana-mana value dalam row sepadan dengan nama kawasan
-                // Ini berguna jika header sheet anda "DAERAH", "NAMA", dll.
-                return Object.values(row).some(val => 
-                    typeof val === 'string' && Utils.normalize(val) === targetName
-                );
+                if (row['LAYER'] && Utils.normalize(row['LAYER']) === targetName) return true;
+                return Object.values(row).some(val => typeof val === 'string' && Utils.normalize(val) === targetName);
             });
-
-            // Kembalikan dalam bentuk array untuk konsistensi dengan UI renderer
             return matchedRow ? [matchedRow] : [];
-
         } catch (error) {
             console.error("Error fetching data from GAS:", error);
             return null;
@@ -838,49 +654,100 @@ const MapManager = {
         
         this.loadBoundaries();
     },
-    // --- UPDATED NAME EXTRACTION LOGIC ---
-    extractGeoName(feature) {
-        const props = feature.properties || {};
-        
-        // Check new property keys first (as per dosm json structure)
-        if (props.district) return Utils.normalize(props.district);
-        if (props.dun) return Utils.normalize(props.dun);
-        if (props.parlimen) return Utils.normalize(props.parlimen);
-
-        // Fallback to legacy keys
-        return Utils.normalize(props.NAME || props.name || props.DISTRICT || props.DAERAH || props.DUN || props.PARLIAMENT || "Sabah");
-    },
     async loadBoundaries() {
         const loadLayer = async (key, url) => {
             try {
                 const res = await fetch(url);
                 if (!res.ok) throw new Error("File Missing");
                 const data = await res.json();
+                
                 const layer = L.geoJSON(data, {
                     style: { color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' },
                     onEachFeature: (feature, layer) => {
-                        // Use updated extraction
                         const name = this.extractGeoName(feature);
-                        layer.bindTooltip(name, { sticky: true, interactive: false, direction: 'center', className: 'leaflet-tooltip' });
+                        
+                        // --- 1. PENGIRAAN KELUASAN AUTOMATIK ---
+                        const areaKm2 = Utils.calculatePolygonArea(feature);
+                        
+                        // --- 2. TOOLTIP BIASA (Nama Shj) ---
+                        // layer.bindTooltip(name, { sticky: true, interactive: false, direction: 'center', className: 'leaflet-tooltip' });
+                        
+                        // --- 3. CUSTOM HOVER INFO MARKER ---
                         layer.on('click', (e) => {
                             L.DomEvent.stopPropagation(e);
                             this.highlightBoundary(key, layer, name);
                         });
+                        
                         layer.on('mouseover', (e) => {
+                            // Style Highlight
                             if (AppState.activeFeatureName !== name) {
                                 e.target.setStyle({ fillColor: Utils.getRandomColor(), fillOpacity: 0.5, weight: 2, color: '#333' });
                             }
+
+                            // Dapatkan Data Atribut dari Sheet
+                            const attrData = AppState.boundaryAttributes[key].find(r => r._key === name);
+                            
+                            // Bina HTML Tooltip
+                            let infoHtml = '';
+                            const layerConfig = APP_CONFIG.BOUNDARY_INFO_CONFIG.layers[key];
+                            
+                            if (layerConfig) {
+                                layerConfig.displayColumns.forEach(col => {
+                                    let val = attrData ? attrData[col] : "N/A";
+                                    // Jika data sheet tiada untuk keluasan, guna kiraan auto
+                                    if (col === "Land Area (km2)" && (val === "N/A" || val === "")) {
+                                        val = areaKm2 + " (Auto-Calc)";
+                                    }
+                                    if (val && val !== "N/A") {
+                                        infoHtml += `
+                                            <div class="tooltip-row">
+                                                <span class="tooltip-label">${col}</span>
+                                                <span class="tooltip-val">${val}</span>
+                                            </div>
+                                        `;
+                                    }
+                                });
+                            }
+
+                            // Jika tiada data sheet, paparkan keluasan auto sekurang-kurangnya
+                            if (!infoHtml) {
+                                infoHtml = `
+                                    <div class="tooltip-row">
+                                        <span class="tooltip-label">Land Area (Calc)</span>
+                                        <span class="tooltip-val">${areaKm2} km²</span>
+                                    </div>
+                                `;
+                            }
+
+                            const tooltipContent = `
+                                <div class="tooltip-header">${name}</div>
+                                <div class="tooltip-body">
+                                    ${infoHtml}
+                                </div>
+                            `;
+
+                            layer.bindTooltip(tooltipContent, {
+                                sticky: true,
+                                direction: 'top',
+                                className: 'custom-hover-tooltip',
+                                opacity: 1
+                            }).openTooltip();
+                            
+                            // Console Log untuk semakan user (Data Entry Helper)
+                            // console.log(`Area Data | Layer: ${key} | Name: ${name} | Area: ${areaKm2} km2`);
                         });
+                        
                         layer.on('mouseout', (e) => {
                             if (AppState.activeFeatureName !== name) {
                                 AppState.dataLayers[key].resetStyle(e.target);
                             }
+                            layer.closeTooltip();
                         });
                     }
                 });
                 AppState.dataLayers[key] = layer;
             } catch (e) {
-                console.warn(`GeoJSON ${key} gagal dimuatkan (Mungkin fail tidak wujud).`, e);
+                console.warn(`GeoJSON ${key} gagal dimuatkan (${url}).`, e);
                 AppState.dataLayers[key] = L.layerGroup(); 
             }
         };
@@ -896,6 +763,19 @@ const MapManager = {
         
         setTimeout(() => this.switchBoundary('district', 'toggle-daerah'), 500);
     },
+    
+    // --- DIKEMASKINI: LOGIK NAMA DOSM BARU ---
+    extractGeoName(feature) {
+        const props = feature.properties || {};
+        // Keutamaan kepada property DOSM yang baru
+        if (props.district) return Utils.normalize(props.district);
+        if (props.dun) return Utils.normalize(props.dun);
+        if (props.parlimen) return Utils.normalize(props.parlimen);
+        
+        // Fallback lama
+        return Utils.normalize(props.NAME || props.name || props.DISTRICT || props.DAERAH || props.DUN || props.PARLIAMENT || "Sabah");
+    },
+    
     switchBoundary(key, btnId) {
         Object.values(AppState.dataLayers).forEach(l => { if(l && AppState.map.hasLayer(l)) AppState.map.removeLayer(l); });
         if (AppState.dataLayers[key] && AppState.dataLayers[key].getLayers().length > 0) {
@@ -914,29 +794,23 @@ const MapManager = {
     highlightBoundary(key, layer, name) {
         AppState.dataLayers[key].eachLayer(l => {
             AppState.dataLayers[key].resetStyle(l);
-            if (!l.getTooltip()) {
-                 const lName = this.extractGeoName(l.feature);
-                 l.bindTooltip(lName, { sticky: true, interactive: false, direction: 'center', className: 'leaflet-tooltip' });
-            }
+            l.unbindTooltip(); // Reset custom tooltip
             l.closeTooltip();
         });
         const color = Utils.getRandomColor();
         layer.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: color });
-        layer.unbindTooltip(); 
-        layer.closeTooltip();
+        
         AppState.activeFeatureName = name;
         document.getElementById('selected-area').textContent = name;
         AppState.map.fitBounds(layer.getBounds());
         FilterManager.applyFilters();
     },
     
-    // --- UPDATED POPUP CREATION LOGIC ---
     createMarker(project) {
         if (!project._validCoord) return null;
         const config = Utils.getTypeConfig(project._type);
         const statusColor = Utils.getStatusColor(project.STATUS);
         
-        // 1. Generate Extra HTML
         let extraHtml = project._extra_details.map(d => 
             `<div class="popup-row">
                 <span class="popup-label">${Utils.escapeHtml(d.label)}</span>
@@ -951,21 +825,15 @@ const MapManager = {
             `;
         }
 
-        // 2. Build the Complete Popup
         const popupContent = `
             <div class="custom-popup-wrapper">
-                <!-- Header -->
                 <div class="popup-header">
                     <div class="popup-icon" style="background:${config.color}20; color:${config.color}">${config.icon}</div>
                     <div class="popup-title">${Utils.escapeHtml(project.SITE_NAME)}</div>
                 </div>
-
-                <!-- Status Badge -->
                 <div class="popup-status-badge" style="background:${statusColor}20; color:${statusColor}; border:1px solid ${statusColor}">
                     ${Utils.escapeHtml(project.STATUS)}
                 </div>
-
-                <!-- Main Info Grid (Updated with DUN, Parliament, Coords) -->
                 <div class="popup-grid">
                     <div class="popup-item">
                         <span class="popup-label-mini">KATEGORI</span>
@@ -988,8 +856,6 @@ const MapManager = {
                         <span class="popup-value-mono">${project.LATITUDE.toFixed(5)}, ${project.LONGITUDE.toFixed(5)}</span>
                     </div>
                 </div>
-
-                <!-- Extra Details -->
                 ${extraHtml}
             </div>
         `;
@@ -998,14 +864,13 @@ const MapManager = {
             pane: 'overlayPane',
             radius: 6, fillColor: config.color, color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
         }).bindPopup(popupContent, {
-            minWidth: 350, // Updated width
-            maxWidth: 420  // Updated width
+            minWidth: 350,
+            maxWidth: 420
         });
         
         marker._meta = project;
         return marker;
     },
-    // --- END UPDATED POPUP LOGIC ---
 
     renderMarkersInBatches(projects, onComplete) {
         const total = projects.length; 
@@ -1530,20 +1395,20 @@ const UI = {
                                     let commentHtml = '';
                                     if (comments[key]) {
                                         commentHtml = `
-                                                        <div class="comment-box">
-                                                            <span class="comment-icon">💬</span>
-                                                            <span>${comments[key]}</span>
-                                                        </div>
-                                                    `;
+                                            <div class="comment-box">
+                                                <span class="comment-icon">💬</span>
+                                                <span>${comments[key]}</span>
+                                            </div>
+                                        `;
                                     }
 
                                     const item = document.createElement('div');
                                     item.className = 'data-row';
                                     item.innerHTML = `
-                                                        <span class="label">${key}:</span>
-                                                        <span class="value">${value}</span>
-                                                        ${commentHtml}
-                                                    `;
+                                        <span class="label">${key}:</span>
+                                        <span class="value">${value}</span>
+                                        ${commentHtml}
+                                    `;
                                     infoContent.appendChild(item);
                                 }
                             }
