@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah - Optimized 0.4</title>
+  <title>Web GIS Projek Sabah - Final Update 0.3</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css03_baru.css">
@@ -22,6 +22,138 @@
   <!-- PDF/Image Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    /* --- STYLES FOR POPUPS & TOOLTIPS --- */
+    
+    /* Boundary Tooltip (Hover) */
+    .leaflet-tooltip.boundary-tooltip {
+        background: rgba(0, 0, 0, 0.8);
+        border: none;
+        color: #fff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 600;
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .leaflet-tooltip-left:before, .leaflet-tooltip-right:before, .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before {
+        border-color: transparent; 
+    }
+
+    /* Boundary Popup (Click) */
+    .boundary-popup-content {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        min-width: 280px;
+        max-width: 320px;
+    }
+    .boundary-popup-header {
+        background-color: var(--primary);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 6px 6px 0 0;
+        font-weight: 700;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .boundary-popup-body {
+        padding: 10px;
+        max-height: 250px;
+        overflow-y: auto;
+        background: #f8f9fa;
+    }
+    .boundary-popup-loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+        font-size: 12px;
+    }
+    .boundary-data-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 12px;
+    }
+    .boundary-data-row:last-child {
+        border-bottom: none;
+    }
+    .boundary-data-label {
+        color: #64748b;
+        font-weight: 500;
+    }
+    .boundary-data-val {
+        color: #1e293b;
+        font-weight: 600;
+        text-align: right;
+    }
+    .boundary-comment-box {
+        background: #eef2ff;
+        border-left: 3px solid #6366f1;
+        padding: 8px;
+        margin-top: 5px;
+        font-size: 11px;
+        color: #4338ca;
+        border-radius: 0 4px 4px 0;
+    }
+
+    /* Styles untuk Report Comment Box */
+    .comment-box {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 8px 12px;
+        margin-top: 5px;
+        font-size: 0.85rem;
+        color: #856404;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        border-radius: 4px;
+    }
+    .comment-icon {
+        font-size: 1rem;
+    }
+    
+    /* Ensure Leaflet popup close button is visible and styled */
+    .leaflet-popup-content-wrapper {
+        padding: 0;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .leaflet-popup-content {
+        margin: 0 !important;
+        width: auto !important;
+    }
+    .leaflet-container a.leaflet-popup-close-button {
+        color: #fff;
+        top: 8px;
+        right: 8px;
+        text-shadow: none;
+        font-size: 18px;
+    }
+    .leaflet-container a.leaflet-popup-close-button:hover {
+        color: #e2e8f0;
+    }
+
+    /* FIX FOR CHARTS EXPANDING: Force fixed height on chart cards */
+    .chart-card {
+        height: 520px !important; /* Fixed height prevents flex loop */
+        min-height: 520px !important;
+        max-height: 520px !important;
+        overflow: hidden !important; /* Cut off overflow */
+    }
+    
+    /* Ensure inner chart container fits */
+    .chart-card > div:not(.chart-title) {
+        flex: 1;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important; /* Allow shrinking */
+    }
+  </style>
 </head>
 <body>
 
@@ -31,7 +163,7 @@
   <!-- Loading Screen -->
   <div class="loading-overlay" id="loading">
     <div class="spinner"></div>
-    <div style="font-weight: 700; font-size: 14px; color: var(--primary); letter-spacing: 0.5px;">MEMUATKAN DATA...</div>
+    <div style="font-weight: 700; font-size: 14px; color: var(--primary); letter-spacing: 0.5px;">MEMUATKAN DATA GIS...</div>
     <div id="loading-msg" style="font-size: 11px; margin-top: 5px; color: #666;"></div>
   </div>
 
@@ -55,11 +187,13 @@
     </div>
     
     <div class="panel-content">
+      <!-- Main Count -->
       <div class="main-stat">
         <div class="main-stat-value" id="total-projects">0</div>
         <div class="main-stat-label">Jumlah Projek</div>
         <div id="selected-area" class="area-badge">SELURUH SABAH</div>
       </div>
+      <!-- End Main Count -->
 
       <div class="grid-stats" id="dynamic-grid-stats"></div>
       <div class="status-section-title">Status Kemajuan</div>
@@ -70,20 +204,23 @@
 
   <!-- Right Controls -->
   <div class="controls-container">
+    <!-- CSV -->
     <div class="control-card">
         <button class="toggle-btn" title="Muat Turun CSV" onclick="downloadCSV()">
             <span class="icon-slot"><i class="fas fa-file-csv" style="color: #10B981;"></i></span> 
             <span class="text-slot">Muat Turun CSV</span>
         </button>
     </div>
+    <!-- Report -->
     <div class="control-card">
-        <button class="toggle-btn" title="Laporan Penuh" onclick="openReport()">
+        <button class="toggle-btn" title="Dashboard" onclick="openReport()">
             <span class="icon-slot"><i class="fas fa-file-invoice-dollar" style="color: #F59E0B;"></i></span> 
-            <span class="text-slot">Laporan Penuh</span>
+            <span class="text-slot">Dashboard</span>
         </button>
     </div>
+    <!-- Layer Toggle (Updated Title) -->
     <div class="control-card" id="layer-card">
-      <div class="control-group-title">Sempadan</div>
+      <div class="control-group-title">Penapis Sempadan</div>
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
         <span class="icon-slot"><i class="fas fa-map-marked-alt"></i></span> <span class="text-slot">Daerah</span>
       </button>
@@ -94,19 +231,19 @@
         <span class="icon-slot"><i class="fas fa-building"></i></span> <span class="text-slot">Parlimen</span>
       </button>
     </div>
+    <!-- Category Filters (Updated Title) -->
     <div class="control-card" id="filter-card">
-      <div class="control-group-title">Penapis</div>
+      <div class="control-group-title">Penapis Data</div>
       <div id="dynamic-filter-btns"></div>
     </div>
   </div>
 
   <!-- REPORT MODAL -->
   <div class="report-overlay" id="report-overlay">
-      <div class="report-modal">
+      <div class="report-modal" id="report-content">
           <button class="modal-close-btn" onclick="closeReport()"><i class="fas fa-times"></i></button>
           
-          <!-- ID ini penting untuk capture -->
-          <div class="report-container" id="report-content">
+          <div class="report-container">
               <!-- HEADER -->
               <header class="report-header-content">
                   <div class="header-title">
@@ -114,9 +251,9 @@
                       <h2 id="report-layer-name">SELURUH SABAH</h2>
                   </div>
                   <div class="header-info">
-                      <div class="action-buttons" data-html2canvas-ignore="true">
+                      <div class="action-buttons">
                         <button class="btn-share" onclick="shareReport()">
-                            <i class="fas fa-share-alt"></i> Kongsi Imej
+                            <i class="fas fa-share-alt"></i> Share
                         </button>
                         <button class="btn-download-main" onclick="generateExport()">
                             <i class="fas fa-file-pdf"></i> Muat Turun PDF
@@ -130,7 +267,7 @@
               <div class="top-row">
                   <div class="card report-main-stat">
                       <h1 id="report-total-count">0</h1>
-                      <p>JUMLAH PROJEK</p>
+                      <p>JUMLAH KESELURUHAN PROJEK</p>
                       <div class="badge" id="report-badge-area">SELURUH SABAH</div>
                   </div>
                   <div class="mini-stats-grid" id="report-mini-stats"></div>
@@ -139,15 +276,15 @@
               <!-- CHARTS ROW -->
               <div class="charts-row">
                   <div class="card chart-card">
-                      <div class="chart-title">Carta 01: Mengikut Projek</div>
+                      <div class="chart-title">Carta 01: Jumlah Site Mengikut Projek</div>
                       <div id="chart-01"></div>
                   </div>
                   <div class="card chart-card">
-                      <div class="chart-title">Carta 02: Status Keseluruhan</div>
+                      <div class="chart-title">Carta 02: Status Projek</div>
                       <div id="chart-02"></div>
                   </div>
                   <div class="card chart-card">
-                      <div class="chart-title">Carta 03: Projek vs Status</div>
+                      <div class="chart-title">Carta 03: Jumlah Projek vs Status</div>
                       <div id="chart-03"></div>
                   </div>
               </div>
@@ -158,28 +295,28 @@
                       <div id="report-map"></div>
                   </div>
                   <div class="card status-container">
-                      <div class="status-header-fixed">STATUS TERPERINCI</div>
+                      <div class="status-header-fixed">STATUS KEMAJUAN TERPERINCI</div>
                       <div class="status-scroll-area" id="dynamic-status-container"></div>
                   </div>
               </div>
 
-              <!-- LAYER INFO (GAS DATA) -->
+              <!-- LAYER INFO CARD (DIKEMBALIKAN & DIKEMASKINI) -->
               <div id="layer-info-section" style="display:none;">
                   <div class="layer-info-card">
                       <div class="layer-info-title">
-                          <i class="fas fa-info-circle"></i> Info Kawasan: <span id="layer-info-name"></span>
+                          <i class="fas fa-info-circle"></i> Maklumat Kawasan: <span id="layer-info-name"></span>
                       </div>
                       <div class="layer-info-grid" id="layer-info-content"></div>
                   </div>
               </div>
 
-              <!-- BOTTOM GRID -->
+              <!-- BOTTOM GRID (DYNAMIC BAR CHARTS) -->
               <div class="bottom-grid" id="dynamic-bottom-grid"></div>
 
               <!-- FOOTER -->
               <footer>
-                  <div>Sistem Maklumat Geografi (GIS) Projek Sabah | © MCMC Tawau</div>
-                  <div style="font-size: 0.8rem; color: #666;">Dijana pada <span id="footer-date"></span></div>
+                  <div>Sistem Maklumat Geografi (GIS) Projek Sabah | dibangunkan oleh © MCMC Tawau</div>
+                  <div style="font-size: 0.8rem; color: #666;">Dijana secara automatik pada <span id="footer-date"></span></div>
               </footer>
           </div>
       </div>
@@ -188,7 +325,9 @@
 <!-- MAIN SCRIPT -->
 <script>
 /**
+ * =============================================================================
  * 1. CONFIGURATION
+ * =============================================================================
  */
 const APP_CONFIG = {
     PROJECT_TYPES: [
@@ -200,20 +339,27 @@ const APP_CONFIG = {
         { id: "usj", sheetId: "1OMOyrS34mAYtg-UxlE4xs0iyMoSdqc3WFbhgMlHsgqo", type: "USJ", label: "USJ", color: "#f06595", icon: "🚀" },
         { id: "samb", sheetId: "1Lg_rGS0I2-lyhttQBBOvdkRR-ruPKAi1KdKcXNUmUo0", type: "SAMB", label: "SAMB", color: "#20c997", icon: "🔌" }
     ],
+    
     STATUS_MAPPING: [
-        { keywords: ["SIAP"], color: "#86efac" }, 
-        { keywords: ["PEMBINAAN"], color: "#fde047" }, 
-        { keywords: ["PERANCANGAN"], color: "#fca5a5" }, 
-        { keywords: ["TIADA STATUS", "UNKNOWN"], color: "#cbd5e1" } 
+        { keywords: ["SIAP"], color: "#86efac" }, // Hijau
+        { keywords: ["PEMBINAAN"], color: "#fde047" }, // Kuning
+        { keywords: ["PERANCANGAN"], color: "#fca5a5" }, // Merah
+        { keywords: ["TIADA STATUS", "UNKNOWN"], color: "#cbd5e1" } // Kelabu
     ],
+    
     DEFAULT_STATUS_COLOR: "#cbd5e1",
+
+    // --- GOOGLE APPS SCRIPT URL ---
     GAS_API_URL: "https://script.google.com/macros/s/AKfycbzDL6FOdwJhzA7Tt3ijuWWN2jMWJfbUEa2iE1DCJRWAX4Lxbut9FT1mphYeSUqDCu40iA/exec",
+
     SETTINGS: {
         MAX_EXTRA_INFO_COLUMNS: 15,
-        REFRESH_INTERVAL_MS: 900000,
+        REFRESH_INTERVAL_MS: 900000, // 15 Minit
         DEFAULT_MAP_CENTER: [5.9804, 116.0735],
         DEFAULT_ZOOM: 8
     },
+    
+    // UPDATED GEOJSON URLs
     GEOJSON_URLS: {
         district: "dosm_district.json",
         dun: "dosm_dun.json",
@@ -222,7 +368,9 @@ const APP_CONFIG = {
 };
 
 /**
- * 2. UTILITIES
+ * =============================================================================
+ * 2. UTILITIES / HELPER FUNCTIONS
+ * =============================================================================
  */
 const Utils = {
     escapeHtml: (str) => String(str || "").replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
@@ -230,7 +378,8 @@ const Utils = {
     cleanFloat: (val) => {
         if (typeof val === 'number') return val;
         if (!val) return 0;
-        const floatVal = parseFloat(String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim());
+        const str = String(val).replace(/[^0-9.,-]/g, "").replace(',', '.').trim();
+        const floatVal = parseFloat(str);
         return isNaN(floatVal) ? 0 : floatVal;
     },
     generateId: (rowObj, type) => {
@@ -248,44 +397,60 @@ const Utils = {
         for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
         return color;
     },
-    getStatusCategory: (rawStatus) => Utils.normalize(rawStatus) || "TIADA STATUS",
+    getStatusCategory: (rawStatus) => {
+        return Utils.normalize(rawStatus) || "TIADA STATUS";
+    },
     getTypeConfig: (typeKey) => APP_CONFIG.PROJECT_TYPES.find(t => t.type === typeKey) || { color: "#666", icon: "❓", label: typeKey },
     getStatusColor: (statusKey) => {
         const s = Utils.normalize(statusKey);
-        const found = APP_CONFIG.STATUS_MAPPING.find(config => config.keywords.some(k => s.includes(k) || s === k));
+        const found = APP_CONFIG.STATUS_MAPPING.find(config => {
+            return config.keywords.some(k => s.includes(k) || s === k);
+        });
         return found ? found.color : APP_CONFIG.DEFAULT_STATUS_COLOR;
     },
     getStatusSortIndex: (statusKey) => {
         const s = Utils.normalize(statusKey);
-        const idx = APP_CONFIG.STATUS_MAPPING.findIndex(config => config.keywords.some(k => s.includes(k) || s === k));
+        const idx = APP_CONFIG.STATUS_MAPPING.findIndex(config => {
+            return config.keywords.some(k => s.includes(k) || s === k);
+        });
         return idx !== -1 ? idx : 999;
     }
 };
 
 /**
+ * =============================================================================
  * 3. STATE MANAGEMENT
+ * =============================================================================
  */
 const AppState = {
     map: null,
     reportMap: null,
     markersLayerGroup: null,
+    reportMarkerLayer: null,
     allProjects: [],
     currentFilteredList: [],
+    visibleProjects: [],
     markersBySite: new Map(),
     dataLayers: { district: null, dun: null, parliament: null },
+    
     activeBoundaryKey: null,
     activeFeatureName: null,
     searchTerm: "",
     activeStatusFilter: null,
+    
     activeCategory: null,
     activeTypeToggles: new Set(),
+    
     charts: { c1: null, c2: null, c3: null, bottom: [] }
 };
 
 /**
- * 4. DATA FETCHING (OPTIMIZED)
+ * =============================================================================
+ * 4. DATA FETCHING & PROCESSING
+ * =============================================================================
  */
 const DataManager = {
+    // NEW: Cache for GAS Data to speed up loading
     layerInfoCache: new Map(),
 
     async loadAllData() {
@@ -295,188 +460,278 @@ const DataManager = {
             const results = await Promise.all(promises);
             AppState.allProjects = results.flat();
             
+            if (AppState.allProjects.length === 0) {
+                 console.warn("Tiada data ditemui dalam Google Sheets.");
+            }
+            
             MapManager.renderMarkersInBatches(AppState.allProjects, () => {
                 FilterManager.applyFilters();
                 UI.showLoading(false);
-                this.checkUrlParams();
+                
+                // --- URL PARAMETER HANDLING FOR SHARING ---
+                const params = new URLSearchParams(window.location.search);
+                const bKey = params.get('layer');
+                const bName = params.get('name');
+                if (bKey && bName && AppState.dataLayers[bKey]) {
+                    let found = false;
+                    AppState.dataLayers[bKey].eachLayer(l => {
+                        const lName = MapManager.extractGeoName(l.feature);
+                        if (lName === Utils.normalize(bName)) {
+                            MapManager.switchBoundary(bKey, (bKey === 'district' ? 'toggle-daerah' : (bKey === 'dun' ? 'toggle-dun' : 'toggle-parliament')));
+                            MapManager.highlightBoundary(bKey, l, lName, false); // Don't pop up immediately on auto-load to avoid clutter
+                            found = true;
+                        }
+                    });
+                    if(found) UI.openReport();
+                }
             });
         } catch (error) {
-            console.error("Data Load Error:", error);
+            console.error("Critical Data Load Error:", error);
             UI.showLoading(false);
+            alert("Ralat memuatkan data. Sila pastikan Google Sheets 'Published to Web'.");
         }
     },
-
-    checkUrlParams() {
-        const params = new URLSearchParams(window.location.search);
-        const bKey = params.get('layer');
-        const bName = params.get('name');
-        if (bKey && bName && AppState.dataLayers[bKey]) {
-            let foundLayer = null;
-            AppState.dataLayers[bKey].eachLayer(l => {
-                if (MapManager.extractGeoName(l.feature) === Utils.normalize(bName)) foundLayer = l;
-            });
-            if (foundLayer) {
-                MapManager.switchBoundary(bKey, (bKey === 'district' ? 'toggle-daerah' : (bKey === 'dun' ? 'toggle-dun' : 'toggle-parliament')));
-                MapManager.highlightBoundary(bKey, foundLayer, Utils.normalize(bName), false);
-                UI.openReport();
-            }
-        }
-    },
-
     async fetchSingleSheet(config) {
         const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/gviz/tq?tqx=out:json&tq=`;
         try {
             const res = await fetch(url);
-            if (!res.ok) return [];
+            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
             const text = await res.text();
-            const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+            
+            const jsonStart = text.indexOf('{');
+            const jsonEnd = text.lastIndexOf('}');
+            if (jsonStart === -1 || jsonEnd === -1) return [];
+            
+            const jsonString = text.substring(jsonStart, jsonEnd + 1);
+            const json = JSON.parse(jsonString);
+            
             return (json.table && json.table.rows) ? this.processSheetData(json.table, config) : [];
-        } catch (e) { return []; }
+        } catch (e) {
+            console.warn(`Gagal memuatkan sheet: ${config.label}. ID: ${config.sheetId}`, e);
+            return [];
+        }
     },
-
     processSheetData(table, config) {
-        const cols = table.cols.map(c => Utils.normalize(c ? c.label : ""));
-        const STD_HEADERS = { SITE_NAME: ["SITE_NAME", "SITE NAME", "NAMA_TAPAK"], DISTRICT: ["DISTRICT", "DAERAH"], DUN: ["DUN"], PARLIAMENT: ["PARLIAMENT", "PARLIMEN"], LAT: ["LATITUDE", "LAT"], LNG: ["LONGITUDE", "LON", "LNG"], STATUS: ["STATUS", "KEMAJUAN"] };
-        
-        return table.rows.map(r => {
-            const getVal = (keys) => {
-                for (let k of keys) {
-                    const idx = cols.indexOf(k);
+        const originalCols = table.cols.map(c => c ? c.label.trim() : "");
+        const cols = originalCols.map(c => Utils.normalize(c));
+
+        const rows = table.rows;
+        const STD_HEADERS = {
+            SITE_NAME: ["SITE_NAME", "SITE NAME", "SITE", "NAMA_TAPAK"],
+            DISTRICT: ["DISTRICT", "DAERAH"],
+            DUN: ["DUN"],
+            PARLIAMENT: ["PARLIAMENT", "PARLIAMENT_NAME", "PARLIMEN"],
+            LAT: ["LATITUDE", "LAT", "LATITUDE_DEC"],
+            LNG: ["LONGITUDE", "LON", "LNG", "LONG"],
+            STATUS: ["STATUS", "STATUS_1", "KEMAJUAN"]
+        };
+        return rows.map(r => {
+            const rowData = {};
+            const extraDetails = [];
+            
+            const getValue = (headerKeys) => {
+                for (let key of headerKeys) {
+                    const idx = cols.indexOf(key);
                     if (idx > -1 && r.c[idx] && r.c[idx].v !== null) return r.c[idx].v;
                 }
                 return "";
             };
 
             if (config.filter) {
-                const idx = cols.indexOf(Utils.normalize(config.filter.col));
-                if (idx > -1 && Utils.normalize(r.c[idx]?.v) !== Utils.normalize(config.filter.val)) return null;
+                const filterColIdx = cols.indexOf(Utils.normalize(config.filter.col));
+                if (filterColIdx > -1) {
+                    const val = r.c[filterColIdx]?.v || "";
+                    if (Utils.normalize(val) !== Utils.normalize(config.filter.val)) return null;
+                }
             }
 
-            const rowData = {
-                SITE_NAME: String(getVal(STD_HEADERS.SITE_NAME) || "N/A").trim(),
-                DISTRICT: String(getVal(STD_HEADERS.DISTRICT)).trim(),
-                DUN: String(getVal(STD_HEADERS.DUN)).trim(),
-                PARLIAMENT: String(getVal(STD_HEADERS.PARLIAMENT)).trim(),
-                STATUS: String(getVal(STD_HEADERS.STATUS) || "TIADA STATUS").trim(),
-                LATITUDE: Utils.cleanFloat(getVal(STD_HEADERS.LAT)),
-                LONGITUDE: Utils.cleanFloat(getVal(STD_HEADERS.LNG)),
-                _type: config.type,
-                _extra_details: []
-            };
-
+            rowData.SITE_NAME = String(getValue(STD_HEADERS.SITE_NAME) || "N/A").trim();
+            rowData.DISTRICT = String(getValue(STD_HEADERS.DISTRICT)).trim();
+            rowData.DUN = String(getValue(STD_HEADERS.DUN)).trim();
+            rowData.PARLIAMENT = String(getValue(STD_HEADERS.PARLIAMENT)).trim();
+            rowData.STATUS = String(getValue(STD_HEADERS.STATUS) || "TIADA STATUS").trim();
+            rowData.LATITUDE = Utils.cleanFloat(getValue(STD_HEADERS.LAT));
+            rowData.LONGITUDE = Utils.cleanFloat(getValue(STD_HEADERS.LNG));
+            rowData._type = config.type;
             rowData._validCoord = (rowData.LATITUDE !== 0 && rowData.LONGITUDE !== 0);
+            
             if (rowData.SITE_NAME === "N/A") return null;
 
             let count = 0;
             const usedKeys = Object.values(STD_HEADERS).flat();
+            
             cols.forEach((colKey, idx) => {
-                if (count < APP_CONFIG.SETTINGS.MAX_EXTRA_INFO_COLUMNS && !usedKeys.includes(colKey) && r.c[idx]) {
-                    const val = (r.c[idx].f !== undefined && r.c[idx].f !== null) ? r.c[idx].f : r.c[idx].v;
-                    if (val) {
-                        rowData._extra_details.push({ label: table.cols[idx].label, value: String(val).trim() });
-                        count++;
-                    }
+                if (count >= APP_CONFIG.SETTINGS.MAX_EXTRA_INFO_COLUMNS) return;
+                if (!colKey || usedKeys.includes(colKey)) return;
+
+                const cell = r.c[idx];
+                if (!cell) return;
+
+                const val = (cell.f !== undefined && cell.f !== null) ? cell.f : cell.v;
+
+                if (val !== null && val !== undefined && val !== "") {
+                    extraDetails.push({ label: originalCols[idx], value: String(val).trim() });
+                    count++;
                 }
             });
 
+            rowData._extra_details = extraDetails;
             rowData._id = Utils.generateId(rowData, config.type);
             return rowData;
         }).filter(item => item !== null);
     },
 
+    // --- UPDATED GOOGLE APPS SCRIPT FETCHER WITH CACHING ---
     async fetchLayerInfoGAS(layerType, featureName) {
         if (!layerType || !featureName) return null;
-        const cacheKey = `${layerType}_${Utils.normalize(featureName)}`;
-        if (this.layerInfoCache.has(cacheKey)) return this.layerInfoCache.get(cacheKey);
 
-        const sheetMap = { 'district': 'district', 'dun': 'dun', 'parliament': 'parliament' };
-        const url = `${APP_CONFIG.GAS_API_URL}?sheet=${sheetMap[layerType] || layerType}`;
+        // CHECK CACHE FIRST
+        const cacheKey = `${layerType}_${Utils.normalize(featureName)}`;
+        if (this.layerInfoCache.has(cacheKey)) {
+            return this.layerInfoCache.get(cacheKey);
+        }
+
+        const sheetMap = {
+            'district': 'district',
+            'dun': 'dun',
+            'parliament': 'parliament'
+        };
+
+        const sheetName = sheetMap[layerType] || layerType;
+        const url = `${APP_CONFIG.GAS_API_URL}?sheet=${sheetName}`;
 
         try {
-            // Add timeout race
-            const fetchPromise = fetch(url);
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000));
-            
-            const response = await Promise.race([fetchPromise, timeoutPromise]);
+            const response = await fetch(url);
             const data = await response.json();
-            if (data.error) throw new Error(data.error);
+
+            if (data.error) {
+                console.error("GAS Error:", data.error);
+                return null;
+            }
 
             const targetName = Utils.normalize(featureName);
-            const matchedRow = data.find(row => 
-                (row['LAYER'] && Utils.normalize(row['LAYER']) === targetName) || 
-                Object.values(row).some(val => typeof val === 'string' && Utils.normalize(val) === targetName)
-            );
+
+            const matchedRow = data.find(row => {
+                if (row['LAYER'] && Utils.normalize(row['LAYER']) === targetName) {
+                    return true;
+                }
+                return Object.values(row).some(val => 
+                    typeof val === 'string' && Utils.normalize(val) === targetName
+                );
+            });
 
             const result = matchedRow ? [matchedRow] : [];
-            this.layerInfoCache.set(cacheKey, result); // Cache empty results too to prevent retry
+            
+            // SAVE TO CACHE
+            if(result.length > 0) {
+                this.layerInfoCache.set(cacheKey, result);
+            }
+            
             return result;
+
         } catch (error) {
-            console.warn("GAS Fetch failed:", error);
+            console.error("Error fetching data from GAS:", error);
             return null;
         }
     }
 };
 
 /**
- * 5. MAP RENDERING
+ * =============================================================================
+ * 5. MAP RENDERING (LEAFLET)
+ * =============================================================================
  */
 const MapManager = {
     init() {
-        AppState.map = L.map('map', { zoomControl: false, preferCanvas: true }).setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, APP_CONFIG.SETTINGS.DEFAULT_ZOOM);
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
-        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: 'OSM' });
+        AppState.map = L.map('map', { zoomControl: false }).setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, APP_CONFIG.SETTINGS.DEFAULT_ZOOM);
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
         satellite.addTo(AppState.map);
-        L.control.layers({ "Satelit": satellite, "Peta": osm }, null, { position: 'topright' }).addTo(AppState.map);
+        L.control.layers({ "Satelit (Esri)": satellite, "Peta (OSM)": osm }, null, { position: 'topright' }).addTo(AppState.map);
         L.control.zoom({ position: 'bottomright' }).addTo(AppState.map);
         AppState.markersLayerGroup = L.layerGroup().addTo(AppState.map);
+        
+        AppState.map.createPane('overlayPane');
+        AppState.map.getPane('overlayPane').style.zIndex = 400;
+        
         this.loadBoundaries();
     },
-
     async loadBoundaries() {
-        const load = async (key, url) => {
+        const loadLayer = async (key, url) => {
             try {
                 const res = await fetch(url);
-                if (!res.ok) throw new Error("Missing");
+                if (!res.ok) throw new Error("File Missing");
                 const data = await res.json();
-                AppState.dataLayers[key] = L.geoJSON(data, {
+                const layer = L.geoJSON(data, {
                     style: { color: '#666', weight: 1, fillOpacity: 0.05, fillColor: '#ffffff' },
                     onEachFeature: (feature, layer) => {
+                        // Extract name based on prioritized keys
                         const name = this.extractGeoName(feature);
-                        layer.bindTooltip(name, { sticky: true, interactive: false, direction: 'top', className: 'leaflet-tooltip boundary-tooltip' });
+                        
+                        // 1. TOOLTIP (HOVER) - Shows simple Name
+                        layer.bindTooltip(name, { 
+                            sticky: true, 
+                            interactive: false, 
+                            direction: 'top', 
+                            className: 'leaflet-tooltip boundary-tooltip' // Added custom class
+                        });
+
+                        // 2. HIGHLIGHT & POPUP (CLICK)
                         layer.on('click', (e) => {
                             L.DomEvent.stopPropagation(e);
-                            this.highlightBoundary(key, layer, name, true, e.latlng);
+                            this.highlightBoundary(key, layer, name, true, e.latlng); // Pass latlng for popup
                         });
-                        layer.on('mouseover', (e) => { if (AppState.activeFeatureName !== name) e.target.setStyle({ fillColor: Utils.getRandomColor(), fillOpacity: 0.5, weight: 2, color: '#333' }); });
-                        layer.on('mouseout', (e) => { if (AppState.activeFeatureName !== name) AppState.dataLayers[key].resetStyle(e.target); });
+
+                        layer.on('mouseover', (e) => {
+                            if (AppState.activeFeatureName !== name) {
+                                e.target.setStyle({ fillColor: Utils.getRandomColor(), fillOpacity: 0.5, weight: 2, color: '#333' });
+                            }
+                        });
+                        layer.on('mouseout', (e) => {
+                            if (AppState.activeFeatureName !== name) {
+                                AppState.dataLayers[key].resetStyle(e.target);
+                            }
+                        });
                     }
                 });
-            } catch (e) { AppState.dataLayers[key] = L.layerGroup(); }
+                AppState.dataLayers[key] = layer;
+            } catch (e) {
+                console.warn(`GeoJSON ${key} gagal dimuatkan (Mungkin fail tidak wujud).`, e);
+                AppState.dataLayers[key] = L.layerGroup(); 
+            }
         };
         await Promise.all([
-            load('district', APP_CONFIG.GEOJSON_URLS.district),
-            load('dun', APP_CONFIG.GEOJSON_URLS.dun),
-            load('parliament', APP_CONFIG.GEOJSON_URLS.parliament)
+            loadLayer('district', APP_CONFIG.GEOJSON_URLS.district),
+            loadLayer('dun', APP_CONFIG.GEOJSON_URLS.dun),
+            loadLayer('parliament', APP_CONFIG.GEOJSON_URLS.parliament)
         ]);
         
         document.getElementById('toggle-daerah').onclick = () => this.switchBoundary('district', 'toggle-daerah');
         document.getElementById('toggle-dun').onclick = () => this.switchBoundary('dun', 'toggle-dun');
         document.getElementById('toggle-parliament').onclick = () => this.switchBoundary('parliament', 'toggle-parliament');
+        
         setTimeout(() => this.switchBoundary('district', 'toggle-daerah'), 500);
     },
-
+    // UPDATED: Priority extraction for specific keys
     extractGeoName(feature) {
-        const p = feature.properties || {};
-        return Utils.normalize(p.district || p.DISTRICT || p.dun || p.DUN || p.parlimen || p.parliament || p.PARLIMEN || p.NAME || p.name || "SABAH");
+        const props = feature.properties || {};
+        // Check for specific keys requested by user first
+        const p = Utils.normalize(
+            props.district || props.DISTRICT || 
+            props.dun || props.DUN || 
+            props.parlimen || props.parliament || props.PARLIMEN || 
+            props.NAME || props.name || props.DAERAH || "Sabah"
+        );
+        return p;
     },
-
     switchBoundary(key, btnId) {
         Object.values(AppState.dataLayers).forEach(l => { if(l && AppState.map.hasLayer(l)) AppState.map.removeLayer(l); });
         if (AppState.dataLayers[key] && AppState.dataLayers[key].getLayers().length > 0) {
             AppState.map.addLayer(AppState.dataLayers[key]);
             AppState.activeBoundaryKey = key;
-        } else AppState.activeBoundaryKey = null;
-        
+        } else {
+            AppState.activeBoundaryKey = null;
+        }
         AppState.activeFeatureName = null;
         document.getElementById('selected-area').textContent = "SELURUH SABAH";
         document.querySelectorAll('#layer-card .toggle-btn').forEach(b => b.classList.remove('active'));
@@ -484,174 +739,457 @@ const MapManager = {
         AppState.map.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, APP_CONFIG.SETTINGS.DEFAULT_ZOOM);
         FilterManager.applyFilters();
     },
-
+    // UPDATED: Added showPopup argument
     highlightBoundary(key, layer, name, showPopup = true, latlng = null) {
-        AppState.dataLayers[key].eachLayer(l => AppState.dataLayers[key].resetStyle(l));
-        layer.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: Utils.getRandomColor() });
+        // Reset others
+        AppState.dataLayers[key].eachLayer(l => {
+            AppState.dataLayers[key].resetStyle(l);
+        });
+        
+        // Style selected
+        const color = Utils.getRandomColor();
+        layer.setStyle({ weight: 3, color: 'var(--primary)', fillOpacity: 0.4, fillColor: color });
+        
+        // Update State
         AppState.activeFeatureName = name;
         document.getElementById('selected-area').textContent = name;
+        
+        // Zoom
         AppState.map.fitBounds(layer.getBounds());
+        
+        // Filter Data
         FilterManager.applyFilters();
-        if (showPopup && latlng) this.openBoundaryPopup(latlng, name, key);
+
+        // Show Popup if requested
+        if (showPopup && latlng) {
+            this.openBoundaryPopup(latlng, name, key);
+        }
     },
 
+    // NEW FUNCTION: Handle the Popup with Async Data
     openBoundaryPopup(latlng, name, layerType) {
-        const popup = L.popup().setLatLng(latlng).setContent(`
+        // 1. Initial Content (Loading)
+        const loadingContent = `
             <div class="boundary-popup-content">
-                <div class="boundary-popup-header"><i class="fas fa-spinner fa-spin"></i> Memuatkan data...</div>
-            </div>`).openOn(AppState.map);
+                <div class="boundary-popup-header">
+                    <i class="fas fa-map-pin"></i> ${name}
+                </div>
+                <div class="boundary-popup-body">
+                    <div class="boundary-popup-loading">
+                        <i class="fas fa-spinner fa-spin"></i> Memuatkan data...
+                    </div>
+                </div>
+            </div>
+        `;
 
+        const popup = L.popup()
+            .setLatLng(latlng)
+            .setContent(loadingContent)
+            .openOn(AppState.map);
+
+        // 2. Fetch Data
         DataManager.fetchLayerInfoGAS(layerType, name).then(rows => {
-            let htmlRows = '';
             if (rows && rows.length > 0) {
+                // 3. Build Data Content
                 const row = rows[0];
                 const comments = row['_comments'] || {};
-                const activeName = Utils.normalize(name);
+                const activeName = Utils.normalize(name); // Normalize title for comparison
+                let htmlRows = '';
 
                 for (const [key, value] of Object.entries(row)) {
+                    const normKey = Utils.normalize(key);
                     const normVal = Utils.normalize(String(value));
-                    if (key === 'LAYER' || key === '_comments' || value === "" || normVal === activeName) continue;
+
+                    // --- FILTERING LOGIC (ADDED AS REQUESTED) ---
+                    // Skip internal keys
+                    if (key === 'LAYER' || key === '_comments' || value === "") continue;
+                    // Skip if value equals the title (Name redundancy check)
+                    if (normVal === activeName) continue;
                     
-                    const commentHtml = comments[key] ? `<div class="boundary-comment-box">${comments[key]}</div>` : '';
-                    htmlRows += `<div class="boundary-data-row"><span class="boundary-data-label">${key}</span><div style="text-align:right;"><span class="boundary-data-val">${value}</span>${commentHtml}</div></div>`;
+                    let commentHtml = '';
+                    if (comments[key]) {
+                        commentHtml = `<div class="boundary-comment-box">${comments[key]}</div>`;
+                    }
+                    htmlRows += `
+                        <div class="boundary-data-row">
+                            <span class="boundary-data-label">${key}</span>
+                            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                                <span class="boundary-data-val">${value}</span>
+                                ${commentHtml}
+                            </div>
+                        </div>
+                    `;
                 }
+
+                if (!htmlRows) htmlRows = '<div class="boundary-popup-loading">Tiada maklumat tambahan yang unik.</div>';
+
+                const finalContent = `
+                    <div class="boundary-popup-content">
+                        <div class="boundary-popup-header">
+                            <i class="fas fa-info-circle"></i> ${name}
+                        </div>
+                        <div class="boundary-popup-body">
+                            ${htmlRows}
+                        </div>
+                    </div>
+                `;
+                
+                popup.setContent(finalContent);
+            } else {
+                // No Data Found
+                popup.setContent(`
+                    <div class="boundary-popup-content">
+                        <div class="boundary-popup-header">${name}</div>
+                        <div class="boundary-popup-body" style="padding:15px; color:#999; text-align:center;">
+                            Tiada maklumat dijumpai dalam pangkalan data.
+                        </div>
+                    </div>
+                `);
             }
-            if (!htmlRows) htmlRows = '<div class="boundary-popup-loading">Tiada maklumat tambahan.</div>';
-            
-            popup.setContent(`
-                <div class="boundary-popup-content">
-                    <div class="boundary-popup-header"><i class="fas fa-info-circle"></i> ${name}</div>
-                    <div class="boundary-popup-body">${htmlRows}</div>
-                </div>`);
         });
     },
 
     createMarker(project) {
+        if (!project._validCoord) return null;
         const config = Utils.getTypeConfig(project._type);
-        const extraHtml = project._extra_details.map(d => `<div class="popup-row"><span class="popup-label">${Utils.escapeHtml(d.label)}</span><span class="popup-value">${Utils.escapeHtml(d.value)}</span></div>`).join('');
+        const statusColor = Utils.getStatusColor(project.STATUS);
         
-        const content = `
+        let extraHtml = project._extra_details.map(d => 
+            `<div class="popup-row">
+                <span class="popup-label">${Utils.escapeHtml(d.label)}</span>
+                <span class="popup-value">${Utils.escapeHtml(d.value)}</span>
+             </div>`
+        ).join('');
+
+        if (extraHtml) {
+            extraHtml = `
+                <div class="popup-divider">MAKLUMAT TERPERINCI</div>
+                <div class="popup-extra-container">${extraHtml}</div>
+            `;
+        }
+
+        const popupContent = `
             <div class="custom-popup-wrapper">
                 <div class="popup-header">
                     <div class="popup-icon" style="background:${config.color}20; color:${config.color}">${config.icon}</div>
                     <div class="popup-title">${Utils.escapeHtml(project.SITE_NAME)}</div>
                 </div>
-                <div class="popup-status-badge" style="background:${Utils.getStatusColor(project.STATUS)}20; color:${Utils.getStatusColor(project.STATUS)}; border:1px solid ${Utils.getStatusColor(project.STATUS)}">${Utils.escapeHtml(project.STATUS)}</div>
-                <div class="popup-grid">
-                    <div class="popup-item"><span class="popup-label-mini">Kategori</span><span class="popup-value-main" style="color:${config.color}">${config.label}</span></div>
-                    <div class="popup-item"><span class="popup-label-mini">Daerah</span><span class="popup-value-main">${Utils.escapeHtml(project.DISTRICT)}</span></div>
-                    <div class="popup-item full-width"><span class="popup-label-mini">Koordinat</span><span class="popup-value-mono">${project.LATITUDE.toFixed(5)}, ${project.LONGITUDE.toFixed(5)}</span></div>
+
+                <div class="popup-status-badge" style="background:${statusColor}20; color:${statusColor}; border:1px solid ${statusColor}">
+                    ${Utils.escapeHtml(project.STATUS)}
                 </div>
-                ${extraHtml ? `<div class="popup-divider">Info Lanjut</div><div class="popup-extra-container">${extraHtml}</div>` : ''}
-            </div>`;
 
-        return L.circleMarker([project.LATITUDE, project.LONGITUDE], {
+                <div class="popup-grid">
+                    <div class="popup-item">
+                        <span class="popup-label-mini">KATEGORI</span>
+                        <span class="popup-value-main" style="color:${config.color}">${config.label}</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label-mini">DAERAH</span>
+                        <span class="popup-value-main">${Utils.escapeHtml(project.DISTRICT)}</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label-mini">DUN</span>
+                        <span class="popup-value-main">${Utils.escapeHtml(project.DUN || '-')}</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label-mini">PARLIMEN</span>
+                        <span class="popup-value-main">${Utils.escapeHtml(project.PARLIAMENT || '-')}</span>
+                    </div>
+                    <div class="popup-item full-width">
+                        <span class="popup-label-mini">KOORDINAT</span>
+                        <span class="popup-value-mono">${project.LATITUDE.toFixed(5)}, ${project.LONGITUDE.toFixed(5)}</span>
+                    </div>
+                </div>
+
+                ${extraHtml}
+            </div>
+        `;
+
+        const marker = L.circleMarker([project.LATITUDE, project.LONGITUDE], {
+            pane: 'overlayPane',
             radius: 6, fillColor: config.color, color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
-        }).bindPopup(content, { minWidth: 360, maxWidth: 400 });
+        }).bindPopup(popupContent, {
+            minWidth: 350,
+            maxWidth: 420
+        });
+        
+        marker._meta = project;
+        return marker;
     },
-
     renderMarkersInBatches(projects, onComplete) {
+        const total = projects.length; 
         let i = 0;
-        const run = () => {
-            const end = Math.min(i + 500, projects.length);
+        const batchSize = 500;
+        const runChunk = () => {
+            const end = Math.min(i + batchSize, total);
             for (; i < end; i++) {
-                if (!AppState.markersBySite.has(projects[i]._id) && projects[i]._validCoord) {
-                    AppState.markersBySite.set(projects[i]._id, this.createMarker(projects[i]));
+                const p = projects[i];
+                if (!AppState.markersBySite.has(p._id)) {
+                    const m = this.createMarker(p);
+                    if (m) AppState.markersBySite.set(p._id, m);
                 }
             }
-            if (i < projects.length) setTimeout(run, 20);
+            if (i < total) setTimeout(runChunk, 20);
             else if (onComplete) onComplete();
         };
-        run();
+        runChunk();
     }
 };
 
 /**
- * 6. CHARTS & FILTERING
+ * =============================================================================
+ * 6. CHART MANAGEMENT
+ * =============================================================================
  */
 const ChartManager = {
     renderCharts(data) {
         this.destroyCharts();
-        const types = APP_CONFIG.PROJECT_TYPES;
         
-        // Data Prep
-        const countsByType = types.map(t => data.filter(p => p._type === t.type).length);
+        const projectTypes = APP_CONFIG.PROJECT_TYPES.map(t => t.type);
+        const typeLabels = APP_CONFIG.PROJECT_TYPES.map(t => t.label);
+        const typeColors = APP_CONFIG.PROJECT_TYPES.map(t => t.color);
+        
+        const countsByType = projectTypes.map(t => data.filter(p => p._type === t).length);
+        
         const statusMap = {};
-        data.forEach(p => { const s = Utils.getStatusCategory(p.STATUS); statusMap[s] = (statusMap[s] || 0) + 1; });
-        const sortedStatus = Object.keys(statusMap).sort((a,b) => Utils.getStatusSortIndex(a) - Utils.getStatusSortIndex(b));
+        data.forEach(p => {
+            const s = Utils.getStatusCategory(p.STATUS);
+            statusMap[s] = (statusMap[s] || 0) + 1;
+        });
         
-        // Common Options (Disable animation for clean exports)
-        const commonOpts = { fontFamily: 'Plus Jakarta Sans', toolbar: { show: false }, animations: { enabled: false } };
+        const sortedStatuses = Object.keys(statusMap).sort((a,b) => Utils.getStatusSortIndex(a) - Utils.getStatusSortIndex(b));
+        const statusCounts = sortedStatuses.map(s => statusMap[s]);
+        const statusColors = sortedStatuses.map(s => Utils.getStatusColor(s));
+        
+        const seriesData = sortedStatuses.map(status => {
+            const dataArray = projectTypes.map(type => {
+                return data.filter(p => p._type === type && Utils.getStatusCategory(p.STATUS) === status).length;
+            });
+            return { name: status, data: dataArray, color: Utils.getStatusColor(status) };
+        });
 
-        // Chart 1: Bar Type
         const opts1 = {
-            ...commonOpts, series: [{ name: 'Jumlah', data: countsByType }], chart: { type: 'bar', height: 350, ...commonOpts },
-            colors: types.map(t => t.color), plotOptions: { bar: { distributed: true, borderRadius: 4 } },
-            xaxis: { categories: types.map(t => t.label) }, legend: { show: false }
+            series: [{ name: 'Jumlah', data: countsByType }],
+            chart: { type: 'bar', height: '100%', toolbar: { show: false }, fontFamily: 'Plus Jakarta Sans' },
+            colors: typeColors,
+            plotOptions: { bar: { borderRadius: 4, distributed: true, columnWidth: '50%' } },
+            dataLabels: { enabled: true },
+            xaxis: { categories: typeLabels },
+            legend: { show: false }
         };
         AppState.charts.c1 = new ApexCharts(document.querySelector("#chart-01"), opts1);
         AppState.charts.c1.render();
-
-        // Chart 2: Donut Status
+        
         const opts2 = {
-            ...commonOpts, series: sortedStatus.map(s => statusMap[s]), labels: sortedStatus,
-            chart: { type: 'donut', height: 350, ...commonOpts },
-            colors: sortedStatus.map(s => Utils.getStatusColor(s)), legend: { position: 'bottom' }
+            series: statusCounts,
+            labels: sortedStatuses,
+            chart: { type: 'donut', height: '100%', fontFamily: 'Plus Jakarta Sans' },
+            colors: statusColors,
+            dataLabels: { enabled: true, formatter: function (val) { return val.toFixed(1) + "%" } },
+            plotOptions: { pie: { donut: { size: '65%' } } },
+            legend: { position: 'bottom' }
         };
         AppState.charts.c2 = new ApexCharts(document.querySelector("#chart-02"), opts2);
         AppState.charts.c2.render();
-
-        // Chart 3: Stacked
-        const series3 = sortedStatus.map(s => ({
-            name: s, color: Utils.getStatusColor(s),
-            data: types.map(t => data.filter(p => p._type === t.type && Utils.getStatusCategory(p.STATUS) === s).length)
-        }));
+        
         const opts3 = {
-            ...commonOpts, series: series3, chart: { type: 'bar', stacked: true, height: 350, ...commonOpts },
-            xaxis: { categories: types.map(t => t.label) }, legend: { position: 'bottom' }
+            series: seriesData,
+            chart: { type: 'bar', height: '100%', stacked: true, toolbar: { show: false }, fontFamily: 'Plus Jakarta Sans' },
+            colors: statusColors,
+            plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
+            xaxis: { categories: typeLabels },
+            legend: { position: 'bottom' },
+            fill: { opacity: 1 }
         };
         AppState.charts.c3 = new ApexCharts(document.querySelector("#chart-03"), opts3);
         AppState.charts.c3.render();
+        
+        this.renderBottomGrid(data);
     },
     
+    renderBottomGrid(data) {
+        const container = document.getElementById('dynamic-bottom-grid');
+        container.innerHTML = "";
+        
+        if (AppState.charts.bottom && AppState.charts.bottom.length) {
+            AppState.charts.bottom.forEach(c => c.destroy());
+        }
+        AppState.charts.bottom = [];
+
+        APP_CONFIG.PROJECT_TYPES.forEach(t => {
+            const typeData = data.filter(p => p._type === t.type);
+
+            const card = document.createElement('div');
+            card.className = "bottom-card"; 
+            card.style.borderTop = `4px solid ${t.color}`;
+            const chartId = `bottom-chart-${t.type}`;
+            
+            card.innerHTML = `
+                <div class="bottom-card-header" style="color:${t.color}; display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="fas fa-chart-bar"></i> ${t.label}</span>
+                    <span style="font-size:12px; opacity:0.7;">${typeData.length} Projek</span>
+                </div>
+                <div class="bottom-card-body" style="overflow:hidden; padding:10px;">
+                    <div id="${chartId}" style="width:100%; height:100%;"></div>
+                </div>
+            `;
+            container.appendChild(card);
+
+            const counts = {};
+            typeData.forEach(p => {
+                const s = Utils.getStatusCategory(p.STATUS);
+                counts[s] = (counts[s] || 0) + 1;
+            });
+            
+            let categories = Object.keys(counts);
+            if (categories.length > 0) {
+                 categories.sort((a,b) => Utils.getStatusSortIndex(a) - Utils.getStatusSortIndex(b));
+            }
+            
+            const seriesData = categories.map(c => counts[c]);
+            const colors = categories.map(c => Utils.getStatusColor(c));
+
+            const options = {
+                series: [{ name: 'Projek', data: seriesData }],
+                chart: {
+                    type: 'bar',
+                    height: '100%',
+                    toolbar: { show: false },
+                    fontFamily: 'Plus Jakarta Sans',
+                    animations: { enabled: false }
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        columnWidth: '50%',
+                        distributed: true,
+                        dataLabels: { position: 'top' }
+                    }
+                },
+                colors: colors,
+                dataLabels: {
+                    enabled: true,
+                    offsetY: -20,
+                    style: { fontSize: '12px', colors: ["#304758"] }
+                },
+                xaxis: {
+                    categories: categories,
+                    labels: { style: { fontSize: '11px' }, rotate: -45 },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                    title: { text: 'PROJEK' }
+                },
+                yaxis: { 
+                    show: false,
+                    title: { text: 'VALUE' }
+                },
+                grid: { show: false, padding: { top: 20, left: 0, right: 0, bottom: 0 } },
+                legend: { show: false },
+                title: {
+                    text: 'Jumlah Projek vs Status',
+                    align: 'center',
+                    style: { fontSize: '12px', color: '#999' }
+                },
+                noData: {
+                    text: 'Tiada Data',
+                    align: 'center',
+                    verticalAlign: 'middle',
+                    style: { color: '#999', fontSize: '14px' }
+                }
+            };
+
+            const chart = new ApexCharts(document.getElementById(chartId), options);
+            chart.render();
+            AppState.charts.bottom.push(chart);
+        });
+    },
+
     destroyCharts() {
-        ['c1', 'c2', 'c3'].forEach(k => { if(AppState.charts[k]) AppState.charts[k].destroy(); });
+        if(AppState.charts.c1) AppState.charts.c1.destroy();
+        if(AppState.charts.c2) AppState.charts.c2.destroy();
+        if(AppState.charts.c3) AppState.charts.c3.destroy();
+        if (AppState.charts.bottom && AppState.charts.bottom.length) {
+            AppState.charts.bottom.forEach(c => c.destroy());
+        }
+        AppState.charts.c1 = null;
+        AppState.charts.c2 = null;
+        AppState.charts.c3 = null;
+        AppState.charts.bottom = [];
     }
 };
 
+/**
+ * =============================================================================
+ * 7. DATA PROCESSING & FILTERING
+ * =============================================================================
+ */
 const FilterManager = {
     applyFilters() {
         let list = AppState.allProjects;
+
         if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
-            const bName = AppState.activeFeatureName;
-            list = list.filter(p => Utils.normalize(p[AppState.activeBoundaryKey.toUpperCase()]) === bName);
+            const boundaryName = AppState.activeFeatureName;
+            list = list.filter(p => {
+                if (AppState.activeBoundaryKey === 'district') return Utils.normalize(p.DISTRICT) === boundaryName;
+                if (AppState.activeBoundaryKey === 'dun') return Utils.normalize(p.DUN) === boundaryName;
+                if (AppState.activeBoundaryKey === 'parliament') return Utils.normalize(p.PARLIAMENT) === boundaryName;
+                return false;
+            });
         }
+
         if (AppState.searchTerm) {
             const term = AppState.searchTerm.toLowerCase();
-            list = list.filter(p => p.SITE_NAME.toLowerCase().includes(term) || p.DISTRICT.toLowerCase().includes(term));
+            list = list.filter(p => 
+                p.SITE_NAME.toLowerCase().includes(term) ||
+                p.DISTRICT.toLowerCase().includes(term) ||
+                p.DUN.toLowerCase().includes(term)
+            );
         }
 
         AppState.currentFilteredList = list;
         UI.updateDashboard(list);
 
-        // Map Filter
-        const activeTypes = AppState.activeCategory ? new Set([AppState.activeCategory]) : (AppState.activeTypeToggles.size ? AppState.activeTypeToggles : null);
-        let mapList = activeTypes ? list.filter(p => activeTypes.has(p._type)) : []; // Default empty on load unless selected
-        if (AppState.activeStatusFilter) mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === AppState.activeStatusFilter);
-        
+        let mapList = [];
+        let typesToShow = new Set();
+
+        if (AppState.activeCategory) {
+            typesToShow.add(AppState.activeCategory);
+        } else {
+            typesToShow = AppState.activeTypeToggles;
+        }
+
+        if (typesToShow.size > 0) {
+             mapList = list.filter(p => typesToShow.has(p._type));
+        } else {
+             mapList = []; 
+        }
+
+        if (AppState.activeStatusFilter) {
+            mapList = mapList.filter(p => Utils.getStatusCategory(p.STATUS) === AppState.activeStatusFilter);
+        }
+
+        this.updateMapMarkers(mapList);
+    },
+    updateMapMarkers(displayList) {
         AppState.markersLayerGroup.clearLayers();
-        AppState.visibleProjects = mapList;
-        const visibleIds = new Set(mapList.map(p => p._id));
-        AppState.markersBySite.forEach((m, id) => { if (visibleIds.has(id)) AppState.markersLayerGroup.addLayer(m); });
+        AppState.visibleProjects = displayList;
+
+        const visibleIds = new Set(displayList.map(p => p._id));
+        AppState.markersBySite.forEach((marker, id) => {
+            if (visibleIds.has(id)) AppState.markersLayerGroup.addLayer(marker);
+        });
     }
 };
 
 /**
- * 7. UI LOGIC
+ * =============================================================================
+ * 8. UI RENDERING
+ * =============================================================================
  */
 const UI = {
     init() {
-        this.genControls();
+        this.generateDynamicControls();
         document.getElementById('search-input').addEventListener('input', Utils.debounce((e) => {
             AppState.searchTerm = e.target.value;
             FilterManager.applyFilters();
@@ -659,29 +1197,54 @@ const UI = {
     },
     showLoading(show, msg) {
         const el = document.getElementById('loading');
-        el.classList.toggle('hide', !show);
+        if(show) el.classList.remove('hide');
+        else el.classList.add('hide');
         if(msg) document.getElementById('loading-msg').textContent = msg;
     },
-    genControls() {
+    generateDynamicControls() {
         const grid = document.getElementById('dynamic-grid-stats');
         const legend = document.getElementById('dynamic-legend');
         const filters = document.getElementById('dynamic-filter-btns');
         
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
-            grid.innerHTML += `<div class="mini-stat" id="stat-card-${t.type}" onclick="UI.catClick('${t.type}')" style="--stat-color:${t.color}"><div class="mini-stat-val" id="count-${t.type}" style="color:${t.color}">0</div><div class="mini-stat-lbl">${t.label}</div></div>`;
+            const stat = document.createElement('div');
+            stat.className = 'mini-stat'; 
+            stat.id = `stat-card-${t.type}`;
+            stat.onclick = () => this.handleCategoryClick(t.type); 
+            stat.setAttribute('style', `--stat-color: ${t.color}`);
+            stat.innerHTML = `
+                <style>#stat-card-${t.type}::before { background: ${t.color}; }</style>
+                <div class="mini-stat-val" id="count-${t.type}" style="color:${t.color}">0</div>
+                <div class="mini-stat-lbl">${t.label}</div>
+            `;
+            grid.appendChild(stat);
+
             legend.innerHTML += `<div class="legend-row"><span class="dot" style="background:${t.color}"></span> ${t.label}</div>`;
-            filters.innerHTML += `<button class="toggle-btn" id="toggle-${t.type}" onclick="UI.typeToggle('${t.type}')"><span class="icon-slot">${t.icon}</span><span class="text-slot">${t.label}</span></button>`;
+
+            const btn = document.createElement('button');
+            btn.className = "toggle-btn"; 
+            btn.id = `toggle-${t.type}`;
+            btn.innerHTML = `<span class="icon-slot">${t.icon}</span><span class="text-slot">${t.label}</span>`;
+            btn.onclick = () => this.handleTypeToggle(t.type); 
+            filters.appendChild(btn);
         });
     },
-    catClick(type) {
-        AppState.activeCategory = (AppState.activeCategory === type) ? null : type;
-        document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
-        if (AppState.activeCategory) document.getElementById(`stat-card-${type}`).classList.add('selected');
-        FilterManager.applyFilters();
+    handleCategoryClick(type) {
+        if (AppState.activeCategory === type) {
+            AppState.activeCategory = null; 
+            document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+        } else {
+            AppState.activeCategory = type; 
+            document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`stat-card-${type}`).classList.add('selected');
+        }
+        FilterManager.applyFilters(); 
     },
-    typeToggle(type) {
-        AppState.activeCategory = null;
-        document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+    handleTypeToggle(type) {
+        if (AppState.activeCategory) {
+            AppState.activeCategory = null;
+            document.querySelectorAll('.mini-stat').forEach(el => el.classList.remove('selected'));
+        }
         if (AppState.activeTypeToggles.has(type)) {
             AppState.activeTypeToggles.delete(type);
             document.getElementById(`toggle-${type}`).classList.remove('active');
@@ -692,248 +1255,712 @@ const UI = {
         FilterManager.applyFilters();
     },
     updateDashboard(data) {
-        const total = data.length;
-        this.animateValue("total-projects", parseInt(document.getElementById('total-projects').textContent)||0, total, 1000);
-        APP_CONFIG.PROJECT_TYPES.forEach(t => document.getElementById(`count-${t.type}`).textContent = data.filter(p => p._type === t.type).length);
-        
-        const statusData = AppState.activeCategory ? data.filter(p => p._type === AppState.activeCategory) : data;
-        const container = document.getElementById('status-list');
-        container.innerHTML = "";
-        
-        const stats = {};
-        statusData.forEach(p => { const s = Utils.getStatusCategory(p.STATUS); stats[s] = (stats[s] || 0) + 1; });
-        const sorted = Object.keys(stats).sort((a,b) => Utils.getStatusSortIndex(a) - Utils.getStatusSortIndex(b) || stats[b]-stats[a]);
-        
-        sorted.forEach(cat => {
-            const count = stats[cat];
-            const pct = total ? Math.round((count/total)*100) : 0;
-            const col = Utils.getStatusColor(cat);
-            const sel = (AppState.activeStatusFilter === cat) ? "selected" : "";
-            container.innerHTML += `
-                <div class="status-wrapper">
-                    <div class="status-item ${sel}" onclick="UI.statusClick('${cat}')">
-                        <div class="status-header"><span class="status-name">${cat}</span><span style="color:${col};font-weight:800">${count} (${pct}%)</span></div>
-                        <div class="progress-bg"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
-                    </div>
-                </div>`;
+        const totalEl = document.getElementById('total-projects');
+        const currentVal = parseInt(totalEl.textContent) || 0;
+        const newVal = data.length;
+        this.animateValue("total-projects", currentVal, newVal, 1000); 
+
+        APP_CONFIG.PROJECT_TYPES.forEach(t => {
+            const count = data.filter(p => p._type === t.type).length;
+            document.getElementById(`count-${t.type}`).textContent = count;
         });
-    },
-    statusClick(status) {
-        AppState.activeStatusFilter = (AppState.activeStatusFilter === status) ? null : status;
-        FilterManager.applyFilters();
+
+        let statusData = data;
+        if (AppState.activeCategory) {
+            statusData = data.filter(p => p._type === AppState.activeCategory);
+        }
+        this.renderStatusList(statusData);
     },
     animateValue(id, start, end, duration) {
         const obj = document.getElementById(id);
+        if(!obj) return;
+        if(start === end) return;
         let startTimestamp = null;
         const step = (timestamp) => {
             if (!startTimestamp) startTimestamp = timestamp;
             const progress = Math.min((timestamp - startTimestamp) / duration, 1);
             obj.textContent = Math.floor(progress * (end - start) + start);
-            if (progress < 1) window.requestAnimationFrame(step);
-            else obj.textContent = end;
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            } else {
+                obj.textContent = end;
+            }
         };
         window.requestAnimationFrame(step);
     },
-    openReport() {
-        const data = AppState.currentFilteredList.length ? AppState.currentFilteredList : AppState.allProjects;
+    renderStatusList(data) {
+        const container = document.getElementById('status-list');
+        container.innerHTML = "";
+        
+        const masterStatusSet = new Set();
+        AppState.allProjects.forEach(p => {
+            masterStatusSet.add(Utils.getStatusCategory(p.STATUS));
+        });
+        
+        const stats = {};
+        masterStatusSet.forEach(s => {
+            stats[s] = { 
+                count: 0, 
+                color: Utils.getStatusColor(s), 
+                details: {} 
+            };
+            APP_CONFIG.PROJECT_TYPES.forEach(t => stats[s].details[t.type] = 0);
+        });
+
+        data.forEach(p => {
+            const cat = Utils.getStatusCategory(p.STATUS);
+            if(!stats[cat]) {
+                stats[cat] = { count: 0, color: Utils.getStatusColor(cat), details: {} };
+                APP_CONFIG.PROJECT_TYPES.forEach(t => stats[cat].details[t.type] = 0);
+            }
+            stats[cat].count++;
+            stats[cat].details[p._type]++;
+        });
+        
+        const totalCount = data.length;
+        
+        const sortedCats = Object.keys(stats).sort((a,b) => {
+            const indexA = Utils.getStatusSortIndex(a);
+            const indexB = Utils.getStatusSortIndex(b);
+            if (indexA !== indexB) return indexA - indexB;
+            const diff = stats[b].count - stats[a].count;
+            if (diff !== 0) return diff;
+            return a.localeCompare(b);
+        });
+
+        if (sortedCats.length === 0) {
+            container.innerHTML = `<div style="text-align:center; color:#aaa; font-style:italic; padding:10px;">Tiada data status</div>`;
+            return;
+        }
+
+        sortedCats.forEach(cat => {
+            const itemData = stats[cat];
+            const percent = totalCount > 0 ? Math.round((itemData.count / totalCount) * 100) : 0;
+            const isSelected = (AppState.activeStatusFilter === cat) ? "selected" : "";
+            
+            let subHtml = "";
+            
+            if (itemData.count === 0) {
+                subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic; padding: 8px 0;">Tiada projek dalam kategori ini.</div>`;
+            } else {
+                Object.entries(itemData.details).forEach(([type, tCount]) => {
+                    if (tCount > 0) {
+                        const tConfig = Utils.getTypeConfig(type);
+                        const tPercent = itemData.count > 0 ? Math.round((tCount / itemData.count) * 100) : 0;
+                        
+                        subHtml += `
+                            <div class="sub-stat-row">
+                                <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
+                                <span>${tCount}</span>
+                            </div>
+                            <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
+                        `;
+                    }
+                });
+            }
+
+            const item = document.createElement('div');
+            item.className = "status-wrapper";
+            item.innerHTML = `
+                <div class="status-item ${isSelected}" onclick="UI.toggleStatusFilter('${cat}')">
+                    <div class="status-header">
+                        <span class="status-name">${cat}</span>
+                        <span style="color:${itemData.color}; font-weight:800;">${itemData.count} (${percent}%)</span>
+                    </div>
+                    <div class="progress-bg"><div class="progress-fill" style="width:${percent}%; background:${itemData.color}"></div></div>
+                </div>
+                <div class="status-details ${isSelected ? 'show' : ''}">${subHtml}</div>
+            `;
+            container.appendChild(item);
+        });
+    },
+    toggleStatusFilter(status) {
+        AppState.activeStatusFilter = (AppState.activeStatusFilter === status) ? null : status;
+        FilterManager.applyFilters();
+    },
+    
+    // --- UPDATED REPORT MODAL (WITH RESTORED LAYER INFO & CLEANED GRID) ---
+    async openReport() {
+        const data = (AppState.currentFilteredList && AppState.currentFilteredList.length > 0) ? AppState.currentFilteredList : AppState.allProjects;
+        
         document.getElementById('report-overlay').classList.add('open');
         document.getElementById('report-layer-name').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-badge-area').textContent = AppState.activeFeatureName || "SELURUH SABAH";
         document.getElementById('report-total-count').textContent = data.length;
+        this.updateClock();
         
-        const now = new Date();
-        document.getElementById('clock').textContent = now.toLocaleDateString('ms-MY', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-        document.getElementById('footer-date').textContent = now.toLocaleString();
-
-        const mini = document.getElementById('report-mini-stats');
-        mini.innerHTML = "";
+        const footerDate = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
+        document.getElementById('footer-date').textContent = footerDate.toLocaleDateString('ms-MY', options);
+        
+        // Mini Stats (Top)
+        const miniContainer = document.getElementById('report-mini-stats');
+        miniContainer.innerHTML = "";
         APP_CONFIG.PROJECT_TYPES.forEach(t => {
-            mini.innerHTML += `<div class="mini-card" style="border-top-color:${t.color}"><h3 style="color:${t.color}">${data.filter(p=>p._type===t.type).length}</h3><span>${t.label}</span></div>`;
+            const count = data.filter(p => p._type === t.type).length;
+            miniContainer.innerHTML += `
+                <div class="mini-card" style="border-top-color:${t.color}">
+                    <h3 style="color:${t.color}">${count}</h3><span>${t.label}</span>
+                </div>`;
         });
-
-        setTimeout(() => {
-            ChartManager.renderCharts(data);
-            this.initReportMap(data);
-            this.loadGASReportData();
-        }, 300);
-    },
-    loadGASReportData() {
-        const content = document.getElementById('layer-info-content');
-        const section = document.getElementById('layer-info-section');
-        section.style.display = 'none';
         
+        setTimeout(() => {
+            ChartManager.renderCharts(data); 
+            this.initReportMap(data);
+        }, 300);
+
+        // --- DIKEMBALIKAN: GAS INTEGRATION FOR LAYER INFO ---
+        const infoSection = document.getElementById('layer-info-section');
+        const infoContent = document.getElementById('layer-info-content');
+        const infoTitle = document.getElementById('layer-info-name');
+
+        infoSection.style.display = 'none';
+        infoContent.innerHTML = '';
+
         if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
-            section.style.display = 'block';
-            content.innerHTML = '<div style="grid-column:1/-1;text-align:center"><i class="fas fa-spinner fa-spin"></i> Memuatkan data...</div>';
-            document.getElementById('layer-info-name').textContent = AppState.activeFeatureName;
+            infoSection.style.display = 'block'; // Show container
+            infoContent.innerHTML = '<div style="padding:20px; text-align:center; color:#666; width:100%; grid-column: 1 / -1;"><i class="fas fa-spinner fa-spin"></i> Memuatkan maklumat kawasan...</div>';
+            infoTitle.textContent = AppState.activeFeatureName;
 
             DataManager.fetchLayerInfoGAS(AppState.activeBoundaryKey, AppState.activeFeatureName).then(rows => {
-                content.innerHTML = '';
-                if (rows && rows.length) {
+                infoContent.innerHTML = ''; // Clear loading
+                if (rows && rows.length > 0) {
                     const row = rows[0];
-                    const skip = ['LAYER','_comments','OBJECTID','SHAPE_LENGTH','SHAPE_AREA','ID','F_CODE','FID'];
+                    const comments = row['_comments'] || {};
                     const activeName = Utils.normalize(AppState.activeFeatureName);
                     
-                    for (const [k, v] of Object.entries(row)) {
-                        if (skip.includes(k) || v === "" || Utils.normalize(String(v)) === activeName) continue;
-                        content.innerHTML += `
-                            <div class="data-row">
-                                <span class="label">${k}</span><span class="value">${v}</span>
-                                ${row['_comments']?.[k] ? `<div class="comment-box">💬 ${row['_comments'][k]}</div>` : ''}
+                    for (const [key, value] of Object.entries(row)) {
+                        // SKIP LOGIC:
+                        // 1. Internal keys: LAYER, _comments
+                        // 2. Empty values
+                        // 3. Duplicate Name: If the value is exactly the layer name (e.g. "TAWAU" in "DAERAH: TAWAU")
+                        // 4. Technical GIS fields: OBJECTID, Shape_Length, etc.
+                        
+                        const normKey = Utils.normalize(key);
+                        const normVal = Utils.normalize(String(value));
+                        
+                        if (key === 'LAYER' || key === '_comments' || value === "") continue;
+                        if (normVal === activeName) continue; // Skip if value == Title
+                        if (['OBJECTID', 'SHAPE_LENGTH', 'SHAPE_AREA', 'ID', 'F_CODE', 'FID'].includes(normKey)) continue;
+
+                        // Create Card
+                        let commentHtml = '';
+                        if (comments[key]) {
+                            commentHtml = `
+                            <div class="comment-box">
+                                <span class="comment-icon">💬</span>
+                                <span>${comments[key]}</span>
                             </div>`;
+                        }
+                        
+                        const item = document.createElement('div');
+                        item.className = 'data-row'; // Fits .layer-info-grid > .data-row CSS
+                        item.innerHTML = `
+                            <span class="label">${key}</span>
+                            <span class="value">${value}</span>
+                            ${commentHtml}
+                        `;
+                        
+                        // Append DIRECTLY to grid container (no wrapper div) to respect CSS Grid
+                        infoContent.appendChild(item);
                     }
+                    
+                    // If everything was filtered out
+                    if (infoContent.children.length === 0) {
+                         infoContent.innerHTML = '<div style="padding:15px; text-align:center; color:#999; grid-column: 1 / -1;">Tiada maklumat tambahan yang unik dijumpai.</div>';
+                    }
+
+                } else {
+                    infoContent.innerHTML = '<div style="padding:15px; text-align:center; color:#999; grid-column: 1 / -1;">Tiada maklumat tambahan dijumpai.</div>';
                 }
-                if (!content.innerHTML) content.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#999">Tiada maklumat tambahan unik.</div>';
             });
         }
+        
+        const modalStatus = document.getElementById('dynamic-status-container');
+        modalStatus.innerHTML = "";
+        
+        const masterStatusSet = new Set();
+        AppState.allProjects.forEach(p => {
+            masterStatusSet.add(Utils.getStatusCategory(p.STATUS));
+        });
+
+        const reportStats = {};
+        masterStatusSet.forEach(s => {
+            reportStats[s] = { count: 0, details: {} };
+            APP_CONFIG.PROJECT_TYPES.forEach(t => reportStats[s].details[t.type] = 0);
+        });
+        
+        data.forEach(p => {
+            const s = Utils.getStatusCategory(p.STATUS);
+            if(reportStats[s]) {
+                reportStats[s].count++;
+                reportStats[s].details[p._type]++;
+            } else {
+                reportStats[s] = { count: 1, details: {} };
+                APP_CONFIG.PROJECT_TYPES.forEach(t => reportStats[s].details[t.type] = 0);
+                reportStats[s].details[p._type]++;
+            }
+        });
+
+        const sortedStatusList = Object.keys(reportStats).sort((a, b) => {
+            const indexA = Utils.getStatusSortIndex(a);
+            const indexB = Utils.getStatusSortIndex(b);
+            if (indexA !== indexB) return indexA - indexB;
+            const diff = reportStats[b].count - reportStats[a].count;
+            if (diff !== 0) return diff;
+            return a.localeCompare(b);
+        });
+
+        if (sortedStatusList.length === 0) {
+             modalStatus.innerHTML = `<div style="text-align:center; color:#aaa; font-style:italic; padding:20px;">Tiada data status.</div>`;
+        }
+
+        sortedStatusList.forEach(cat => {
+             const itemData = reportStats[cat];
+             const count = itemData.count;
+             const percentage = data.length > 0 ? ((count / data.length) * 100).toFixed(1) : "0.0";
+             const col = Utils.getStatusColor(cat);
+             
+             let subHtml = "";
+             
+             if (count === 0) {
+                 subHtml = `<div style="font-size:11px; color:#aaa; font-style:italic; padding: 8px 0;">Tiada projek dalam kategori ini.</div>`;
+             } else {
+                 APP_CONFIG.PROJECT_TYPES.forEach(t => {
+                        const tCount = itemData.details[t.type] || 0;
+                        if (tCount > 0) {
+                           const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
+                           const tConfig = Utils.getTypeConfig(t.type);
+                           subHtml += `
+                            <div class="sub-stat-row">
+                                 <span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span>
+                                 <span>${tCount}</span>
+                            </div>
+                            <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
+                          `;
+                        }
+                 });
+             }
+
+             modalStatus.innerHTML += `
+                <div class="status-wrapper" style="margin-bottom:15px;">
+                    <div class="status-item selected" style="cursor:default;">
+                        <div class="status-header">
+                            <span class="status-name">${cat}</span>
+                            <span style="color:${col}; font-weight:800;">${count} (${percentage}%)</span>
+                        </div>
+                        <div class="progress-bg"><div class="progress-fill" style="width:${percentage}%; background:${col}"></div></div>
+                    </div>
+                    <div class="status-details show" style="display:block;">${subHtml}</div>
+                </div>`;
+        });
     },
     initReportMap(data) {
-        if (AppState.reportMap) { AppState.reportMap.remove(); AppState.reportMap = null; }
-        document.getElementById('report-map').innerHTML = "";
-        AppState.reportMap = L.map('report-map', { zoomControl: false, preferCanvas: true });
+        if (AppState.reportMap) {
+            AppState.reportMap.off();
+            AppState.reportMap.remove();
+            AppState.reportMap = null;
+        }
+        
+        const mapContainer = document.getElementById('report-map');
+        if (!mapContainer) return;
+        mapContainer.innerHTML = ""; 
+
+        AppState.reportMap = L.map('report-map', { 
+            zoomControl: false, 
+            attributionControl: false,
+            preferCanvas: true 
+        });
+        
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(AppState.reportMap);
         
-        const group = L.featureGroup().addTo(AppState.reportMap);
+        AppState.reportMap.createPane('boundaryPane');
+        AppState.reportMap.getPane('boundaryPane').style.zIndex = 300;
+        AppState.reportMap.createPane('markerPane');
+        AppState.reportMap.getPane('markerPane').style.zIndex = 400;
+
+        const boundaryGroup = L.featureGroup().addTo(AppState.reportMap);
+        const markerGroup = L.featureGroup({pane: 'markerPane'}).addTo(AppState.reportMap);
         
+        let boundaryAdded = false;
         if (AppState.activeBoundaryKey && AppState.dataLayers[AppState.activeBoundaryKey]) {
-            const geoJson = AppState.dataLayers[AppState.activeBoundaryKey].toGeoJSON();
-            L.geoJSON(geoJson, {
-                style: f => {
-                    const active = MapManager.extractGeoName(f) === AppState.activeFeatureName;
-                    return { color: active?'#DC2626':'#94a3b8', weight: active?2:1, fillColor: active?'#EF4444':'transparent', fillOpacity: active?0.2:0 };
-                }
-            }).addTo(group);
+            const layerObj = AppState.dataLayers[AppState.activeBoundaryKey];
+            
+            if (typeof layerObj.toGeoJSON === 'function') {
+                const geoJson = layerObj.toGeoJSON();
+                const boundaryLayer = L.geoJSON(geoJson, {
+                      pane: 'boundaryPane',
+                      style: (feature) => {
+                          const name = MapManager.extractGeoName(feature);
+                          const isActive = name === AppState.activeFeatureName;
+                          return { 
+                              color: isActive ? '#DC2626' : '#94a3b8', 
+                              weight: isActive ? 2 : 1,
+                              fillColor: isActive ? '#EF4444' : 'transparent',
+                              fillOpacity: isActive ? 0.2 : 0
+                          };
+                      }
+                }).addTo(boundaryGroup);
+                boundaryAdded = true;
+            }
         }
 
         data.forEach(p => {
             if(p._validCoord) {
-                L.circleMarker([p.LATITUDE, p.LONGITUDE], { radius: 3, color: 'transparent', fillColor: Utils.getTypeConfig(p._type).color, fillOpacity: 0.8 }).addTo(group);
+                const config = Utils.getTypeConfig(p._type);
+                L.circleMarker([p.LATITUDE, p.LONGITUDE], { 
+                    pane: 'markerPane',
+                    radius: 4, 
+                    color: '#fff', 
+                    weight: 1,
+                    fillColor: config.color, 
+                    fillOpacity: 0.8 
+                }).addTo(markerGroup);
             }
         });
-        
+
         AppState.reportMap.invalidateSize();
-        if (group.getLayers().length) AppState.reportMap.fitBounds(group.getBounds(), { padding: [20, 20] });
-        else AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
+
+        if (AppState.activeFeatureName && boundaryAdded) {
+            let boundsToFit = null;
+            boundaryGroup.eachLayer(l => {
+                 if (l.eachLayer) { 
+                      l.eachLayer(featLayer => {
+                          const name = MapManager.extractGeoName(featLayer.feature);
+                          if (name === AppState.activeFeatureName) {
+                              boundsToFit = featLayer.getBounds();
+                          }
+                      });
+                 }
+            });
+            
+            if (boundsToFit && boundsToFit.isValid()) {
+                AppState.reportMap.fitBounds(boundsToFit, { padding: [20, 20] });
+            } else {
+                AppState.reportMap.fitBounds(boundaryGroup.getBounds(), { padding: [20, 20] });
+            }
+        } else if (markerGroup.getLayers().length > 0) {
+             AppState.reportMap.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
+        } else {
+            AppState.reportMap.setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, 7);
+        }
+    },
+    updateClock() {
+        const now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleDateString('ms-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
     },
     downloadCSV() {
-        const data = AppState.visibleProjects;
-        if (!data || !data.length) return alert("Tiada data dipaparkan.");
-        const headers = ["SITE_NAME","DISTRICT","DUN","PARLIAMENT","LATITUDE","LONGITUDE","STATUS","PROJECT_TYPE"];
-        data.forEach(p => p._extra_details.forEach(d => { if(!headers.includes(d.label)) headers.push(d.label); }));
+        const data = AppState.visibleProjects; 
+        if (!data || data.length === 0) return alert("Tiada data pada peta untuk dimuat turun.");
+
+        const stdHeaders = ["SITE_NAME", "DISTRICT", "DUN", "PARLIAMENT", "LATITUDE", "LONGITUDE", "STATUS", "PROJECT_TYPE"];
+        const extraKeys = new Set();
+        data.forEach(p => p._extra_details.forEach(d => extraKeys.add(d.label)));
+        const allHeaders = [...stdHeaders, ...Array.from(extraKeys)];
+
+        const csvContent = [
+            allHeaders.join(","),
+            ...data.map(p => {
+                return allHeaders.map(h => {
+                    if (h === "PROJECT_TYPE") return p._type;
+                    if (h === "LATITUDE" || h === "LONGITUDE") return p[h]; 
+                    if (p[h] !== undefined) return `"${String(p[h]).replace(/"/g, '""')}"`;
+                    
+                    const extra = p._extra_details.find(d => d.label === h);
+                    const extraVal = extra ? extra.value : "";
+                    return `"${String(extraVal).replace(/"/g, '""')}"`;
+                }).join(",");
+            })
+        ].join("\n");
+
+        let fLayer = AppState.activeFeatureName ? AppState.activeFeatureName.replace(/\s+/g, '_') : "Seluruh_Sabah";
+        let fProject = "Semua_Projek";
+        if (AppState.activeCategory) {
+            fProject = AppState.activeCategory;
+        } else if (AppState.activeTypeToggles.size > 0) {
+            fProject = (AppState.activeTypeToggles.size === 1) ? 
+                Array.from(AppState.activeTypeToggles)[0] : "Gabungan";
+        }
         
-        const csv = [headers.join(","), ...data.map(p => headers.map(h => {
-            if(h==="PROJECT_TYPE") return p._type;
-            if(h==="LATITUDE"||h==="LONGITUDE") return p[h];
-            const extra = p._extra_details.find(d=>d.label===h);
-            return `"${String(extra ? extra.value : (p[h]||"")).replace(/"/g, '""')}"`;
-        }).join(","))].join("\n");
+        let fStatus = AppState.activeStatusFilter ? AppState.activeStatusFilter.replace(/\s+/g, '_') : "Semua_Status";
+        const now = new Date();
+        const fDate = now.toISOString().slice(0,10).replace(/-/g, ''); 
+        const fTime = now.toTimeString().slice(0,5).replace(/:/g, ''); 
         
+        const fileName = `data_gis_${fLayer}_${fProject}_${fStatus}_${fDate}_${fTime}.csv`;
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8;"}));
-        link.download = `GIS_Sabah_${new Date().toISOString().slice(0,10)}.csv`;
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
         link.click();
     }
 };
 
 /**
- * 8. EXPORT & SHARE LOGIC (FIXED)
+ * =============================================================================
+ * 9. GLOBAL HANDLERS & EXPORT LOGIC
+ * =============================================================================
  */
-async function captureReport(callback) {
-    const originalNode = document.getElementById('report-content');
-    if (!originalNode) return;
+function toggleDashboard() {
+    const panel = document.getElementById('dashboard-panel');
+    const btn = document.getElementById('sidebar-toggle');
+    panel.classList.toggle('closed');
+    btn.innerHTML = panel.classList.contains('closed') ? '<i class="fas fa-chart-pie"></i>' : '<i class="fas fa-times"></i>';
+    setTimeout(() => {
+        if(AppState.map) AppState.map.invalidateSize();
+    }, 300);
+}
 
-    UI.showLoading(true, "MENJANA IMEJ...");
-    
-    // 1. CLONE NODE to avoid scroll/overflow issues
-    const clone = originalNode.cloneNode(true);
-    
-    // 2. STRETCH CLONE
-    clone.style.width = "1400px"; // Fixed standard width
-    clone.style.height = "auto";
-    clone.style.maxHeight = "none";
-    clone.style.overflow = "visible";
-    clone.style.position = "absolute";
-    clone.style.top = "-9999px";
-    clone.style.left = "0";
-    clone.style.zIndex = "9999";
-    clone.style.background = "#f1f5f9"; // Ensure background exists
-    
-    // Remove buttons from clone
-    const btns = clone.querySelector('.action-buttons');
-    if(btns) btns.remove();
-    const closeBtn = clone.querySelector('.modal-close-btn'); // Won't be there as it's outside content div, but safely check
-    
-    document.body.appendChild(clone);
+function closeReport() {
+    document.getElementById('report-overlay').classList.remove('open');
+    if (AppState.reportMap) {
+        AppState.reportMap.off();
+        AppState.reportMap.remove();
+        AppState.reportMap = null;
+    }
+}
 
-    // 3. CAPTURE
+// SHARE FUNCTION (UPDATED - IMAGE SHARE)
+async function shareReport() {
+    // 1. Target Elements
+    const captureElement = document.getElementById('report-content');
+    const scrollContainer = document.querySelector('.report-container');
+    
+    // 2. Save Original Styles
+    const originalStyles = {
+        overflow: captureElement.style.overflow,
+        maxHeight: captureElement.style.maxHeight,
+        height: captureElement.style.height,
+        transform: captureElement.style.transform,
+        borderRadius: captureElement.style.borderRadius,
+        position: captureElement.style.position,
+        width: captureElement.style.width,
+        margin: captureElement.style.margin
+    };
+    const originalScrollPos = scrollContainer.scrollTop;
+
+    // 3. UI Feedback
+    UI.showLoading(true, "MENYEDIAKAN IMEJ UNTUK DIKONGSI...");
+
     try {
-        const canvas = await html2canvas(clone, {
-            scale: 2,
+        // 4. Modify Styles for Capture
+        captureElement.style.overflow = "visible";
+        captureElement.style.maxHeight = "none";
+        captureElement.style.height = "auto";
+        captureElement.style.transform = "none"; 
+        captureElement.style.borderRadius = "0"; 
+        
+        scrollContainer.style.overflow = "visible";
+        scrollContainer.style.height = "auto";
+
+        // Hide UI controls
+        document.querySelector('.modal-close-btn').style.display = 'none';
+        document.querySelector('.action-buttons').style.visibility = 'hidden';
+
+        // 5. Capture with html2canvas
+        const canvas = await html2canvas(captureElement, { 
+            scale: 2, // High quality
             useCORS: true,
             allowTaint: true,
+            backgroundColor: '#eef2f5', 
             logging: false,
-            windowWidth: 1400
+            windowHeight: captureElement.scrollHeight,
+            height: captureElement.scrollHeight
         });
-        document.body.removeChild(clone);
-        callback(canvas);
+
+        // 6. Restore Styles Immediately
+        captureElement.style.overflow = originalStyles.overflow;
+        captureElement.style.maxHeight = originalStyles.maxHeight;
+        captureElement.style.height = originalStyles.height;
+        captureElement.style.transform = originalStyles.transform;
+        captureElement.style.borderRadius = originalStyles.borderRadius;
+        scrollContainer.style.overflow = "auto";
+        scrollContainer.style.height = "100%";
+        scrollContainer.scrollTop = originalScrollPos;
+        document.querySelector('.modal-close-btn').style.display = 'flex';
+        document.querySelector('.action-buttons').style.visibility = 'visible';
+
+        // 7. Process Image for Sharing
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                alert("Gagal menjana imej.");
+                UI.showLoading(false);
+                return;
+            }
+
+            const layerName = (AppState.activeFeatureName || "Seluruh_Sabah").replace(/\s+/g, '_');
+            const fileName = `Laporan_${layerName}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            // 8. Attempt Web Share API
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Laporan Dashboard Projek',
+                        text: `Laporan Dashboard Projek: ${AppState.activeFeatureName || 'Seluruh Sabah'}`
+                    });
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error('Share failed:', err);
+                        // Fallback to download
+                        saveAsImage(blob, fileName);
+                    }
+                }
+            } else {
+                // Fallback: Download Image
+                saveAsImage(blob, fileName);
+            }
+            UI.showLoading(false);
+        }, 'image/png');
+
     } catch (err) {
-        console.error(err);
-        document.body.removeChild(clone);
-        alert("Gagal menjana imej.");
-    } finally {
+        console.error("Screen Capture Error:", err);
+        alert("Ralat semasa menjana imej.");
+        
+        // Restore styles in case of error
+        captureElement.style.overflow = originalStyles.overflow;
+        captureElement.style.maxHeight = originalStyles.maxHeight;
+        captureElement.style.height = originalStyles.height;
+        captureElement.style.transform = originalStyles.transform;
+        captureElement.style.borderRadius = originalStyles.borderRadius;
+        scrollContainer.style.overflow = "auto";
+        scrollContainer.style.height = "100%";
+        document.querySelector('.modal-close-btn').style.display = 'flex';
+        document.querySelector('.action-buttons').style.visibility = 'visible';
         UI.showLoading(false);
     }
 }
 
-function shareReport() {
-    captureReport(async (canvas) => {
-        canvas.toBlob(async (blob) => {
-            const file = new File([blob], "Laporan_GIS.png", { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try { await navigator.share({ files: [file], title: 'Laporan GIS' }); } 
-                catch (e) { saveAsImage(blob); }
-            } else {
-                saveAsImage(blob);
-            }
-        });
-    });
-}
-
-function generateExport() {
-    captureReport((canvas) => {
-        const imgData = canvas.toDataURL('image/jpeg', 0.8);
-        const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3');
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = pdf.internal.pageSize.getHeight();
-        const imgRatio = canvas.height / canvas.width;
-        
-        // Scale to fit width
-        let printH = pdfW * imgRatio;
-        if (printH > pdfH) {
-             // If too tall, fit to height instead
-             const scale = pdfH / printH;
-             const printW = pdfW * scale;
-             pdf.addImage(imgData, 'JPEG', (pdfW - printW)/2, 0, printW, pdfH);
-        } else {
-             pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
-        }
-        pdf.save(`Laporan_GIS_${new Date().toISOString().slice(0,10)}.pdf`);
-    });
-}
-
-function saveAsImage(blob) {
+function saveAsImage(blob, fileName) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = "Laporan_GIS.png";
+    link.download = fileName;
     link.click();
+    URL.revokeObjectURL(link.href);
+    alert("Fungsi 'Share' terus tidak disokong oleh pelayar ini. Imaj laporan telah dimuat turun.");
 }
 
-// Global Binds
-window.toggleDashboard = () => document.getElementById('dashboard-panel').classList.toggle('closed');
-window.closeReport = () => document.getElementById('report-overlay').classList.remove('open');
-window.UI = UI; window.shareReport = shareReport; window.generateExport = generateExport; window.downloadCSV = UI.downloadCSV; window.openReport = UI.openReport.bind(UI);
+// GENERATE EXPORT (PDF ONLY)
+function generateExport() {
+    // 1. Target the Modal (Parent)
+    const captureElement = document.getElementById('report-content');
+    const scrollContainer = document.querySelector('.report-container');
+    
+    // 2. Save Original Styles
+    const originalStyles = {
+        overflow: captureElement.style.overflow,
+        maxHeight: captureElement.style.maxHeight,
+        height: captureElement.style.height,
+        transform: captureElement.style.transform,
+        borderRadius: captureElement.style.borderRadius,
+        position: captureElement.style.position,
+        width: captureElement.style.width,
+        margin: captureElement.style.margin
+    };
+    
+    // 3. Save Scroll Position
+    const originalScrollPos = scrollContainer.scrollTop;
 
-window.onload = () => { UI.init(); MapManager.init(); DataManager.loadAllData(); };
+    // 4. Modify Styles for Capture (Expand to fit content)
+    captureElement.style.overflow = "visible";
+    captureElement.style.maxHeight = "none";
+    captureElement.style.height = "auto";
+    captureElement.style.transform = "none"; 
+    captureElement.style.borderRadius = "0"; 
+    
+    // Ensure scroll container is fully visible
+    scrollContainer.style.overflow = "visible";
+    scrollContainer.style.height = "auto";
+
+    // Hide UI controls
+    document.querySelector('.modal-close-btn').style.display = 'none';
+    document.querySelector('.action-buttons').style.visibility = 'hidden';
+
+    UI.showLoading(true, "MENJANA DOKUMEN PDF...");
+
+    // Use Try-Catch-Finally to prevent "Stuck" state
+    setTimeout(() => {
+        html2canvas(captureElement, { 
+            scale: 1.5, // Standard quality for PDF
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#eef2f5', 
+            logging: false,
+            windowHeight: captureElement.scrollHeight,
+            height: captureElement.scrollHeight
+        }).then(canvas => {
+            // CONSTRUCT FILENAME
+            const layerName = (AppState.activeFeatureName || "Seluruh_Sabah").replace(/\s+/g, '_').toUpperCase();
+            const now = new Date();
+            const fileName = `Laporan_Projek_${layerName}_${now.toISOString().slice(0,10)}`;
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
+            const pdf = new window.jspdf.jsPDF('l', 'mm', 'a3'); 
+            
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            
+            const imgRatio = canvas.height / canvas.width;
+            const printH = pdfW * imgRatio;
+
+            if (printH > pdfH) {
+                  const scaleFactor = pdfH / printH;
+                  const finalW = pdfW * scaleFactor;
+                  const finalH = pdfH; 
+                  const x = (pdfW - finalW) / 2;
+                  pdf.addImage(imgData, 'JPEG', x, 0, finalW, finalH);
+            } else {
+                  pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, printH);
+            }
+            
+            pdf.save(`${fileName}.pdf`);
+
+        }).catch(err => {
+            console.error("Export Error:", err);
+            alert("Ralat semasa menjana PDF. Sila cuba sekali lagi atau semak sambungan internet.");
+        }).finally(() => {
+            // CRITICAL: ALWAYS RESTORE STYLES
+            captureElement.style.overflow = originalStyles.overflow;
+            captureElement.style.maxHeight = originalStyles.maxHeight;
+            captureElement.style.height = originalStyles.height;
+            captureElement.style.transform = originalStyles.transform;
+            captureElement.style.borderRadius = originalStyles.borderRadius;
+            
+            scrollContainer.style.overflow = "auto";
+            scrollContainer.style.height = "100%";
+
+            // Restore Scroll
+            scrollContainer.scrollTop = originalScrollPos;
+
+            // Show UI
+            document.querySelector('.modal-close-btn').style.display = 'flex';
+            document.querySelector('.action-buttons').style.visibility = 'visible';
+            
+            // Hide loading
+            UI.showLoading(false);
+            
+            // Scroll to top of window to prevent disorientation
+            window.scrollTo(0,0);
+        });
+    }, 500); 
+}
+
+// Bind functions to window
+window.toggleDashboard = toggleDashboard;
+window.closeReport = closeReport;
+window.generateExport = generateExport;
+window.shareReport = shareReport;
+window.downloadCSV = UI.downloadCSV;
+window.openReport = UI.openReport.bind(UI);
+
+window.onload = () => {
+    UI.init();
+    MapManager.init();
+    DataManager.loadAllData();
+    setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS);
+};
 </script>
 </body>
 </html>
