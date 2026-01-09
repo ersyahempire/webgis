@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah - Final Update</title>
+  <title>Web GIS Projek Sabah - Final Update 0.2</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -115,20 +115,6 @@
     }
     .comment-icon {
         font-size: 1rem;
-    }
-    .data-row {
-        padding: 8px 0;
-        border-bottom: 1px solid #eee;
-        font-size: 0.95rem;
-    }
-    .data-row .label {
-        font-weight: 600;
-        color: #555;
-    }
-    .data-row .value {
-        float: right;
-        font-weight: 700;
-        color: #333;
     }
     
     /* Ensure Leaflet popup close button is visible and styled */
@@ -298,7 +284,7 @@
                   </div>
               </div>
 
-              <!-- LAYER INFO CARD (DIKEMBALIKAN - RESTORED) -->
+              <!-- LAYER INFO CARD (DIKEMBALIKAN & DIKEMASKINI) -->
               <div id="layer-info-section" style="display:none;">
                   <div class="layer-info-card">
                       <div class="layer-info-title">
@@ -1354,7 +1340,7 @@ const UI = {
         FilterManager.applyFilters();
     },
     
-    // --- UPDATED REPORT MODAL (WITH RESTORED LAYER INFO) ---
+    // --- UPDATED REPORT MODAL (WITH RESTORED LAYER INFO & CLEANED GRID) ---
     async openReport() {
         const data = (AppState.currentFilteredList && AppState.currentFilteredList.length > 0) ? AppState.currentFilteredList : AppState.allProjects;
         
@@ -1394,7 +1380,7 @@ const UI = {
 
         if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
             infoSection.style.display = 'block'; // Show container
-            infoContent.innerHTML = '<div style="padding:20px; text-align:center; color:#666;"><i class="fas fa-spinner fa-spin"></i> Memuatkan maklumat kawasan...</div>';
+            infoContent.innerHTML = '<div style="padding:20px; text-align:center; color:#666; width:100%; grid-column: 1 / -1;"><i class="fas fa-spinner fa-spin"></i> Memuatkan maklumat kawasan...</div>';
             infoTitle.textContent = AppState.activeFeatureName;
 
             DataManager.fetchLayerInfoGAS(AppState.activeBoundaryKey, AppState.activeFeatureName).then(rows => {
@@ -1402,35 +1388,51 @@ const UI = {
                 if (rows && rows.length > 0) {
                     const row = rows[0];
                     const comments = row['_comments'] || {};
+                    const activeName = Utils.normalize(AppState.activeFeatureName);
                     
                     for (const [key, value] of Object.entries(row)) {
-                        if (key !== 'LAYER' && key !== '_comments' && value !== "") {
-                             let commentHtml = '';
-                             if (comments[key]) {
-                                 commentHtml = `
-                                    <div class="comment-box">
-                                        <span class="comment-icon">💬</span>
-                                        <span>${comments[key]}</span>
-                                    </div>`;
-                             }
-                             const item = document.createElement('div');
-                             item.className = 'data-row';
-                             item.innerHTML = `
-                                <span class="label">${key}:</span>
-                                <span class="value">${value}</span>
-                                ${commentHtml}
-                             `;
-                             
-                             // Wrap nicely
-                             const wrapper = document.createElement('div');
-                             wrapper.style.padding = '4px 0';
-                             wrapper.style.borderBottom = '1px solid #eee';
-                             wrapper.appendChild(item);
-                             infoContent.appendChild(wrapper);
+                        // SKIP LOGIC:
+                        // 1. Internal keys: LAYER, _comments
+                        // 2. Empty values
+                        // 3. Duplicate Name: If the value is exactly the layer name (e.g. "TAWAU" in "DAERAH: TAWAU")
+                        // 4. Technical GIS fields: OBJECTID, Shape_Length, etc.
+                        
+                        const normKey = Utils.normalize(key);
+                        const normVal = Utils.normalize(String(value));
+                        
+                        if (key === 'LAYER' || key === '_comments' || value === "") continue;
+                        if (normVal === activeName) continue; // Skip if value == Title
+                        if (['OBJECTID', 'SHAPE_LENGTH', 'SHAPE_AREA', 'ID', 'F_CODE', 'FID'].includes(normKey)) continue;
+
+                        // Create Card
+                        let commentHtml = '';
+                        if (comments[key]) {
+                            commentHtml = `
+                            <div class="comment-box">
+                                <span class="comment-icon">💬</span>
+                                <span>${comments[key]}</span>
+                            </div>`;
                         }
+                        
+                        const item = document.createElement('div');
+                        item.className = 'data-row'; // Fits .layer-info-grid > .data-row CSS
+                        item.innerHTML = `
+                            <span class="label">${key}</span>
+                            <span class="value">${value}</span>
+                            ${commentHtml}
+                        `;
+                        
+                        // Append DIRECTLY to grid container (no wrapper div) to respect CSS Grid
+                        infoContent.appendChild(item);
                     }
+                    
+                    // If everything was filtered out
+                    if (infoContent.children.length === 0) {
+                         infoContent.innerHTML = '<div style="padding:15px; text-align:center; color:#999; grid-column: 1 / -1;">Tiada maklumat tambahan yang unik dijumpai.</div>';
+                    }
+
                 } else {
-                    infoContent.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">Tiada maklumat tambahan dijumpai.</div>';
+                    infoContent.innerHTML = '<div style="padding:15px; text-align:center; color:#999; grid-column: 1 / -1;">Tiada maklumat tambahan dijumpai.</div>';
                 }
             });
         }
