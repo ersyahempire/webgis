@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah - Final Update v2</title>
+  <title>Web GIS Projek Sabah - Final Update v.05</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -105,44 +105,64 @@
       font-family: 'Plus Jakarta Sans', sans-serif; margin-top: 12px !important; margin-right: 12px !important;
     }
 
-    /* * --- 3. TOOLTIPS UPDATE (DIKEMASKINI: Lebih Kemas) ---
-     */
+    /* * --- 3. TOOLTIPS UPDATE (DIKEMASKINI: Penuh & Kemas) --- */
     .leaflet-tooltip.boundary-tooltip {
-        background: rgba(15, 23, 42, 0.95); /* Darker Slate */
-        border: 1px solid rgba(255,255,255,0.1);
-        color: #f8fafc;
+        background-color: #1e293b !important; /* Solid Dark Color to hide white default */
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        color: #f8fafc !important;
         font-family: 'Plus Jakarta Sans', sans-serif; 
-        font-weight: 600; 
+        font-weight: 700; 
         font-size: 12px;
-        padding: 6px 12px; 
+        padding: 8px 14px; /* Increased padding */
         border-radius: 6px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        backdrop-filter: blur(4px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         white-space: nowrap;
+        text-align: center;
+        /* Ensure no default margin messes up the box */
+        margin: 0;
     }
     /* Hide the triangle tip for a cleaner floating look */
     .leaflet-tooltip-left:before, .leaflet-tooltip-right:before, .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before {
         display: none; 
     }
 
-    /* 4. POPUPS (FIXED WIDTH) */
-    .leaflet-popup-content-wrapper { padding: 0; border-radius: 6px; overflow: hidden; }
-    .leaflet-popup-content { margin: 0 !important; width: 360px !important; } 
-    .leaflet-container a.leaflet-popup-close-button { color: #fff; top: 8px; right: 8px; font-size: 18px; text-shadow: none; }
+    /* 4. POPUPS (FIXED & FILLED) */
+    .leaflet-popup-content-wrapper { 
+        padding: 0 !important; /* Critical: Remove default white padding */
+        border-radius: 8px !important; 
+        overflow: hidden; 
+        background: #fff;
+    }
+    .leaflet-popup-content { 
+        margin: 0 !important; /* Critical: Remove default margin */
+        width: 320px !important; /* Match inner content width perfectly */
+        line-height: 1.5;
+    } 
+    .leaflet-container a.leaflet-popup-close-button { 
+        color: #fff; 
+        top: 10px; 
+        right: 10px; 
+        font-size: 18px; 
+        text-shadow: none; 
+        z-index: 10;
+    }
     .leaflet-container a.leaflet-popup-close-button:hover { color: #e2e8f0; }
 
-    .boundary-popup-content { font-family: 'Plus Jakarta Sans', sans-serif; min-width: 280px; max-width: 320px; }
-    .boundary-popup-header { background-color: var(--primary); color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-    .boundary-popup-body { padding: 10px; max-height: 250px; overflow-y: auto; background: #f8f9fa; }
+    .boundary-popup-content { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        width: 100%; /* Fill container */
+    }
+    .boundary-popup-header { background-color: var(--primary); color: white; padding: 12px 16px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .boundary-popup-body { padding: 12px 16px; max-height: 250px; overflow-y: auto; background: #f8f9fa; }
     .boundary-popup-loading { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-    .boundary-data-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 12px; }
+    .boundary-data-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 12px; }
     .boundary-data-row:last-child { border-bottom: none; }
     .boundary-data-label { color: #64748b; font-weight: 500; }
     .boundary-data-val { color: #1e293b; font-weight: 600; text-align: right; }
     .boundary-comment-box { background: #eef2ff; border-left: 3px solid #6366f1; padding: 8px; margin-top: 5px; font-size: 11px; color: #4338ca; border-radius: 0 4px 4px 0; }
 
     /* Custom Marker Popup */
-    .custom-popup-wrapper { padding: 15px; }
+    .custom-popup-wrapper { padding: 16px; }
     .popup-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
     .popup-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
     .popup-title { font-weight: 700; font-size: 14px; color: var(--text-main); padding-top: 2px; }
