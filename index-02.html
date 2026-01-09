@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah - Final Update 0.2</title>
+  <title>Web GIS Projek Sabah - Final Update 0.3</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -24,7 +24,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    /* --- STYLES FOR POPUPS & TOOLTIPS (KEKALKAN) --- */
+    /* --- STYLES FOR POPUPS & TOOLTIPS --- */
     
     /* Boundary Tooltip (Hover) */
     .leaflet-tooltip.boundary-tooltip {
@@ -100,7 +100,7 @@
         border-radius: 0 4px 4px 0;
     }
 
-    /* Styles untuk Report Comment Box (Dikembalikan) */
+    /* Styles untuk Report Comment Box */
     .comment-box {
         background: #fff3cd;
         border-left: 4px solid #ffc107;
@@ -136,6 +136,22 @@
     }
     .leaflet-container a.leaflet-popup-close-button:hover {
         color: #e2e8f0;
+    }
+
+    /* FIX FOR CHARTS EXPANDING: Force fixed height on chart cards */
+    .chart-card {
+        height: 520px !important; /* Fixed height prevents flex loop */
+        min-height: 520px !important;
+        max-height: 520px !important;
+        overflow: hidden !important; /* Cut off overflow */
+    }
+    
+    /* Ensure inner chart container fits */
+    .chart-card > div:not(.chart-title) {
+        flex: 1;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important; /* Allow shrinking */
     }
   </style>
 </head>
@@ -261,15 +277,15 @@
               <div class="charts-row">
                   <div class="card chart-card">
                       <div class="chart-title">Carta 01: Jumlah Site Mengikut Projek</div>
-                      <div id="chart-01" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
+                      <div id="chart-01"></div>
                   </div>
                   <div class="card chart-card">
                       <div class="chart-title">Carta 02: Status Projek</div>
-                      <div id="chart-02" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
+                      <div id="chart-02"></div>
                   </div>
                   <div class="card chart-card">
                       <div class="chart-title">Carta 03: Jumlah Projek vs Status</div>
-                      <div id="chart-03" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
+                      <div id="chart-03"></div>
                   </div>
               </div>
 
@@ -434,6 +450,9 @@ const AppState = {
  * =============================================================================
  */
 const DataManager = {
+    // NEW: Cache for GAS Data to speed up loading
+    layerInfoCache: new Map(),
+
     async loadAllData() {
         UI.showLoading(true, "MENGHUBUNGI GOOGLE SHEETS...");
         try {
@@ -562,9 +581,15 @@ const DataManager = {
         }).filter(item => item !== null);
     },
 
-    // --- GOOGLE APPS SCRIPT FETCHER ---
+    // --- UPDATED GOOGLE APPS SCRIPT FETCHER WITH CACHING ---
     async fetchLayerInfoGAS(layerType, featureName) {
         if (!layerType || !featureName) return null;
+
+        // CHECK CACHE FIRST
+        const cacheKey = `${layerType}_${Utils.normalize(featureName)}`;
+        if (this.layerInfoCache.has(cacheKey)) {
+            return this.layerInfoCache.get(cacheKey);
+        }
 
         const sheetMap = {
             'district': 'district',
@@ -595,7 +620,14 @@ const DataManager = {
                 );
             });
 
-            return matchedRow ? [matchedRow] : [];
+            const result = matchedRow ? [matchedRow] : [];
+            
+            // SAVE TO CACHE
+            if(result.length > 0) {
+                this.layerInfoCache.set(cacheKey, result);
+            }
+            
+            return result;
 
         } catch (error) {
             console.error("Error fetching data from GAS:", error);
@@ -761,28 +793,35 @@ const MapManager = {
                 // 3. Build Data Content
                 const row = rows[0];
                 const comments = row['_comments'] || {};
+                const activeName = Utils.normalize(name); // Normalize title for comparison
                 let htmlRows = '';
 
                 for (const [key, value] of Object.entries(row)) {
-                    // Filter out internal keys or empty values
-                    if (key !== 'LAYER' && key !== '_comments' && value !== "") {
-                        let commentHtml = '';
-                        if (comments[key]) {
-                            commentHtml = `<div class="boundary-comment-box">${comments[key]}</div>`;
-                        }
-                        htmlRows += `
-                            <div class="boundary-data-row">
-                                <span class="boundary-data-label">${key}</span>
-                                <div style="display:flex; flex-direction:column; align-items:flex-end;">
-                                    <span class="boundary-data-val">${value}</span>
-                                    ${commentHtml}
-                                </div>
-                            </div>
-                        `;
+                    const normKey = Utils.normalize(key);
+                    const normVal = Utils.normalize(String(value));
+
+                    // --- FILTERING LOGIC (ADDED AS REQUESTED) ---
+                    // Skip internal keys
+                    if (key === 'LAYER' || key === '_comments' || value === "") continue;
+                    // Skip if value equals the title (Name redundancy check)
+                    if (normVal === activeName) continue;
+                    
+                    let commentHtml = '';
+                    if (comments[key]) {
+                        commentHtml = `<div class="boundary-comment-box">${comments[key]}</div>`;
                     }
+                    htmlRows += `
+                        <div class="boundary-data-row">
+                            <span class="boundary-data-label">${key}</span>
+                            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                                <span class="boundary-data-val">${value}</span>
+                                ${commentHtml}
+                            </div>
+                        </div>
+                    `;
                 }
 
-                if (!htmlRows) htmlRows = '<div class="boundary-popup-loading">Tiada maklumat tambahan.</div>';
+                if (!htmlRows) htmlRows = '<div class="boundary-popup-loading">Tiada maklumat tambahan yang unik.</div>';
 
                 const finalContent = `
                     <div class="boundary-popup-content">
