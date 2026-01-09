@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css05_testing.css">
+  <link rel="stylesheet" href="css03_baru.css">
 
   <!-- ApexCharts -->
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -24,7 +24,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    /* --- STYLES FOR POPUPS & TOOLTIPS --- */
+    /* --- STYLES FOR POPUPS & TOOLTIPS (KEKALKAN) --- */
     
     /* Boundary Tooltip (Hover) */
     .leaflet-tooltip.boundary-tooltip {
@@ -100,7 +100,7 @@
         border-radius: 0 4px 4px 0;
     }
 
-    /* Styles untuk Report Comment Box */
+    /* Styles untuk Report Comment Box (Dikembalikan) */
     .comment-box {
         background: #fff3cd;
         border-left: 4px solid #ffc107;
@@ -115,6 +115,20 @@
     }
     .comment-icon {
         font-size: 1rem;
+    }
+    .data-row {
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 0.95rem;
+    }
+    .data-row .label {
+        font-weight: 600;
+        color: #555;
+    }
+    .data-row .value {
+        float: right;
+        font-weight: 700;
+        color: #333;
     }
     
     /* Ensure Leaflet popup close button is visible and styled */
@@ -136,22 +150,6 @@
     }
     .leaflet-container a.leaflet-popup-close-button:hover {
         color: #e2e8f0;
-    }
-
-    /* FIX FOR CHARTS EXPANDING: Force fixed height on chart cards */
-    .chart-card {
-        height: 520px !important; /* Fixed height prevents flex loop */
-        min-height: 520px !important;
-        max-height: 520px !important;
-        overflow: hidden !important; /* Cut off overflow */
-    }
-    
-    /* Ensure inner chart container fits */
-    .chart-card > div:not(.chart-title) {
-        flex: 1;
-        width: 100% !important;
-        height: 100% !important;
-        min-height: 0 !important; /* Allow shrinking */
     }
   </style>
 </head>
@@ -277,15 +275,15 @@
               <div class="charts-row">
                   <div class="card chart-card">
                       <div class="chart-title">Carta 01: Jumlah Site Mengikut Projek</div>
-                      <div id="chart-01"></div>
+                      <div id="chart-01" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
                   </div>
                   <div class="card chart-card">
                       <div class="chart-title">Carta 02: Status Projek</div>
-                      <div id="chart-02"></div>
+                      <div id="chart-02" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
                   </div>
                   <div class="card chart-card">
                       <div class="chart-title">Carta 03: Jumlah Projek vs Status</div>
-                      <div id="chart-03"></div>
+                      <div id="chart-03" style="flex:1; width:100%; min-height: 0; overflow:hidden;"></div>
                   </div>
               </div>
 
@@ -300,7 +298,7 @@
                   </div>
               </div>
 
-              <!-- LAYER INFO CARD (DIKEMBALIKAN & DIKEMASKINI) -->
+              <!-- LAYER INFO CARD (DIKEMBALIKAN - RESTORED) -->
               <div id="layer-info-section" style="display:none;">
                   <div class="layer-info-card">
                       <div class="layer-info-title">
@@ -450,9 +448,6 @@ const AppState = {
  * =============================================================================
  */
 const DataManager = {
-    // NEW: Cache for GAS Data to speed up loading
-    layerInfoCache: new Map(),
-
     async loadAllData() {
         UI.showLoading(true, "MENGHUBUNGI GOOGLE SHEETS...");
         try {
@@ -581,15 +576,9 @@ const DataManager = {
         }).filter(item => item !== null);
     },
 
-    // --- UPDATED GOOGLE APPS SCRIPT FETCHER WITH CACHING ---
+    // --- GOOGLE APPS SCRIPT FETCHER ---
     async fetchLayerInfoGAS(layerType, featureName) {
         if (!layerType || !featureName) return null;
-
-        // CHECK CACHE FIRST
-        const cacheKey = `${layerType}_${Utils.normalize(featureName)}`;
-        if (this.layerInfoCache.has(cacheKey)) {
-            return this.layerInfoCache.get(cacheKey);
-        }
 
         const sheetMap = {
             'district': 'district',
@@ -620,14 +609,7 @@ const DataManager = {
                 );
             });
 
-            const result = matchedRow ? [matchedRow] : [];
-            
-            // SAVE TO CACHE
-            if(result.length > 0) {
-                this.layerInfoCache.set(cacheKey, result);
-            }
-            
-            return result;
+            return matchedRow ? [matchedRow] : [];
 
         } catch (error) {
             console.error("Error fetching data from GAS:", error);
@@ -793,35 +775,28 @@ const MapManager = {
                 // 3. Build Data Content
                 const row = rows[0];
                 const comments = row['_comments'] || {};
-                const activeName = Utils.normalize(name); // Normalize title for comparison
                 let htmlRows = '';
 
                 for (const [key, value] of Object.entries(row)) {
-                    const normKey = Utils.normalize(key);
-                    const normVal = Utils.normalize(String(value));
-
-                    // --- FILTERING LOGIC (ADDED AS REQUESTED) ---
-                    // Skip internal keys
-                    if (key === 'LAYER' || key === '_comments' || value === "") continue;
-                    // Skip if value equals the title (Name redundancy check)
-                    if (normVal === activeName) continue;
-                    
-                    let commentHtml = '';
-                    if (comments[key]) {
-                        commentHtml = `<div class="boundary-comment-box">${comments[key]}</div>`;
-                    }
-                    htmlRows += `
-                        <div class="boundary-data-row">
-                            <span class="boundary-data-label">${key}</span>
-                            <div style="display:flex; flex-direction:column; align-items:flex-end;">
-                                <span class="boundary-data-val">${value}</span>
-                                ${commentHtml}
+                    // Filter out internal keys or empty values
+                    if (key !== 'LAYER' && key !== '_comments' && value !== "") {
+                        let commentHtml = '';
+                        if (comments[key]) {
+                            commentHtml = `<div class="boundary-comment-box">${comments[key]}</div>`;
+                        }
+                        htmlRows += `
+                            <div class="boundary-data-row">
+                                <span class="boundary-data-label">${key}</span>
+                                <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                                    <span class="boundary-data-val">${value}</span>
+                                    ${commentHtml}
+                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    }
                 }
 
-                if (!htmlRows) htmlRows = '<div class="boundary-popup-loading">Tiada maklumat tambahan yang unik.</div>';
+                if (!htmlRows) htmlRows = '<div class="boundary-popup-loading">Tiada maklumat tambahan.</div>';
 
                 const finalContent = `
                     <div class="boundary-popup-content">
@@ -1379,7 +1354,7 @@ const UI = {
         FilterManager.applyFilters();
     },
     
-    // --- UPDATED REPORT MODAL (WITH RESTORED LAYER INFO & CLEANED GRID) ---
+    // --- UPDATED REPORT MODAL (WITH RESTORED LAYER INFO) ---
     async openReport() {
         const data = (AppState.currentFilteredList && AppState.currentFilteredList.length > 0) ? AppState.currentFilteredList : AppState.allProjects;
         
@@ -1419,7 +1394,7 @@ const UI = {
 
         if (AppState.activeBoundaryKey && AppState.activeFeatureName) {
             infoSection.style.display = 'block'; // Show container
-            infoContent.innerHTML = '<div style="padding:20px; text-align:center; color:#666; width:100%; grid-column: 1 / -1;"><i class="fas fa-spinner fa-spin"></i> Memuatkan maklumat kawasan...</div>';
+            infoContent.innerHTML = '<div style="padding:20px; text-align:center; color:#666;"><i class="fas fa-spinner fa-spin"></i> Memuatkan maklumat kawasan...</div>';
             infoTitle.textContent = AppState.activeFeatureName;
 
             DataManager.fetchLayerInfoGAS(AppState.activeBoundaryKey, AppState.activeFeatureName).then(rows => {
@@ -1427,51 +1402,35 @@ const UI = {
                 if (rows && rows.length > 0) {
                     const row = rows[0];
                     const comments = row['_comments'] || {};
-                    const activeName = Utils.normalize(AppState.activeFeatureName);
                     
                     for (const [key, value] of Object.entries(row)) {
-                        // SKIP LOGIC:
-                        // 1. Internal keys: LAYER, _comments
-                        // 2. Empty values
-                        // 3. Duplicate Name: If the value is exactly the layer name (e.g. "TAWAU" in "DAERAH: TAWAU")
-                        // 4. Technical GIS fields: OBJECTID, Shape_Length, etc.
-                        
-                        const normKey = Utils.normalize(key);
-                        const normVal = Utils.normalize(String(value));
-                        
-                        if (key === 'LAYER' || key === '_comments' || value === "") continue;
-                        if (normVal === activeName) continue; // Skip if value == Title
-                        if (['OBJECTID', 'SHAPE_LENGTH', 'SHAPE_AREA', 'ID', 'F_CODE', 'FID'].includes(normKey)) continue;
-
-                        // Create Card
-                        let commentHtml = '';
-                        if (comments[key]) {
-                            commentHtml = `
-                            <div class="comment-box">
-                                <span class="comment-icon">💬</span>
-                                <span>${comments[key]}</span>
-                            </div>`;
+                        if (key !== 'LAYER' && key !== '_comments' && value !== "") {
+                             let commentHtml = '';
+                             if (comments[key]) {
+                                 commentHtml = `
+                                    <div class="comment-box">
+                                        <span class="comment-icon">💬</span>
+                                        <span>${comments[key]}</span>
+                                    </div>`;
+                             }
+                             const item = document.createElement('div');
+                             item.className = 'data-row';
+                             item.innerHTML = `
+                                <span class="label">${key}:</span>
+                                <span class="value">${value}</span>
+                                ${commentHtml}
+                             `;
+                             
+                             // Wrap nicely
+                             const wrapper = document.createElement('div');
+                             wrapper.style.padding = '4px 0';
+                             wrapper.style.borderBottom = '1px solid #eee';
+                             wrapper.appendChild(item);
+                             infoContent.appendChild(wrapper);
                         }
-                        
-                        const item = document.createElement('div');
-                        item.className = 'data-row'; // Fits .layer-info-grid > .data-row CSS
-                        item.innerHTML = `
-                            <span class="label">${key}</span>
-                            <span class="value">${value}</span>
-                            ${commentHtml}
-                        `;
-                        
-                        // Append DIRECTLY to grid container (no wrapper div) to respect CSS Grid
-                        infoContent.appendChild(item);
                     }
-                    
-                    // If everything was filtered out
-                    if (infoContent.children.length === 0) {
-                         infoContent.innerHTML = '<div style="padding:15px; text-align:center; color:#999; grid-column: 1 / -1;">Tiada maklumat tambahan yang unik dijumpai.</div>';
-                    }
-
                 } else {
-                    infoContent.innerHTML = '<div style="padding:15px; text-align:center; color:#999; grid-column: 1 / -1;">Tiada maklumat tambahan dijumpai.</div>';
+                    infoContent.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">Tiada maklumat tambahan dijumpai.</div>';
                 }
             });
         }
