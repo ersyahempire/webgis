@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah - Edisi Lengkap</title>
+  <title>Web GIS Projek Sabah - Edisi Lengkap v0.2</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -25,94 +25,109 @@
 
   <!-- CUSTOM CSS FOR THEME SWITCHER UI -->
   <style>
-    /* Widget Tema Terapung (Top Right - Updated Location & Style) */
-    .theme-floater-container {
+    /* Widget Tema Dropdown (Top Right - Swapped Position) */
+    .theme-dropdown-container {
         position: absolute;
-        top: 12px; /* Jarak dari atas */
-        right: 160px; /* Jarak jauh dari kanan untuk elak logo MCMC/Layer Control */
-        z-index: 2000; /* Pastikan ia berada di atas elemen lain */
-        background: rgba(255, 255, 255, 0.95); /* Latar belakang separa telus */
-        backdrop-filter: blur(4px); /* Kesan kabur moden */
-        border: 1px solid rgba(0,0,0,0.1);
-        border-radius: 30px; /* Bentuk pil yang kemas */
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        display: flex;
-        flex-direction: row;
-        padding: 4px 10px;
-        gap: 6px;
-        align-items: center;
-        height: 40px;
-        transition: all 0.3s ease;
-    }
-
-    .theme-floater-container:hover {
-        background: #fff;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-    }
-
-    .theme-floater-label {
-        font-size: 12px;
-        color: #555;
-        text-align: center;
-        border-right: 1px solid #eee;
-        padding-right: 8px;
-        padding-left: 2px;
-        margin-right: 2px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-    }
-    
-    .theme-floater-label i {
-        font-size: 14px;
-        color: #666;
-    }
-
-    .theme-btn {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%; /* Butang bulat sepenuhnya */
-        border: 1px solid transparent;
-        background: transparent;
-        cursor: pointer;
+        top: 10px;
+        right: 10px; /* Posisi paling kanan (mengambil tempat logo) */
+        z-index: 2000;
         font-family: 'Plus Jakarta Sans', sans-serif;
-        font-weight: 700;
-        font-size: 11px;
-        color: #555;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .theme-dropdown-btn {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 8px;
+        padding: 8px 12px;
         display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 8px;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+        font-weight: 600;
+        font-size: 12px;
+        color: #333;
     }
 
-    .theme-btn:hover {
-        background: #f1f5f9;
-        color: #000;
-        transform: scale(1.1);
+    .theme-dropdown-btn:hover {
+        background: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
 
-    .theme-btn.active {
-        background: #0f172a; /* Warna gelap moden */
-        color: #fff;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3);
+    .theme-dropdown-btn i.fa-palette {
+        color: #3b82f6;
+        font-size: 14px;
     }
-    
-    /* Tooltip mudah */
-    .theme-btn[title]:hover::after {
-        content: attr(title);
-        position: absolute;
-        top: 115%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.85);
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
+
+    .theme-dropdown-btn i.fa-chevron-down {
         font-size: 10px;
-        font-weight: 500;
-        white-space: nowrap;
-        pointer-events: none;
-        z-index: 3000;
+        color: #888;
+        transition: transform 0.3s ease;
+    }
+
+    .theme-dropdown-container.active .theme-dropdown-btn i.fa-chevron-down {
+        transform: rotate(180deg);
+    }
+
+    .theme-dropdown-content {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 6px;
+        background: #fff;
+        min-width: 140px;
+        border-radius: 8px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+        animation: fadeIn 0.2s ease;
+    }
+
+    .theme-dropdown-container.active .theme-dropdown-content {
+        display: block;
+    }
+
+    .theme-option {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        text-decoration: none;
+        color: #444;
+        font-size: 12px;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.2s;
+    }
+
+    .theme-option:last-child {
+        border-bottom: none;
+    }
+
+    .theme-option:hover {
+        background: #f8fafc;
+        color: #000;
+    }
+
+    .theme-option.active {
+        background: #eff6ff;
+        color: #3b82f6;
+        font-weight: 700;
+    }
+
+    .theme-option.active::after {
+        content: '\f00c';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        margin-left: auto;
+        font-size: 10px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
     }
   </style>
 
@@ -137,12 +152,18 @@
     </div>
   </div>
 
-  <!-- NEW THEME SWITCHER WIDGET (Top Right) -->
-  <div class="theme-floater-container">
-    <div class="theme-floater-label" title="Tukar Tema"><i class="fas fa-palette"></i></div>
-    <button class="theme-btn" onclick="switchTheme('css07.css', this)" title="Design 07">07</button>
-    <button class="theme-btn active" onclick="switchTheme('css08.css', this)" title="Design 08 (Asal)">08</button>
-    <button class="theme-btn" onclick="switchTheme('css09.css', this)" title="Design 09">09</button>
+  <!-- NEW THEME SWITCHER DROPDOWN (Swapped to Top Right) -->
+  <div class="theme-dropdown-container" id="themeDropdown">
+    <button class="theme-dropdown-btn" onclick="toggleThemeDropdown()">
+        <i class="fas fa-palette"></i> 
+        <span>Tema</span>
+        <i class="fas fa-chevron-down"></i>
+    </button>
+    <div class="theme-dropdown-content">
+        <a href="javascript:void(0)" onclick="switchTheme('css07.css', this)" class="theme-option">Design 07</a>
+        <a href="javascript:void(0)" onclick="switchTheme('css08.css', this)" class="theme-option active">Design 08 (Asal)</a>
+        <a href="javascript:void(0)" onclick="switchTheme('css09.css', this)" class="theme-option">Design 09</a>
+    </div>
   </div>
 
   <!-- Sidebar Toggle -->
@@ -299,7 +320,21 @@
     
 <!-- MAIN JAVASCRIPT LOGIC -->
 <script>
-// --- 0. THEME SWITCHER LOGIC (UPDATED) ---
+// --- 0. THEME SWITCHER LOGIC (UPDATED WITH DROPDOWN) ---
+function toggleThemeDropdown() {
+    const dropdown = document.getElementById('themeDropdown');
+    dropdown.classList.toggle('active');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('themeDropdown');
+    const isClickInside = dropdown.contains(event.target);
+    if (!isClickInside && dropdown.classList.contains('active')) {
+        dropdown.classList.remove('active');
+    }
+});
+
 function switchTheme(themeFile, btnElement) {
     const themeLink = document.getElementById('app-theme');
     if (themeLink) {
@@ -307,9 +342,12 @@ function switchTheme(themeFile, btnElement) {
         console.log("Tema ditukar kepada: " + themeFile);
         
         // Update visual active state
-        const buttons = document.querySelectorAll('.theme-btn');
-        buttons.forEach(btn => btn.classList.remove('active'));
+        const options = document.querySelectorAll('.theme-option');
+        options.forEach(opt => opt.classList.remove('active'));
         if(btnElement) btnElement.classList.add('active');
+
+        // Close dropdown
+        document.getElementById('themeDropdown').classList.remove('active');
     }
 }
 
@@ -1337,6 +1375,7 @@ window.shareReport = shareReport;
 window.downloadCSV = UI.downloadCSV;
 window.openReport = UI.openReport.bind(UI);
 window.switchTheme = switchTheme; // Make globally accessible
+window.toggleThemeDropdown = toggleThemeDropdown;
 
 window.onload = () => { UI.init(); MapManager.init(); DataManager.loadAllData(); setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS); };
 </script>
