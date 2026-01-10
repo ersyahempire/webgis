@@ -39,19 +39,20 @@ body {
   color: var(--text-main);
 }
 
-/* LOGO MCMC */
+/* LOGO OVERLAY */
 .mcmc-logo {
     position: absolute;
     top: 20px;
-    right: 120px;
-    height: 55px;
-    width: 180px; 
+    right: 80px;
+    height: 60px;
+    width: 140px; 
     background-image: url('https://ersyahempire.github.io/webgis/asset/mcmc_logo.png');
     background-repeat: no-repeat;
-    background-position: right center; 
+    background-position: center right; 
     background-size: contain; 
     z-index: 1002;
     pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgba(255,255,255,0.8));
     transition: all 0.3s ease;
 }
 
@@ -169,25 +170,85 @@ body {
 .sub-stat-bar-bg { height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
 .sub-stat-bar-fill { height: 100%; border-radius: 3px; }
 
-/* LEGEND */
-.legend-mini { margin-top: 24px; padding-top: 20px; border-top: 1px solid #f1f5f9; }
-.legend-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-light); margin-bottom: 8px; font-weight: 600; }
+/* 1. LEGEND UPDATE (Horizontal/Mendatar) */
+.legend-mini { 
+    margin-top: 24px; 
+    padding-top: 20px; 
+    border-top: 1px solid #f1f5f9; 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 8px; 
+}
+.legend-row { 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    font-size: 11px; 
+    color: var(--text-light); 
+    font-weight: 600; 
+    margin-bottom: 0; 
+    background: #f8fafc; 
+    padding: 4px 10px; 
+    border-radius: 20px; 
+    border: 1px solid #f1f5f9;
+}
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 
-/* ----- CONTROLS (RIGHT) ----- */
+/* 2. CONTROLS UPDATE (Icon Centering) */
 .controls-container { position: absolute; top: 100px; right: 24px; display: flex; flex-direction: column; gap: 14px; z-index: 1000; align-items: flex-end; }
 .control-card {
-  background: #fff; padding: 6px; border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
-  width: 48px; height: 48px; overflow: hidden; transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.3s; display: flex; flex-direction: column; border: 1px solid #f1f5f9;
+  background: #fff; padding: 0; border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+  width: 48px; height: 48px; overflow: hidden; transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.3s; 
+  display: flex; flex-direction: column; border: 1px solid #f1f5f9;
+  justify-content: center; /* Center Vertically */
 }
-.control-card:hover { width: 220px; height: auto; border-radius: 24px; padding: 12px; }
+.control-card:hover { width: 220px; height: auto; border-radius: 24px; padding: 6px; justify-content: flex-start; }
 .control-group-title { padding: 4px 10px 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--primary); display: none; letter-spacing: 1px; }
 .control-card:hover .control-group-title { display: block; }
-.toggle-btn { display: flex; align-items: center; width: 100%; padding: 10px; background: transparent; border: none; border-radius: 50px; cursor: pointer; color: var(--text-light); transition: var(--transition); margin-bottom: 2px; white-space: nowrap; }
+
+.toggle-btn { 
+    display: flex; 
+    align-items: center; 
+    width: 100%; 
+    height: 100%; /* Fill the card */
+    padding: 0; /* Remove default padding */
+    background: transparent; 
+    border: none; 
+    border-radius: 50px; 
+    cursor: pointer; 
+    color: var(--text-light); 
+    transition: var(--transition); 
+    margin-bottom: 0; 
+    white-space: nowrap; 
+}
+.control-card:hover .toggle-btn {
+    padding: 10px; /* Add padding back when expanded */
+    height: auto;
+    margin-bottom: 2px;
+}
+
 .toggle-btn:hover { background: #f0f9ff; color: var(--primary); }
 .toggle-btn.active { background: var(--primary); color: #fff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
 .toggle-btn.active i, .toggle-btn.active span.icon-slot { color: white !important; }
-.icon-slot { width: 24px; display: flex; justify-content: center; font-size: 16px; margin-right: 12px; }
+
+/* Perfect Icon Centering Logic */
+.icon-slot { 
+    width: 48px; /* Full width of circle */
+    height: 48px; /* Full height of circle */
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    font-size: 16px; 
+    margin-right: 0; 
+    flex-shrink: 0;
+}
+/* When expanded, adjust icon slot */
+.control-card:hover .icon-slot {
+    width: 24px; 
+    height: auto; 
+    margin-right: 12px; 
+}
+
 .text-slot { font-size: 13px; font-weight: 600; opacity: 0; transform: translateX(-10px); transition: all 0.2s ease; }
 .control-card:hover .text-slot { opacity: 1; transform: translateX(0); }
 .theme-select-btn.active { border: 2px solid var(--primary); background: #f0f9ff; color: var(--primary); }
@@ -223,10 +284,24 @@ body {
 .mini-card h3 { font-size: 32px; margin: 0; font-weight: 800; color: var(--text-main); }
 .mini-card span { font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-top: 4px; }
 
+/* 3. CHART HEIGHT FIX */
 .charts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 24px; }
-.chart-card { height: auto; min-height: 400px; display: flex; flex-direction: column; padding: 20px; overflow: visible; }
+.chart-card { 
+    height: 400px; /* Fixed Height */
+    max-height: 400px; /* Prevent Expansion */
+    display: flex; 
+    flex-direction: column; 
+    padding: 20px; 
+    overflow: hidden; 
+    background: #fff;
+}
 .chart-title { font-size: 12px; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
-.chart-card > div:not(.chart-title) { flex: 1; width: 100% !important; min-height: 350px !important; }
+.chart-card > div:not(.chart-title) { 
+    flex: 1; 
+    width: 100% !important; 
+    min-height: 0 !important; /* Critical for chart responsiveness */
+    max-height: 100% !important;
+}
 
 .main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; min-height: 600px; }
 .map-container { padding: 0; overflow: hidden; background: #e2e8f0; display: flex; flex-direction: column; }
@@ -239,8 +314,8 @@ body {
 .layer-info-title { font-size: 14px; font-weight: 700; color: var(--primary); border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 25px; display: flex; align-items: center; gap: 8px; }
 .layer-info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
 .data-row { background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid #f1f5f9; display: flex; flex-direction: column; }
-.label { font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.value { font-size: 1rem; color: #0f172a; font-weight: 600; word-break: break-word; }
+.label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px; }
+.value { font-size: 14px; font-weight: 600; color: #0f172a; word-wrap: break-word; }
 
 .bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 24px; }
 .bottom-card { background: #fff; border-radius: var(--radius-md); padding: 20px; height: auto; min-height: 350px; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: visible; border: 1px solid #f1f5f9; }
