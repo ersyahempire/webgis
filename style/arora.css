@@ -270,17 +270,41 @@ body {
 .mini-stat-val { font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
 .mini-stat-lbl { font-size: 11px; font-weight: 600; color: var(--text-sub); text-transform: uppercase; }
 
-/* Status List & Accordion */
+/* Status List & Accordion (SUB MENU UPDATE) */
 .status-section-title { font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--text-sub); margin: 0 0 16px 0; letter-spacing: 1px; }
 .status-wrapper { margin-bottom: 12px; transition: var(--transition); }
 
 .status-item { 
   background: rgba(255,255,255,0.4); padding: 12px 16px; border-radius: 12px; 
-  cursor: pointer; transition: var(--transition); border: 1px solid transparent; position: relative; z-index: 2;
+  cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+  border: 1px solid transparent; position: relative; z-index: 5;
 } 
 .status-item:hover { background: rgba(255,255,255,0.8); }
 
-/* Active Group Styling */
+/* Header with Chevron */
+.status-header { 
+    display: flex; justify-content: space-between; align-items: center; 
+    font-size: 14px; margin-bottom: 8px; font-weight: 600; 
+} 
+.status-header::after {
+    content: '\f107'; /* FontAwesome angle-down */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-left: 8px;
+    font-size: 14px;
+    color: var(--text-sub);
+    transition: transform 0.3s ease;
+}
+.status-wrapper.active-group .status-header::after {
+    transform: rotate(180deg);
+    color: var(--primary);
+}
+
+.status-name { font-weight: 700; color: var(--text-main); font-size: 13px; }
+.progress-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease-in-out; }
+
+/* Active Group Styling (Expanded State) */
 .status-wrapper.active-group .status-item { 
     background: #fff; 
     border-color: var(--primary); 
@@ -288,28 +312,27 @@ body {
     border-radius: 12px 12px 0 0; 
     border-bottom: none;
     padding-bottom: 12px;
+    box-shadow: 0 -2px 6px rgba(0,0,0,0.02);
 }
 
-.status-header { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-bottom: 8px; font-weight: 600; } 
-.status-name { font-weight: 700; color: var(--text-main); font-size: 13px; }
-.progress-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease-in-out; }
-
+/* Sub Menu Container */
 .status-details {
-  background: rgba(255,255,255,0.6); padding: 16px; border-radius: 0 0 12px 12px;
-  border: 1px solid rgba(255,255,255,0.5); 
+  background: #fff; /* Match active item background */
+  padding: 16px; 
+  border-radius: 0 0 12px 12px;
+  border: 1px solid var(--primary); /* Match active item border */
   border-top: none; 
-  display: none; /* Default hidden */
+  display: none; 
   margin-top: 0;
-  position: relative; z-index: 1;
+  position: relative; 
+  top: -1px; /* Overlap border */
+  z-index: 4;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 .status-wrapper.active-group .status-details {
-    display: block; /* Show when active */
-    background: #fff; 
-    border-color: var(--primary);
-    border-top: none;
-    animation: slideDown 0.3s ease-out;
+    display: block; 
+    animation: slideDown 0.3s ease-out forwards;
 }
 
 @keyframes slideDown {
@@ -317,9 +340,22 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.sub-stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; }
-.sub-stat-bar-bg { width: 100%; height: 4px; background: rgba(0,0,0,0.05); border-radius: 2px; margin-bottom: 10px; }
-.sub-stat-bar-fill { height: 100%; border-radius: 2px; }
+/* Sub-menu Items (Project Categories) */
+.sub-stat-row { 
+    display: flex; justify-content: space-between; 
+    margin-bottom: 4px; font-size: 11px; 
+    font-weight: 600; color: var(--text-sub);
+}
+.sub-stat-val { color: var(--text-main); font-weight: 700; }
+
+.sub-stat-bar-bg { 
+    width: 100%; height: 6px; 
+    background: #f3f4f6; 
+    border-radius: 3px; 
+    margin-bottom: 12px; 
+    overflow: hidden;
+}
+.sub-stat-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
 
 /* Legend Mini */
 .legend-mini { 
