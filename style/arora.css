@@ -326,27 +326,27 @@ body {
 .map-container { padding: 0; overflow: hidden; border-radius: 16px; position: relative; display: flex; flex-direction: column; background: #e5e7eb; }
 #report-map { width: 100%; flex: 1; z-index: 1; }
 
-/* UPDATED: Status Container (Auto Height) */
+/* UPDATED: Status Container (Auto Height for Full Content) */
 .status-container { 
     background: rgba(255, 255, 255, 0.8); 
     padding: 0; 
     display: flex; 
     flex-direction: column; 
-    /* Changed height: 100% to auto so it grows */
-    height: auto;
-    min-height: 100%; /* Ensure it fills grid cell if content is short */
+    height: auto; /* Grows with content */
+    min-height: 100%; /* Matches map height at minimum */
     border-radius: 16px; 
     overflow: hidden; 
+    border: 1px solid rgba(255,255,255,0.4);
 }
 
 .status-header-fixed { padding: 15px 20px; background: rgba(255,255,255,0.9); border-bottom: 1px solid #e5e7eb; font-weight: 800; color: #374151; }
 
-/* UPDATED: Status Scroll Area (Hidden Scrollbar, Auto Height) */
+/* UPDATED: Status Scroll Area (Auto Height, No Scrollbar) */
 .status-scroll-area { 
   padding: 20px; 
-  flex: 1; 
-  overflow: visible; /* Show all content, let parent scroll */
-  height: auto;
+  height: auto; /* Grows with content */
+  overflow: visible; /* Show all content */
+  flex: 1 0 auto; /* Allow growth, don't shrink */
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
