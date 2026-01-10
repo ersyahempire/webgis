@@ -32,6 +32,19 @@ body {
   color: var(--text-main);
 }
 
+/* LOGO MCMC */
+.mcmc-logo {
+    position: absolute;
+    top: 20px;
+    right: 120px; /* Kedudukan 120px dari kanan seperti diminta */
+    height: 55px; /* Saiz optimum */
+    width: auto;
+    z-index: 1002; /* Lebih tinggi dari peta tapi tidak menghalang kawalan */
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    pointer-events: none; /* Membenarkan klik tembus ke peta jika perlu */
+    transition: all 0.3s ease;
+}
+
 /* ----- MAP CONTAINER ----- */
 #map {
   position: absolute; top: 0; left: 0;
