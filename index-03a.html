@@ -23,147 +23,115 @@
   <!-- PAUTAN KE FAIL CSS (ID ditambah untuk penukaran tema) -->
   <link id="app-theme" rel="stylesheet" href="css08.css">
 
-  <!-- CUSTOM CSS FOR TOP RIGHT HEADER TOOLS -->
+  <!-- CUSTOM CSS FOR THEME DROPDOWN INSIDE CARD -->
   <style>
-    /* Wrapper untuk menyusun Logo dan Tema sebaris */
-    .header-tools-wrapper {
-        position: absolute;
-        top: 10px;
-        right: 60px; /* Memberi ruang ~50px di kanan untuk butang Map View (Leaflet Control) */
-        z-index: 2000;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 10px; /* Jarak antara Logo dan Menu Tema */
-        font-family: 'Plus Jakarta Sans', sans-serif;
+    /* Dropdown specific styles tailored for the control card */
+    .card-theme-dropdown {
+        position: relative;
+        width: 100%;
+        margin-top: 5px;
     }
 
-    /* 1. MCMC Logo Style */
-    .mcmc-logo-badge {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(0,0,0,0.1);
-        border-radius: 8px;
-        height: 36px;
-        padding: 0 12px;
+    .card-theme-btn {
+        width: 100%;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 10px 12px;
         display: flex;
         align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        font-weight: 800;
-        color: #4f46e5; /* Warna rasmi/biru korporat */
-        font-size: 14px;
-        letter-spacing: 0.5px;
-    }
-    
-    .mcmc-logo-badge img {
-        height: 20px;
-        width: auto;
-        margin-right: 6px;
-    }
-
-    /* 2. Theme Dropdown Container (Relative to wrapper) */
-    .theme-dropdown-container {
-        position: relative; /* Relative kepada wrapper, bukan page */
-    }
-
-    .theme-dropdown-btn {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(0,0,0,0.1);
-        border-radius: 8px;
-        padding: 8px 12px;
-        height: 36px; /* Sama tinggi dengan logo */
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        justify-content: space-between;
         cursor: pointer;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: all 0.2s ease;
+        font-family: 'Plus Jakarta Sans', sans-serif;
         font-weight: 600;
-        font-size: 12px;
-        color: #333;
-        white-space: nowrap;
+        font-size: 13px;
+        color: #334155;
+        transition: all 0.2s ease;
     }
 
-    .theme-dropdown-btn:hover {
-        background: #fff;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    .card-theme-btn:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
     }
 
-    .theme-dropdown-btn i.fa-palette {
+    .card-theme-btn i.fa-palette {
         color: #3b82f6;
-        font-size: 14px;
+        margin-right: 8px;
     }
 
-    .theme-dropdown-btn i.fa-chevron-down {
+    .card-theme-btn i.fa-chevron-down {
         font-size: 10px;
-        color: #888;
-        transition: transform 0.3s ease;
+        color: #94a3b8;
+        transition: transform 0.2s ease;
     }
 
-    .theme-dropdown-container.active .theme-dropdown-btn i.fa-chevron-down {
+    /* Active state for dropdown button */
+    .card-theme-dropdown.active .card-theme-btn {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    .card-theme-dropdown.active .card-theme-btn i.fa-chevron-down {
         transform: rotate(180deg);
     }
 
-    /* Dropdown Content */
-    .theme-dropdown-content {
+    /* The Dropdown List */
+    .card-theme-content {
         display: none;
         position: absolute;
-        top: 100%;
-        right: 0;
-        margin-top: 6px;
+        bottom: 100%; /* Opens upwards to avoid being cut off at bottom of screen */
+        left: 0;
+        width: 100%;
+        margin-bottom: 6px;
         background: #fff;
-        min-width: 150px;
         border-radius: 8px;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        z-index: 3000;
         overflow: hidden;
-        animation: fadeIn 0.2s ease;
-        text-align: left;
+        animation: slideUp 0.2s ease;
     }
 
-    .theme-dropdown-container.active .theme-dropdown-content {
+    .card-theme-dropdown.active .card-theme-content {
         display: block;
     }
 
-    .theme-option {
+    .card-theme-option {
         display: flex;
         align-items: center;
         padding: 10px 12px;
         text-decoration: none;
-        color: #444;
-        font-size: 12px;
+        color: #475569;
+        font-size: 13px;
         border-bottom: 1px solid #f1f5f9;
-        transition: background 0.2s;
+        transition: background 0.1s;
     }
 
-    .theme-option:last-child {
+    .card-theme-option:last-child {
         border-bottom: none;
     }
 
-    .theme-option:hover {
+    .card-theme-option:hover {
         background: #f8fafc;
-        color: #000;
+        color: #0f172a;
     }
 
-    .theme-option.active {
+    .card-theme-option.active {
         background: #eff6ff;
-        color: #3b82f6;
+        color: #2563eb;
         font-weight: 700;
     }
 
-    .theme-option.active::after {
+    .card-theme-option.active::after {
         content: '\f00c';
         font-family: 'Font Awesome 6 Free';
         font-weight: 900;
         margin-left: auto;
-        font-size: 10px;
+        font-size: 12px;
     }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-5px); }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(5px); }
         to { opacity: 1; transform: translateY(0); }
     }
   </style>
@@ -187,32 +155,6 @@
       <i class="fas fa-search"></i>
       <input type="text" id="search-input" placeholder="Cari tapak, daerah, atau parlimen...">
     </div>
-  </div>
-
-  <!-- HEADER TOOLS WRAPPER (Top Right) -->
-  <!-- Urutan: [Logo MCMC] -> [Menu Tema] -> [Map View (Leaflet Native Control @ Right Edge)] -->
-  <div class="header-tools-wrapper">
-      
-      <!-- 1. MCMC Logo -->
-      <div class="mcmc-logo-badge" title="Suruhanjaya Komunikasi dan Multimedia Malaysia">
-          <!-- Gantikan src dengan URL logo sebenar jika ada -->
-          <i class="fas fa-globe-asia" style="margin-right: 8px;"></i> MCMC
-      </div>
-
-      <!-- 2. Theme Dropdown -->
-      <div class="theme-dropdown-container" id="themeDropdown">
-        <button class="theme-dropdown-btn" onclick="toggleThemeDropdown()">
-            <i class="fas fa-palette"></i> 
-            <span>Tema</span>
-            <i class="fas fa-chevron-down"></i>
-        </button>
-        <div class="theme-dropdown-content">
-            <a href="javascript:void(0)" onclick="switchTheme('css07.css', this)" class="theme-option">Design 07</a>
-            <a href="javascript:void(0)" onclick="switchTheme('css08.css', this)" class="theme-option active">Design 08 (Asal)</a>
-            <a href="javascript:void(0)" onclick="switchTheme('css09.css', this)" class="theme-option">Design 09</a>
-        </div>
-      </div>
-
   </div>
 
   <!-- Sidebar Toggle -->
@@ -280,6 +222,22 @@
     <div class="control-card" id="filter-card">
       <div class="control-group-title">Penapis Data</div>
       <div id="dynamic-filter-btns"></div>
+    </div>
+
+    <!-- Pilihan Tema (NEW LOCATION: Bottom Right Card) -->
+    <div class="control-card" style="z-index: 2001;">
+        <div class="control-group-title">Pilihan Tema</div>
+        <div class="card-theme-dropdown" id="cardThemeDropdown">
+            <button class="card-theme-btn" onclick="toggleCardThemeDropdown()">
+                <span><i class="fas fa-palette"></i> Pilih Design</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="card-theme-content">
+                <a href="javascript:void(0)" onclick="switchTheme('css07.css', this)" class="card-theme-option">Design 07</a>
+                <a href="javascript:void(0)" onclick="switchTheme('css08.css', this)" class="card-theme-option active">Design 08 (Asal)</a>
+                <a href="javascript:void(0)" onclick="switchTheme('css09.css', this)" class="card-theme-option">Design 09</a>
+            </div>
+        </div>
     </div>
   </div>
 
@@ -369,17 +327,17 @@
     
 <!-- MAIN JAVASCRIPT LOGIC -->
 <script>
-// --- 0. THEME SWITCHER LOGIC (UPDATED WITH DROPDOWN) ---
-function toggleThemeDropdown() {
-    const dropdown = document.getElementById('themeDropdown');
+// --- 0. THEME SWITCHER LOGIC (UPDATED FOR CARD) ---
+function toggleCardThemeDropdown() {
+    const dropdown = document.getElementById('cardThemeDropdown');
     dropdown.classList.toggle('active');
 }
 
 // Close dropdown when clicking outside
 document.addEventListener('click', function(event) {
-    const dropdown = document.getElementById('themeDropdown');
+    const dropdown = document.getElementById('cardThemeDropdown');
     const isClickInside = dropdown.contains(event.target);
-    const btn = document.querySelector('.theme-dropdown-btn');
+    const btn = dropdown.querySelector('.card-theme-btn');
     const isBtnClick = btn.contains(event.target);
     
     if (!isClickInside && !isBtnClick && dropdown.classList.contains('active')) {
@@ -394,12 +352,12 @@ function switchTheme(themeFile, btnElement) {
         console.log("Tema ditukar kepada: " + themeFile);
         
         // Update visual active state
-        const options = document.querySelectorAll('.theme-option');
+        const options = document.querySelectorAll('.card-theme-option');
         options.forEach(opt => opt.classList.remove('active'));
         if(btnElement) btnElement.classList.add('active');
 
         // Close dropdown
-        document.getElementById('themeDropdown').classList.remove('active');
+        document.getElementById('cardThemeDropdown').classList.remove('active');
     }
 }
 
@@ -1427,7 +1385,7 @@ window.shareReport = shareReport;
 window.downloadCSV = UI.downloadCSV;
 window.openReport = UI.openReport.bind(UI);
 window.switchTheme = switchTheme; // Make globally accessible
-window.toggleThemeDropdown = toggleThemeDropdown;
+window.toggleCardThemeDropdown = toggleCardThemeDropdown;
 
 window.onload = () => { UI.init(); MapManager.init(); DataManager.loadAllData(); setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS); };
 </script>
