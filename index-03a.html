@@ -23,6 +23,82 @@
   <!-- PAUTAN KE FAIL CSS (ID ditambah untuk penukaran tema) -->
   <link id="app-theme" rel="stylesheet" href="css08.css">
 
+  <!-- CUSTOM CSS FOR THEME SWITCHER UI -->
+  <style>
+    /* Widget Tema Terapung (Top Right) */
+    .theme-floater-container {
+        position: absolute;
+        top: 80px; /* Di bawah butang Layer Leaflet standard */
+        right: 10px;
+        z-index: 1000;
+        background: #fff;
+        border: 2px solid rgba(0,0,0,0.2);
+        border-radius: 4px;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        display: flex;
+        flex-direction: column;
+        padding: 5px;
+        gap: 5px;
+        width: 44px;
+        align-items: center;
+        background-clip: padding-box;
+    }
+
+    .theme-floater-label {
+        font-size: 10px;
+        color: #666;
+        text-align: center;
+        margin-bottom: 2px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 3px;
+        width: 100%;
+    }
+
+    .theme-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        background: #f8f9fa;
+        cursor: pointer;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 700;
+        font-size: 11px;
+        color: #444;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .theme-btn:hover {
+        background: #e2e8f0;
+        transform: translateY(-1px);
+    }
+
+    .theme-btn.active {
+        background: #3b82f6; /* Warna biru moden */
+        color: #fff;
+        border-color: #2563eb;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.4);
+    }
+    
+    /* Tooltip mudah */
+    .theme-btn[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        right: 50px;
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+  </style>
+
 </head>
 <body>
 
@@ -42,6 +118,14 @@
       <i class="fas fa-search"></i>
       <input type="text" id="search-input" placeholder="Cari tapak, daerah, atau parlimen...">
     </div>
+  </div>
+
+  <!-- NEW THEME SWITCHER WIDGET (Top Right) -->
+  <div class="theme-floater-container">
+    <div class="theme-floater-label" title="Pilihan Tema"><i class="fas fa-palette"></i></div>
+    <button class="theme-btn" onclick="switchTheme('css07.css', this)" title="Design 07">07</button>
+    <button class="theme-btn active" onclick="switchTheme('css08.css', this)" title="Design 08 (Asal)">08</button>
+    <button class="theme-btn" onclick="switchTheme('css09.css', this)" title="Design 09">09</button>
   </div>
 
   <!-- Sidebar Toggle -->
@@ -90,16 +174,6 @@
             <span class="icon-slot"><i class="fas fa-file-invoice-dollar" style="color: #F59E0B;"></i></span> 
             <span class="text-slot">Dashboard</span>
         </button>
-    </div>
-
-    <!-- Theme Switcher (NEW ADDITION) -->
-    <div class="control-card">
-        <div class="control-group-title">Pilihan Tema</div>
-        <select id="theme-selector" onchange="switchTheme(this.value)" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 8px; border: 1px solid #e2e8f0; outline: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; color: #333; background: #f8fafc; cursor: pointer;">
-            <option value="css07.css">Design 07</option>
-            <option value="css08.css" selected>Design 08 (Asal)</option>
-            <option value="css09.css">Design 09</option>
-        </select>
     </div>
 
     <!-- Layer Toggles -->
@@ -208,12 +282,17 @@
     
 <!-- MAIN JAVASCRIPT LOGIC -->
 <script>
-// --- 0. THEME SWITCHER LOGIC (NEW) ---
-function switchTheme(themeFile) {
+// --- 0. THEME SWITCHER LOGIC (UPDATED) ---
+function switchTheme(themeFile, btnElement) {
     const themeLink = document.getElementById('app-theme');
     if (themeLink) {
         themeLink.href = themeFile;
         console.log("Tema ditukar kepada: " + themeFile);
+        
+        // Update visual active state
+        const buttons = document.querySelectorAll('.theme-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        if(btnElement) btnElement.classList.add('active');
     }
 }
 
