@@ -20,13 +20,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- PAUTAN KE FAIL CSS -->
+  <!-- PAUTAN KE FAIL CSS (Default: Arora) -->
   <link id="app-theme" rel="stylesheet" href="style/arora.css">
 
 </head>
 <body>
 
-<!-- Logo MCMC (Dikawal oleh CSS) -->
+  <!-- Logo MCMC (Dikawal oleh CSS) -->
   <div class="mcmc-logo"></div>
 
   <!-- Map Background -->
@@ -922,7 +922,6 @@ const UI = {
                     if (tCount > 0) {
                         const tConfig = Utils.getTypeConfig(type);
                         const tPercent = itemData.count > 0 ? Math.round((tCount / itemData.count) * 100) : 0;
-                        // UPDATED: Added percentage to the sub-item label
                         subHtml += `
                             <div class="sub-stat-row">
                                 <span class="sub-stat-label" style="color:${tConfig.color};">${tConfig.label}</span>
@@ -1065,7 +1064,6 @@ const UI = {
                         if (tCount > 0) {
                            const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
                            const tConfig = Utils.getTypeConfig(t.type);
-                           // UPDATED: Added percentages to report sub-items
                            subHtml += `<div class="sub-stat-row"><span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span><span>${tCount} <span style="font-size:0.8em; opacity:0.8; margin-left:3px;">(${tPercent}%)</span></span></div><div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>`;
                         }
                  });
