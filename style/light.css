@@ -194,7 +194,7 @@ body {
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 
-/* 2. CONTROLS UPDATE (Icon Centering & Order) */
+/* 2. CONTROLS UPDATE (Icon Centering) */
 .controls-container { position: absolute; top: 100px; right: 24px; display: flex; flex-direction: column; gap: 14px; z-index: 1000; align-items: flex-end; }
 .control-card {
   background: #fff; padding: 0; border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
@@ -228,12 +228,7 @@ body {
 }
 
 .toggle-btn:hover { background: #f0f9ff; color: var(--primary); }
-.toggle-btn.active { 
-    background: var(--primary); 
-    color: #fff; 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
-    order: -1; /* Ensure active button is at top/center when collapsed */
-}
+.toggle-btn.active { background: var(--primary); color: #fff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
 .toggle-btn.active i, .toggle-btn.active span.icon-slot { color: white !important; }
 
 /* Perfect Icon Centering Logic */
