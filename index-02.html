@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah - Final Update 0.8</title>
+  <title>Web GIS Projek Sabah - v.01</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,9 +20,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- PAUTAN CSS LUAR -->
-  <!-- Simpan salah satu kod CSS di bawah sebagai 'style.css' -->
-  <link rel="stylesheet" href="css07_midnight.css">
+  <!-- PAUTAN KE FAIL CSS (ID ditambah untuk penukaran tema) -->
+  <link id="app-theme" rel="stylesheet" href="style/arora.css">
 
 </head>
 <body>
@@ -50,7 +49,7 @@
     <i class="fas fa-bars"></i>
   </button>
 
-  <!-- Floating Dashboard -->
+  <!-- Floating Dashboard (Left Panel) -->
   <div class="dashboard-panel" id="dashboard-panel">
     <div class="panel-header">
       <h2><i class="fas fa-layer-group"></i> Statistik Projek</h2>
@@ -63,32 +62,37 @@
         <div class="main-stat-label">Jumlah Projek</div>
         <div id="selected-area" class="area-badge">SELURUH SABAH</div>
       </div>
-      <!-- End Main Count -->
 
+      <!-- Grid Stats -->
       <div class="grid-stats" id="dynamic-grid-stats"></div>
+      
+      <!-- Status List -->
       <div class="status-section-title">Status Kemajuan</div>
       <div id="status-list"></div>
+      
+      <!-- Legend -->
       <div class="legend-mini" id="dynamic-legend"></div>
     </div>
   </div>
 
-  <!-- Right Controls -->
+  <!-- Right Controls (Buttons) -->
   <div class="controls-container">
-    <!-- CSV -->
+    <!-- CSV Button -->
     <div class="control-card">
         <button class="toggle-btn" title="Muat Turun CSV" onclick="downloadCSV()">
             <span class="icon-slot"><i class="fas fa-file-csv" style="color: #10B981;"></i></span> 
             <span class="text-slot">Muat Turun CSV</span>
         </button>
     </div>
-    <!-- Report -->
+    <!-- Dashboard/Report Button -->
     <div class="control-card">
         <button class="toggle-btn" title="Dashboard" onclick="openReport()">
             <span class="icon-slot"><i class="fas fa-file-invoice-dollar" style="color: #F59E0B;"></i></span> 
             <span class="text-slot">Dashboard</span>
         </button>
     </div>
-    <!-- Layer Toggle -->
+
+    <!-- Layer Toggles -->
     <div class="control-card" id="layer-card">
       <div class="control-group-title">Penapis Sempadan</div>
       <button class="toggle-btn active" id="toggle-daerah" title="Daerah">
@@ -106,9 +110,29 @@
       <div class="control-group-title">Penapis Data</div>
       <div id="dynamic-filter-btns"></div>
     </div>
+
+    <!-- Pilihan Tema (DIKEMASKINI: Gaya Butang Standard) -->
+    <div class="control-card" style="z-index: 2001;">
+        <div class="control-group-title">Pilihan Tema</div>
+        <!-- Butang Design 07 -->
+        <button class="toggle-btn theme-select-btn" onclick="switchTheme('style/arora.css', this)">
+            <span class="icon-slot"><i class="fas fa-paint-brush"></i></span> 
+            <span class="text-slot">arora</span>
+        </button>
+        <!-- Butang Design 08 (Aktif) -->
+        <button class="toggle-btn theme-select-btn active" onclick="switchTheme('style/light.css', this)">
+            <span class="icon-slot"><i class="fas fa-palette"></i></span> 
+            <span class="text-slot">light</span>
+        </button>
+        <!-- Butang Design 09 -->
+        <button class="toggle-btn theme-select-btn" onclick="switchTheme('style/dark.css', this)">
+            <span class="icon-slot"><i class="fas fa-fill-drip"></i></span> 
+            <span class="text-slot">dark</span>
+        </button>
+    </div>
   </div>
 
-  <!-- REPORT MODAL -->
+  <!-- REPORT MODAL (Full Screen Dashboard) -->
   <div class="report-overlay" id="report-overlay">
       <div class="report-modal" id="report-content">
           <button class="modal-close-btn" onclick="closeReport()"><i class="fas fa-times"></i></button>
@@ -192,13 +216,27 @@
       </div>
   </div>
     
-<!-- MAIN SCRIPT -->
+<!-- MAIN JAVASCRIPT LOGIC -->
 <script>
-/**
- * =============================================================================
- * 1. CONFIGURATION
- * =============================================================================
- */
+// --- 0. THEME SWITCHER LOGIC (SIMPLIFIED FOR BUTTONS) ---
+function switchTheme(themeFile, btnElement) {
+    const themeLink = document.getElementById('app-theme');
+    if (themeLink) {
+        themeLink.href = themeFile;
+        console.log("Tema ditukar kepada: " + themeFile);
+        
+        // Update visual active state
+        // Remove 'active' from all buttons in the theme control card
+        if (btnElement && btnElement.parentElement) {
+            const siblings = btnElement.parentElement.querySelectorAll('.toggle-btn');
+            siblings.forEach(btn => btn.classList.remove('active'));
+            // Add 'active' to the clicked button
+            btnElement.classList.add('active');
+        }
+    }
+}
+
+// --- 1. CONFIGURATION ---
 const APP_CONFIG = {
     PROJECT_TYPES: [
         { id: "db_bwa", sheetId: "1594VRWEs0PF56KXeSPudZTWkbGuS5UZmxXGrKqo4bUU", type: "BWA", label: "WiFi", color: "#51cf66", icon: "📶" },
@@ -230,7 +268,7 @@ const APP_CONFIG = {
     }
 };
 
-/* UTILITIES */
+// --- 2. UTILITIES ---
 const Utils = {
     escapeHtml: (str) => String(str || "").replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
     normalize: (str) => String(str || "").trim().toUpperCase(),
@@ -270,7 +308,7 @@ const Utils = {
     }
 };
 
-/* STATE */
+// --- 3. STATE MANAGEMENT ---
 const AppState = {
     map: null, reportMap: null, markersLayerGroup: null, reportMarkerLayer: null,
     allProjects: [], currentFilteredList: [], visibleProjects: [], markersBySite: new Map(),
@@ -280,7 +318,7 @@ const AppState = {
     charts: { c1: null, c2: null, c3: null, bottom: [] }
 };
 
-/* DATA MANAGER */
+// --- 4. DATA MANAGER ---
 const DataManager = {
     layerInfoCache: new Map(),
     async loadAllData() {
@@ -411,7 +449,7 @@ const DataManager = {
     }
 };
 
-/* MAP MANAGER */
+// --- 5. MAP MANAGER ---
 const MapManager = {
     init() {
         AppState.map = L.map('map', { zoomControl: false }).setView(APP_CONFIG.SETTINGS.DEFAULT_MAP_CENTER, APP_CONFIG.SETTINGS.DEFAULT_ZOOM);
@@ -606,7 +644,7 @@ const MapManager = {
     }
 };
 
-/* CHART MANAGER */
+// --- 6. CHART MANAGER ---
 const ChartManager = {
     renderCharts(data) {
         this.destroyCharts();
@@ -716,7 +754,7 @@ const ChartManager = {
     }
 };
 
-/* FILTER MANAGER */
+// --- 7. FILTER MANAGER ---
 const FilterManager = {
     applyFilters() {
         let list = AppState.allProjects;
@@ -754,7 +792,7 @@ const FilterManager = {
     }
 };
 
-/* UI */
+// --- 8. UI RENDERER ---
 const UI = {
     init() {
         this.generateDynamicControls();
@@ -1138,7 +1176,7 @@ const UI = {
     }
 };
 
-/* GLOBAL HANDLERS */
+// --- 9. GLOBAL HANDLERS ---
 function toggleDashboard() {
     const panel = document.getElementById('dashboard-panel');
     const btn = document.getElementById('sidebar-toggle');
@@ -1221,6 +1259,7 @@ window.generateExport = generateExport;
 window.shareReport = shareReport;
 window.downloadCSV = UI.downloadCSV;
 window.openReport = UI.openReport.bind(UI);
+window.switchTheme = switchTheme; // Make globally accessible
 
 window.onload = () => { UI.init(); MapManager.init(); DataManager.loadAllData(); setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS); };
 </script>
