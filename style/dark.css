@@ -67,7 +67,7 @@ body {
 /* 2. MAP - Darken Map */
 #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: #0f172a; filter: contrast(1.1) brightness(0.85); }
 
-/* LEAFLET TOOLTIP - DEFAULT (Overridden below for boundaries) */
+/* LEAFLET TOOLTIP */
 .leaflet-tooltip {
     background: #000 !important;
     border: 1px solid var(--primary) !important;
@@ -176,12 +176,30 @@ body {
 .status-wrapper.active-group .status-details, .status-details.show { display: block !important; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 .sub-stat-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-top: 10px; margin-bottom: 4px; color: var(--text-light); }
-.sub-stat-bar-bg { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; }
+.sub-stat-bar-bg { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
 .sub-stat-bar-fill { height: 100%; border-radius: 2px; }
 
-/* LEGEND */
-.legend-mini { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
-.legend-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
+/* LEGEND (Horizontal) */
+.legend-mini { 
+    margin-top: 24px; 
+    padding-top: 20px; 
+    border-top: 1px solid rgba(255,255,255,0.1); 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 8px; 
+}
+.legend-row { 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    font-size: 11px; 
+    color: var(--text-light); 
+    margin-bottom: 0; 
+    background: rgba(255,255,255,0.05); 
+    padding: 4px 10px; 
+    border-radius: 20px; 
+    border: 1px solid rgba(255,255,255,0.05);
+}
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 
 /* ----- CONTROLS (RIGHT) ----- */
@@ -197,25 +215,10 @@ body {
 .icon-slot { width: 24px; display: flex; justify-content: center; font-size: 14px; }
 .text-slot { font-size: 12px; font-weight: 600; opacity: 0; transform: translateX(-10px); transition: all 0.2s ease; }
 .control-card:hover .text-slot { opacity: 1; transform: translateX(0); }
+.theme-select-btn.active { border: 1px solid var(--primary); background: rgba(99,102,241,0.1); color: var(--primary); }
+.theme-select-btn.active i { color: var(--primary) !important; }
 
-/* 7. POPUPS & TOOLTIPS (DARK) */
-.leaflet-tooltip.boundary-tooltip { 
-    background: #000 !important; 
-    border: 1px solid var(--primary) !important; 
-    color: #fff !important; 
-    font-family: 'Plus Jakarta Sans', sans-serif; 
-    font-weight: 700; 
-    font-size: 11px; 
-    padding: 6px 12px; 
-    border-radius: 4px; 
-    box-shadow: 0 0 15px var(--primary); 
-    text-transform: uppercase; 
-    letter-spacing: 1px; 
-    margin: 0;
-    display: none !important; /* HIDE TOOLTIP ON CURSOR AS REQUESTED */
-}
-
-/* 8. REPORT MODAL */
+/* ----- REPORT MODAL ----- */
 .report-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(8px); z-index: 5000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
 .report-overlay.open { display: flex; opacity: 1; }
 .report-modal { width: 95%; max-width: 1400px; height: 92vh; background: #0f172a; border-radius: var(--radius-xl); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; position: relative; overflow: hidden; transform: scale(0.95); transition: transform 0.3s ease; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
