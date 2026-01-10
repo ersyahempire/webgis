@@ -20,8 +20,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- PAUTAN KE FAIL CSS (Tukar nama fail ini jika perlu) -->
-  <link rel="stylesheet" href="css08.css">
+  <!-- PAUTAN KE FAIL CSS (ID ditambah untuk penukaran tema) -->
+  <link id="app-theme" rel="stylesheet" href="css08.css">
 
 </head>
 <body>
@@ -91,6 +91,17 @@
             <span class="text-slot">Dashboard</span>
         </button>
     </div>
+
+    <!-- Theme Switcher (NEW ADDITION) -->
+    <div class="control-card">
+        <div class="control-group-title">Pilihan Tema</div>
+        <select id="theme-selector" onchange="switchTheme(this.value)" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 8px; border: 1px solid #e2e8f0; outline: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; color: #333; background: #f8fafc; cursor: pointer;">
+            <option value="css07.css">Design 07</option>
+            <option value="css08.css" selected>Design 08 (Asal)</option>
+            <option value="css09.css">Design 09</option>
+        </select>
+    </div>
+
     <!-- Layer Toggles -->
     <div class="control-card" id="layer-card">
       <div class="control-group-title">Penapis Sempadan</div>
@@ -197,6 +208,15 @@
     
 <!-- MAIN JAVASCRIPT LOGIC -->
 <script>
+// --- 0. THEME SWITCHER LOGIC (NEW) ---
+function switchTheme(themeFile) {
+    const themeLink = document.getElementById('app-theme');
+    if (themeLink) {
+        themeLink.href = themeFile;
+        console.log("Tema ditukar kepada: " + themeFile);
+    }
+}
+
 // --- 1. CONFIGURATION ---
 const APP_CONFIG = {
     PROJECT_TYPES: [
@@ -1220,6 +1240,7 @@ window.generateExport = generateExport;
 window.shareReport = shareReport;
 window.downloadCSV = UI.downloadCSV;
 window.openReport = UI.openReport.bind(UI);
+window.switchTheme = switchTheme; // Make globally accessible
 
 window.onload = () => { UI.init(); MapManager.init(); DataManager.loadAllData(); setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS); };
 </script>
