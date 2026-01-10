@@ -1,6 +1,6 @@
 /* ARORA THEME (Glassmorphism / Modern Gradient) */
 
-/* ----- GLOBAL VARIABLES & RESET 5pm ----- */
+/* ----- GLOBAL VARIABLES & RESET ----- */
 :root {
   --primary: #4F46E5;         /* Indigo 600 */
   --primary-dark: #4338ca;    /* Indigo 700 */
@@ -270,12 +270,27 @@ body {
 /* ----- REPORT MODAL ----- */
 .report-overlay { position: fixed; inset: 0; z-index: 5000; background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
 .report-overlay.open { display: flex; opacity: 1; }
+
+/* UPDATED: Aurora Gradient Background */
 .report-modal {
     width: 95%; max-width: 1400px; max-height: 90vh; height: 90vh; border-radius: 20px;
     box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; overflow: hidden;
     transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    background: linear-gradient(135deg, #eef2f5 0%, #e0e7ff 100%); color: #1f2937; border: 1px solid rgba(255,255,255,0.3); position: relative;
+    
+    /* Aurora Mesh Gradient (Purple -> Blue -> Cyan Pastel) */
+    background: linear-gradient(125deg, #E0C3FC 0%, #8EC5FC 50%, #90F7EC 100%); 
+    background-size: 200% 200%;
+    animation: auroraMove 15s ease infinite; 
+    
+    color: #1f2937; border: 1px solid rgba(255,255,255,0.3); position: relative;
 }
+
+@keyframes auroraMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 .report-overlay.open .report-modal { transform: scale(1); }
 .modal-close-btn { position: absolute; top: 15px; right: 20px; z-index: 5002; background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.4); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; color: #4b5563; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
 .modal-close-btn:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
@@ -310,19 +325,33 @@ body {
 .main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; min-height: 550px; align-items: stretch; }
 .map-container { padding: 0; overflow: hidden; border-radius: 16px; position: relative; display: flex; flex-direction: column; background: #e5e7eb; }
 #report-map { width: 100%; flex: 1; z-index: 1; }
-.status-container { background: rgba(255, 255, 255, 0.8); padding: 0; display: flex; flex-direction: column; height: 100%; border-radius: 16px; overflow: hidden; }
+
+/* UPDATED: Status Container (Auto Height) */
+.status-container { 
+    background: rgba(255, 255, 255, 0.8); 
+    padding: 0; 
+    display: flex; 
+    flex-direction: column; 
+    /* Changed height: 100% to auto so it grows */
+    height: auto;
+    min-height: 100%; /* Ensure it fills grid cell if content is short */
+    border-radius: 16px; 
+    overflow: hidden; 
+}
+
 .status-header-fixed { padding: 15px 20px; background: rgba(255,255,255,0.9); border-bottom: 1px solid #e5e7eb; font-weight: 800; color: #374151; }
 
-/* REMOVED SCROLLBAR */
+/* UPDATED: Status Scroll Area (Hidden Scrollbar, Auto Height) */
 .status-scroll-area { 
   padding: 20px; 
   flex: 1; 
-  overflow-y: auto;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  overflow: visible; /* Show all content, let parent scroll */
+  height: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .status-scroll-area::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
 .layer-info-card { background: #fff; border-radius: 16px; padding: 25px; border: 1px solid #e5e7eb; margin-bottom: 20px; }
