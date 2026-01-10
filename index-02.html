@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Web GIS Projek Sabah - v.02</title>
+  <title>Web GIS Projek Sabah - v.01</title>
   
   <!-- FontAwesome & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -257,9 +257,9 @@ const APP_CONFIG = {
         DEFAULT_ZOOM: 8
     },
     GEOJSON_URLS: {
-        district: "dosm_district.json",
-        dun: "dosm_dun.json",
-        parliament: "dosm_parlimen.json"
+        district: "maps/dosm_district.json",
+        dun: "maps/dosm_dun.json",
+        parliament: "maps/dosm_parlimen.json"
     }
 };
 
@@ -1071,12 +1071,12 @@ const UI = {
                  });
              }
              modalStatus.innerHTML += `
-                <div class="status-wrapper" style="margin-bottom:15px;">
+                <div class="status-wrapper active-group" style="margin-bottom:15px;">
                     <div class="status-item selected" style="cursor:default; border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
                         <div class="status-header"><span class="status-name">${cat}</span><span style="color:${col}; font-weight:800;">${count} (${percentage}%)</span></div>
                         <div class="progress-bg"><div class="progress-fill" style="width:${percentage}%; background:${col}"></div></div>
                     </div>
-                    <div class="status-details show" style="display:block; border-top:none; border-top-left-radius: 0; border-top-right-radius: 0;">${subHtml}</div>
+                    <div class="status-details show" style="display:block; border-top:none; border-top-left-radius: 0; border-top-right-radius: 0; margin-top:0;">${subHtml}</div>
                 </div>`;
         });
     },
