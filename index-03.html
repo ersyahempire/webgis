@@ -20,11 +20,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- PAUTAN KE FAIL CSS (ID ditambah untuk penukaran tema) -->
+  <!-- PAUTAN KE FAIL CSS -->
   <link id="app-theme" rel="stylesheet" href="style/arora.css">
 
 </head>
 <body>
+
+  <!-- Logo MCMC (Atas Kanan) -->
+  <img src="https://ersyahempire.github.io/webgis/asset/mcmc_logo.png" alt="MCMC Logo" class="mcmc-logo">
 
   <!-- Map Background -->
   <div id="map"></div>
@@ -111,20 +114,17 @@
       <div id="dynamic-filter-btns"></div>
     </div>
 
-    <!-- Pilihan Tema (DIKEMASKINI: Gaya Butang Standard) -->
+    <!-- Pilihan Tema -->
     <div class="control-card" style="z-index: 2001;">
         <div class="control-group-title">Pilihan Tema</div>
-        <!-- Butang Design 07 -->
-        <button class="toggle-btn theme-select-btn" onclick="switchTheme('style/arora.css', this)">
+        <button class="toggle-btn theme-select-btn active" onclick="switchTheme('style/arora.css', this)">
             <span class="icon-slot"><i class="fas fa-paint-brush"></i></span> 
             <span class="text-slot">arora</span>
         </button>
-        <!-- Butang Design 08 (Aktif) -->
-        <button class="toggle-btn theme-select-btn active" onclick="switchTheme('style/light.css', this)">
+        <button class="toggle-btn theme-select-btn" onclick="switchTheme('style/light.css', this)">
             <span class="icon-slot"><i class="fas fa-palette"></i></span> 
             <span class="text-slot">light</span>
         </button>
-        <!-- Butang Design 09 -->
         <button class="toggle-btn theme-select-btn" onclick="switchTheme('style/dark.css', this)">
             <span class="icon-slot"><i class="fas fa-fill-drip"></i></span> 
             <span class="text-slot">dark</span>
@@ -218,19 +218,14 @@
     
 <!-- MAIN JAVASCRIPT LOGIC -->
 <script>
-// --- 0. THEME SWITCHER LOGIC (SIMPLIFIED FOR BUTTONS) ---
+// --- 0. THEME SWITCHER LOGIC ---
 function switchTheme(themeFile, btnElement) {
     const themeLink = document.getElementById('app-theme');
     if (themeLink) {
         themeLink.href = themeFile;
-        console.log("Tema ditukar kepada: " + themeFile);
-        
-        // Update visual active state
-        // Remove 'active' from all buttons in the theme control card
         if (btnElement && btnElement.parentElement) {
             const siblings = btnElement.parentElement.querySelectorAll('.toggle-btn');
             siblings.forEach(btn => btn.classList.remove('active'));
-            // Add 'active' to the clicked button
             btnElement.classList.add('active');
         }
     }
@@ -927,10 +922,11 @@ const UI = {
                     if (tCount > 0) {
                         const tConfig = Utils.getTypeConfig(type);
                         const tPercent = itemData.count > 0 ? Math.round((tCount / itemData.count) * 100) : 0;
+                        // UPDATED: Added percentage to the sub-item label
                         subHtml += `
                             <div class="sub-stat-row">
                                 <span class="sub-stat-label" style="color:${tConfig.color};">${tConfig.label}</span>
-                                <span class="sub-stat-val">${tCount}</span>
+                                <span class="sub-stat-val">${tCount} <span style="font-size:0.8em; opacity:0.8; margin-left:3px;">(${tPercent}%)</span></span>
                             </div>
                             <div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>
                         `;
@@ -1069,17 +1065,18 @@ const UI = {
                         if (tCount > 0) {
                            const tPercent = (count > 0) ? Math.round((tCount / count) * 100) : 0;
                            const tConfig = Utils.getTypeConfig(t.type);
-                           subHtml += `<div class="sub-stat-row"><span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span><span>${tCount}</span></div><div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>`;
+                           // UPDATED: Added percentages to report sub-items
+                           subHtml += `<div class="sub-stat-row"><span style="color:${tConfig.color}; font-weight:700;">${tConfig.label}</span><span>${tCount} <span style="font-size:0.8em; opacity:0.8; margin-left:3px;">(${tPercent}%)</span></span></div><div class="sub-stat-bar-bg"><div class="sub-stat-bar-fill" style="width:${tPercent}%; background:${tConfig.color}"></div></div>`;
                         }
                  });
              }
              modalStatus.innerHTML += `
-                <div class="status-wrapper" style="margin-bottom:15px;">
-                    <div class="status-item selected" style="cursor:default;">
+                <div class="status-wrapper active-group" style="margin-bottom:15px;">
+                    <div class="status-item selected" style="cursor:default; border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
                         <div class="status-header"><span class="status-name">${cat}</span><span style="color:${col}; font-weight:800;">${count} (${percentage}%)</span></div>
                         <div class="progress-bg"><div class="progress-fill" style="width:${percentage}%; background:${col}"></div></div>
                     </div>
-                    <div class="status-details show" style="display:block;">${subHtml}</div>
+                    <div class="status-details show" style="display:block; border-top:none; border-top-left-radius: 0; border-top-right-radius: 0; margin-top:0;">${subHtml}</div>
                 </div>`;
         });
     },
@@ -1259,7 +1256,7 @@ window.generateExport = generateExport;
 window.shareReport = shareReport;
 window.downloadCSV = UI.downloadCSV;
 window.openReport = UI.openReport.bind(UI);
-window.switchTheme = switchTheme; // Make globally accessible
+window.switchTheme = switchTheme;
 
 window.onload = () => { UI.init(); MapManager.init(); DataManager.loadAllData(); setInterval(() => DataManager.loadAllData(), APP_CONFIG.SETTINGS.REFRESH_INTERVAL_MS); };
 </script>
