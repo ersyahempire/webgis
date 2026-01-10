@@ -39,20 +39,19 @@ body {
   color: var(--text-main);
 }
 
-/* LOGO OVERLAY */
+/* LOGO MCMC */
 .mcmc-logo {
     position: absolute;
     top: 20px;
-    right: 80px;
-    height: 60px;
-    width: 140px; 
+    right: 120px;
+    height: 55px;
+    width: 180px; 
     background-image: url('https://ersyahempire.github.io/webgis/asset/mcmc_logo.png');
     background-repeat: no-repeat;
-    background-position: center right; 
+    background-position: right center; 
     background-size: contain; 
     z-index: 1002;
     pointer-events: none;
-    filter: drop-shadow(0 2px 4px rgba(255,255,255,0.8));
     transition: all 0.3s ease;
 }
 
@@ -170,7 +169,7 @@ body {
 .sub-stat-bar-bg { height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
 .sub-stat-bar-fill { height: 100%; border-radius: 3px; }
 
-/* LEGEND */
+/* 1. LEGEND UPDATE (Horizontal/Mendatar) */
 .legend-mini { 
     margin-top: 24px; 
     padding-top: 20px; 
@@ -194,66 +193,23 @@ body {
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 
-/* ----- CONTROLS (RIGHT) ----- */
+/* 2. CONTROLS UPDATE (Icon Centering) */
 .controls-container { position: absolute; top: 100px; right: 24px; display: flex; flex-direction: column; gap: 14px; z-index: 1000; align-items: flex-end; }
-
 .control-card {
   background: #fff; padding: 0; border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
   width: 48px; height: 48px; overflow: hidden; transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.3s; 
   display: flex; flex-direction: column; border: 1px solid #f1f5f9;
-  justify-content: center; /* Center Vertically by default (Collapsed) */
+  justify-content: center; /* Center Vertically */
 }
-
-/* Expand on hover */
-.control-card:hover { 
-    width: 220px; 
-    height: auto; 
-    border-radius: 24px; 
-    padding: 6px; 
-    justify-content: flex-start; /* Align top when expanded */
-}
-
-/* HIDE TITLES FOR SPECIFIC CARDS (Penapis Sempadan & Penapis Data) */
-#layer-card .control-group-title,
-#filter-card .control-group-title {
-  display: none !important;
-}
-
+.control-card:hover { width: 220px; height: auto; border-radius: 24px; padding: 6px; justify-content: flex-start; }
 .control-group-title { padding: 4px 10px 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--primary); display: none; letter-spacing: 1px; }
 .control-card:hover .control-group-title { display: block; }
-
-/* HIDE INACTIVE BUTTONS ONLY FOR MULTI-BUTTON CARDS (#layer-card, #filter-card) 
-   This ensures single-button cards (CSV, Dashboard) always show their button.
-*/
-#layer-card:not(:hover) .toggle-btn:not(.active),
-#filter-card:not(:hover) .toggle-btn:not(.active) {
-  display: none;
-}
-
-/* DEFAULT ICON FOR FILTER CARD when empty/inactive */
-/* Use :has() to detect if there is NO active button */
-#filter-card:not(:hover):not(:has(.toggle-btn.active))::before {
-  content: '\f0b0'; /* FontAwesome Filter Icon */
-  font-family: "Font Awesome 6 Free";
-  font-weight: 900;
-  font-size: 18px;
-  color: var(--secondary);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  /* Ensure it takes up the circle */
-  position: absolute;
-  top: 0;
-  left: 0;
-}
 
 .toggle-btn { 
     display: flex; 
     align-items: center; 
     width: 100%; 
-    height: 100%; /* Fill the card when collapsed */
+    height: 100%; /* Fill the card */
     padding: 0; /* Remove default padding */
     background: transparent; 
     border: none; 
@@ -264,22 +220,14 @@ body {
     margin-bottom: 0; 
     white-space: nowrap; 
 }
-
-/* Re-apply padding when expanded */
 .control-card:hover .toggle-btn {
-    padding: 10px; 
+    padding: 10px; /* Add padding back when expanded */
     height: auto;
     margin-bottom: 2px;
 }
 
 .toggle-btn:hover { background: #f0f9ff; color: var(--primary); }
-
-.toggle-btn.active { 
-    background: var(--primary); 
-    color: #fff; 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
-    order: -1; /* Keep active button at the top/center */
-}
+.toggle-btn.active { background: var(--primary); color: #fff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
 .toggle-btn.active i, .toggle-btn.active span.icon-slot { color: white !important; }
 
 /* Perfect Icon Centering Logic */
