@@ -43,15 +43,16 @@ body {
 .mcmc-logo {
     position: absolute;
     top: 20px;
-    right: 120px;
-    height: 55px;
-    width: 180px; 
+    right: 80px;
+    height: 60px;
+    width: 140px; 
     background-image: url('https://ersyahempire.github.io/webgis/asset/mcmc_logo.png');
     background-repeat: no-repeat;
-    background-position: right center; 
+    background-position: center right; 
     background-size: contain; 
     z-index: 1002;
     pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgba(255,255,255,0.8));
     transition: all 0.3s ease;
 }
 
@@ -193,7 +194,7 @@ body {
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 
-/* 2. CONTROLS UPDATE (Icon Centering) */
+/* 2. CONTROLS UPDATE (Icon Centering & Order) */
 .controls-container { position: absolute; top: 100px; right: 24px; display: flex; flex-direction: column; gap: 14px; z-index: 1000; align-items: flex-end; }
 .control-card {
   background: #fff; padding: 0; border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
@@ -227,7 +228,12 @@ body {
 }
 
 .toggle-btn:hover { background: #f0f9ff; color: var(--primary); }
-.toggle-btn.active { background: var(--primary); color: #fff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.toggle-btn.active { 
+    background: var(--primary); 
+    color: #fff; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+    order: -1; /* Ensure active button is at top/center when collapsed */
+}
 .toggle-btn.active i, .toggle-btn.active span.icon-slot { color: white !important; }
 
 /* Perfect Icon Centering Logic */
